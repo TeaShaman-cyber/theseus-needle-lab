@@ -1,0 +1,51 @@
+name: Experiment
+description: Propose a reproducible Needle Lab experiment
+title: "experiment: "
+labels: []
+body:
+  - type: textarea
+    id: question
+    attributes:
+      label: Hypothesis or research question
+      description: State what is being tested without assuming the result.
+    validations:
+      required: true
+  - type: input
+    id: data_manifest
+    attributes:
+      label: Data or dataset manifest identity
+      description: URL, version, digest, or explicit statement that no dataset is required.
+    validations:
+      required: true
+  - type: input
+    id: config_identity
+    attributes:
+      label: Configuration identity
+      description: Version, path, digest, or explicit statement that configuration is not yet defined.
+    validations:
+      required: true
+  - type: textarea
+    id: criteria
+    attributes:
+      label: Success and failure criteria
+      description: Define observable criteria before execution.
+    validations:
+      required: true
+  - type: dropdown
+    id: privacy
+    attributes:
+      label: Data classification
+      options:
+        - Public data
+        - Synthetic data
+        - Private data referenced by manifest only; no private content in GitHub
+        - Undecided; must be resolved before execution
+    validations:
+      required: true
+  - type: textarea
+    id: runtime
+    attributes:
+      label: Expected runtime requirements
+      description: CPU, GPU, memory, duration, external services, or unknowns. Hosted runners must not be assumed sufficient before measurement.
+    validations:
+      required: true

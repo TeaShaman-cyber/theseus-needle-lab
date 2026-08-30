@@ -1,0 +1,37 @@
+name: Docs check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Record runner provenance
+        shell: bash
+        run: |
+          set -eu
+          printf 'runner_os=%s\n' "${RUNNER_OS:-unknown}"
+          printf 'runner_arch=%s\n' "${RUNNER_ARCH:-unknown}"
+          printf 'image_os=%s\n' "${ImageOS:-unknown}"
+          printf 'image_version=%s\n' "${ImageVersion:-unknown}"
+      - name: Validate bootstrap files
+        shell: bash
+        run: |
+          set -eu
+          for f in \
+            README.md \
+            docs/architecture.md \
+            docs/experiment-lifecycle.md \
+            experiments/README.md \
+            receipts/README.md \
+            .github/ISSUE_TEMPLATE/experiment.yml; do
+            test -s "$f"
+          done
