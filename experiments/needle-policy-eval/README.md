@@ -40,3 +40,15 @@ Inference uses `max_new_tokens=256`, matching the pinned upstream Needle API def
 Base and tuned models run in separate processes because Needle's native engine keeps tuned-weight binding process-global.
 
 A successful workflow means the comparison executed and produced auditable results. It does not require the tuned model to outperform base.
+
+## Quantization distinguishing probe
+
+After the 256-token train replay still returned `base 1/12` and default tuned `0/12`, the next probe keeps training fixed and changes export precision only:
+
+```text
+checkpoint SHA256 4b0a972d163ffc7678fb3c36bace508114872e9d2ce9e10f225825752d3795bc
+adapter SHA256    7005de88bbe7fa9cfaa3e7cab90fc344e2b9e5e45f187f5b90c75cf0c8f9e7fc
+needle build --bits 4
+```
+
+The pinned CLI supports `--bits 2` or `--bits 4`; it does not expose W8. The probe compares the original checkpoint-declared mixed export (`embedding=4,mhc=4,default=2`) against a uniform-W4 export on the exact 12-query training replay. No finetune step is repeated.

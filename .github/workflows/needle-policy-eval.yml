@@ -46,6 +46,11 @@ jobs:
           printf 'expected=%s\nactual=%s\n' "$expected" "$actual"
           test "$actual" = "$expected"
           test "$(stat -c %s input/smoke/artifacts/tuned.cact)" = 13737807
+          adapter_expected=7005de88bbe7fa9cfaa3e7cab90fc344e2b9e5e45f187f5b90c75cf0c8f9e7fc
+          adapter_actual=$(sha256sum input/smoke/artifacts/adapter.pkl | awk '{print $1}')
+          printf 'adapter_expected=%s\nadapter_actual=%s\n' "$adapter_expected" "$adapter_actual"
+          test "$adapter_actual" = "$adapter_expected"
+          test "$(stat -c %s input/smoke/artifacts/adapter.pkl)" = 1991592
 
       - name: Install Needle runtime
         shell: bash
@@ -62,6 +67,39 @@ jobs:
           for name in ['cactus-needle','huggingface-hub']:
               print(f'{name}={importlib.metadata.version(name)}')
           PY
+
+      - name: Download exact Needle 2 checkpoint for W4 rebuild
+        shell: bash
+        run: |
+          set -eu
+          mkdir -p checkpoints
+          python - <<'PY' 2>&1 | tee logs/w4-checkpoint-download.log
+          from huggingface_hub import hf_hub_download
+          path = hf_hub_download(
+              'Cactus-Compute/needle2',
+              'checkpoints/needle2.pkl',
+              repo_type='model',
+              local_dir='.',
+          )
+          print(path)
+          PY
+          expected=4b0a972d163ffc7678fb3c36bace508114872e9d2ce9e10f225825752d3795bc
+          actual=$(sha256sum checkpoints/needle2.pkl | awk '{print $1}')
+          printf 'checkpoint_expected=%s\ncheckpoint_actual=%s\n' "$expected" "$actual"
+          test "$actual" = "$expected"
+          test "$(stat -c %s checkpoints/needle2.pkl)" = 90426504
+
+      - name: Build uniform W4 from exact adapter
+        shell: bash
+        run: |
+          set -o pipefail
+          /usr/bin/time -v -o metrics/w4-build.time \
+            needle build checkpoints/needle2.pkl \
+              --lora input/smoke/artifacts/adapter.pkl \
+              --bits 4 \
+              --out results/tuned-w4.cact \
+            2>&1 | tee logs/w4-build.log
+          sha256sum results/tuned-w4.cact | tee metrics/w4.sha256
 
       - name: Evaluate untouched base model
         shell: bash
@@ -127,6 +165,19 @@ jobs:
               --weights input/smoke/artifacts/tuned.cact \
             2>&1 | tee logs/train-tuned.log
 
+      - name: Replay exact training set on uniform W4 artifact
+        shell: bash
+        run: |
+          set -o pipefail
+          /usr/bin/time -v -o metrics/train-w4.time \
+            python scripts/run_policy_eval.py \
+              --training-jsonl experiments/needle-cpu-smoke/data.jsonl \
+              --output results/train-w4.jsonl \
+              --model-id uniform-w4-train-replay \
+              --max-new-tokens 256 \
+              --weights results/tuned-w4.cact \
+            2>&1 | tee logs/train-w4.log
+
       - name: Compare training-set replay
         shell: bash
         run: |
@@ -141,6 +192,22 @@ jobs:
             --scope training_replay_diagnostic
           cat results/train-replay-summary.md
           cat results/train-replay-receipt.json
+
+      - name: Compare default mixed and uniform W4
+        shell: bash
+        run: |
+          set -eu
+          python scripts/quantization_probe_receipt.py \
+            --mixed results/train-tuned.jsonl \
+            --w4 results/train-w4.jsonl \
+            --checkpoint checkpoints/needle2.pkl \
+            --adapter input/smoke/artifacts/adapter.pkl \
+            --mixed-artifact input/smoke/artifacts/tuned.cact \
+            --w4-artifact results/tuned-w4.cact \
+            --output results/quantization-receipt.json \
+            --markdown results/quantization-summary.md
+          cat results/quantization-summary.md
+          cat results/quantization-receipt.json
 
       - name: Upload evaluation evidence
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -165,10 +232,15 @@ jobs:
           test -s results/train-tuned.jsonl
           test -s results/train-replay-receipt.json
           test -s results/train-replay-summary.md
+          test -s results/tuned-w4.cact
+          test -s results/train-w4.jsonl
+          test -s results/quantization-receipt.json
+          test -s results/quantization-summary.md
           python - <<'PY'
           import json
           receipt = json.load(open('results/receipt.json'))
           replay = json.load(open('results/train-replay-receipt.json'))
+          quant = json.load(open('results/quantization-receipt.json'))
           assert receipt['inputs']['tuned_cact_sha256'] == receipt['inputs']['expected_tuned_cact_sha256']
           assert receipt['comparison']['base']['n'] == 24
           assert receipt['comparison']['tuned']['n'] == 24
@@ -177,4 +249,12 @@ jobs:
           assert replay['scope'] == 'training_replay_diagnostic'
           assert replay['comparison']['base']['n'] == 12
           assert replay['comparison']['tuned']['n'] == 12
+          assert quant['schema'] == 'theseus.needle.quantization_probe.v1'
+          assert quant['inputs']['checkpoint_sha256'] == '4b0a972d163ffc7678fb3c36bace508114872e9d2ce9e10f225825752d3795bc'
+          assert quant['inputs']['adapter_sha256'] == '7005de88bbe7fa9cfaa3e7cab90fc344e2b9e5e45f187f5b90c75cf0c8f9e7fc'
+          assert quant['inputs']['default_mixed_cact_sha256'] == '3c0c684888c0d796e1b3a62326fbb1f3cc991f6ee5a0e596ac448df99edef10a'
+          assert quant['inputs']['build_bits'] == 4
+          assert quant['inputs']['max_new_tokens'] == 256
+          assert quant['comparison']['base']['n'] == 12
+          assert quant['comparison']['tuned']['n'] == 12
           PY

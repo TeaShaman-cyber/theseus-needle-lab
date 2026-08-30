@@ -143,7 +143,7 @@ class DecodeBudgetContractTest(unittest.TestCase):
         runner_text = RUNNER.read_text()
         workflow_text = WORKFLOW.read_text()
         self.assertIn('parser.add_argument("--max-new-tokens", type=int, default=256)', runner_text)
-        self.assertEqual(workflow_text.count("--max-new-tokens 256"), 4)
+        self.assertEqual(workflow_text.count("--max-new-tokens 256"), 5)
         module = load_module("compare_policy_eval_decode_budget", COMPARE)
         base = [{"id":"a","category":"x","expected":"READY","predicted":"READY","correct":True,"max_new_tokens":256}]
         tuned = [{"id":"a","category":"x","expected":"READY","predicted":"READY","correct":True,"max_new_tokens":256}]
@@ -155,3 +155,36 @@ class DecodeBudgetContractTest(unittest.TestCase):
         tuned = [{"id":"a","max_new_tokens":256}]
         with self.assertRaises(ValueError):
             module.shared_max_new_tokens(base, tuned)
+
+QUANT_RECEIPT = ROOT / "scripts" / "quantization_probe_receipt.py"
+
+class QuantizationProbeContractTest(unittest.TestCase):
+    def test_quantization_receipt_labels_mixed_and_w4_explicitly(self):
+        module = load_module("quantization_probe_receipt", QUANT_RECEIPT)
+        mixed = [{"id":"a","category":"training_replay","expected":"READY","predicted":"NO_CALL","correct":False,"max_new_tokens":256}]
+        w4 = [{"id":"a","category":"training_replay","expected":"READY","predicted":"READY","correct":True,"max_new_tokens":256}]
+        receipt = module.build_receipt(
+            mixed, w4,
+            checkpoint_sha256="c"*64,
+            adapter_sha256="a"*64,
+            mixed_sha256="m"*64,
+            w4_sha256="w"*64,
+            w4_size_bytes=123,
+        )
+        self.assertEqual(receipt["schema"], "theseus.needle.quantization_probe.v1")
+        self.assertEqual(receipt["models"], {"base_field":"default_mixed", "tuned_field":"uniform_w4"})
+        self.assertEqual(receipt["comparison"]["base"]["overall_accuracy"], 0.0)
+        self.assertEqual(receipt["comparison"]["tuned"]["overall_accuracy"], 1.0)
+        self.assertEqual(receipt["inputs"]["max_new_tokens"], 256)
+
+    def test_workflow_builds_w4_from_exact_adapter_without_retraining(self):
+        text = WORKFLOW.read_text()
+        self.assertIn("7005de88bbe7fa9cfaa3e7cab90fc344e2b9e5e45f187f5b90c75cf0c8f9e7fc", text)
+        self.assertIn("4b0a972d163ffc7678fb3c36bace508114872e9d2ce9e10f225825752d3795bc", text)
+        self.assertIn("needle build checkpoints/needle2.pkl", text)
+        self.assertIn("--lora input/smoke/artifacts/adapter.pkl", text)
+        self.assertIn("--bits 4", text)
+        self.assertIn("--out results/tuned-w4.cact", text)
+        self.assertIn("--weights results/tuned-w4.cact", text)
+        self.assertIn("results/quantization-receipt.json", text)
+        self.assertNotIn("needle finetune", text)
