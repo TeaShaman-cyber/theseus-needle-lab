@@ -137,3 +137,21 @@ class MarkdownOptionalMetricTest(unittest.TestCase):
         self.assertIn("Base negative-control no-call rate: n/a", text)
         self.assertIn("Tuned negative-control no-call rate: n/a", text)
         self.assertIn("Delta negative-control no-call: n/a", text)
+
+class DecodeBudgetContractTest(unittest.TestCase):
+    def test_evaluator_uses_upstream_256_token_budget_and_records_it(self):
+        runner_text = RUNNER.read_text()
+        workflow_text = WORKFLOW.read_text()
+        self.assertIn('parser.add_argument("--max-new-tokens", type=int, default=256)', runner_text)
+        self.assertEqual(workflow_text.count("--max-new-tokens 256"), 4)
+        module = load_module("compare_policy_eval_decode_budget", COMPARE)
+        base = [{"id":"a","category":"x","expected":"READY","predicted":"READY","correct":True,"max_new_tokens":256}]
+        tuned = [{"id":"a","category":"x","expected":"READY","predicted":"READY","correct":True,"max_new_tokens":256}]
+        self.assertEqual(module.shared_max_new_tokens(base, tuned), 256)
+
+    def test_mixed_decode_budgets_are_rejected(self):
+        module = load_module("compare_policy_eval_mixed_budget", COMPARE)
+        base = [{"id":"a","max_new_tokens":64}]
+        tuned = [{"id":"a","max_new_tokens":256}]
+        with self.assertRaises(ValueError):
+            module.shared_max_new_tokens(base, tuned)

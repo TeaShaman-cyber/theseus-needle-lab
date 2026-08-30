@@ -27,6 +27,15 @@ def load_jsonl(path: pathlib.Path) -> list[dict]:
     return [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
 
 
+def shared_max_new_tokens(base: list[dict], tuned: list[dict]) -> int | None:
+    values = {row.get("max_new_tokens") for row in (base + tuned) if row.get("max_new_tokens") is not None}
+    if not values:
+        return None
+    if len(values) != 1:
+        raise ValueError(f"mixed max_new_tokens values: {sorted(values)}")
+    return next(iter(values))
+
+
 def _accuracy(records: list[dict]) -> float | None:
     if not records:
         return None
@@ -131,7 +140,10 @@ def main() -> None:
     tuned_path = pathlib.Path(args.tuned)
     cases_path = pathlib.Path(args.cases)
     artifact_path = pathlib.Path(args.tuned_artifact)
-    comparison = compare(load_jsonl(base_path), load_jsonl(tuned_path))
+    base_rows = load_jsonl(base_path)
+    tuned_rows = load_jsonl(tuned_path)
+    comparison = compare(base_rows, tuned_rows)
+    max_new_tokens = shared_max_new_tokens(base_rows, tuned_rows)
     receipt = {
         "schema": "theseus.needle.policy_eval.v1",
         "generated_at": datetime.now(timezone.utc).isoformat(),
@@ -148,6 +160,7 @@ def main() -> None:
             "tuned_cact_sha256": sha256(artifact_path),
             "tuned_cact_size_bytes": artifact_path.stat().st_size,
             "expected_tuned_cact_sha256": "3c0c684888c0d796e1b3a62326fbb1f3cc991f6ee5a0e596ac448df99edef10a",
+            "max_new_tokens": max_new_tokens,
         },
         "comparison": comparison,
     }

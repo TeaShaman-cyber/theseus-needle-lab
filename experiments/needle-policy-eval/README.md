@@ -35,6 +35,8 @@ PROBE | READY | UNKNOWN | NO_CALL | INVALID
 
 `confidence` is recorded but never used for scoring or acceptance. Tuned Needle weights intentionally report `confidence=None` because LoRA does not update the confidence head.
 
+Inference uses `max_new_tokens=256`, matching the pinned upstream Needle API default; the value is explicit in the workflow and recorded in evaluation receipts.
+
 Base and tuned models run in separate processes because Needle's native engine keeps tuned-weight binding process-global.
 
 A successful workflow means the comparison executed and produced auditable results. It does not require the tuned model to outperform base.

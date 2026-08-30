@@ -72,6 +72,7 @@ jobs:
               --cases experiments/needle-policy-eval/cases.jsonl \
               --output results/base.jsonl \
               --model-id base \
+              --max-new-tokens 256 \
             2>&1 | tee logs/base.log
 
       - name: Evaluate exact tuned artifact
@@ -83,6 +84,7 @@ jobs:
               --cases experiments/needle-policy-eval/cases.jsonl \
               --output results/tuned.jsonl \
               --model-id tuned \
+              --max-new-tokens 256 \
               --weights input/smoke/artifacts/tuned.cact \
             2>&1 | tee logs/tuned.log
 
@@ -109,6 +111,7 @@ jobs:
               --training-jsonl experiments/needle-cpu-smoke/data.jsonl \
               --output results/train-base.jsonl \
               --model-id base-train-replay \
+              --max-new-tokens 256 \
             2>&1 | tee logs/train-base.log
 
       - name: Replay exact training set on tuned artifact
@@ -120,6 +123,7 @@ jobs:
               --training-jsonl experiments/needle-cpu-smoke/data.jsonl \
               --output results/train-tuned.jsonl \
               --model-id tuned-train-replay \
+              --max-new-tokens 256 \
               --weights input/smoke/artifacts/tuned.cact \
             2>&1 | tee logs/train-tuned.log
 
@@ -168,6 +172,8 @@ jobs:
           assert receipt['inputs']['tuned_cact_sha256'] == receipt['inputs']['expected_tuned_cact_sha256']
           assert receipt['comparison']['base']['n'] == 24
           assert receipt['comparison']['tuned']['n'] == 24
+          assert receipt['inputs']['max_new_tokens'] == 256
+          assert replay['inputs']['max_new_tokens'] == 256
           assert replay['scope'] == 'training_replay_diagnostic'
           assert replay['comparison']['base']['n'] == 12
           assert replay['comparison']['tuned']['n'] == 12

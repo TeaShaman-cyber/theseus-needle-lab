@@ -76,6 +76,7 @@ def evaluate(cases: list[dict], weights: str | None, model_id: str, max_new_toke
             "confidence": response.get("confidence"),
             "latency_ms": round(latency_ms, 3),
             "model_id": model_id,
+            "max_new_tokens": max_new_tokens,
             "raw_response": response,
         })
     return records
@@ -89,7 +90,7 @@ def main() -> None:
     parser.add_argument("--output", required=True)
     parser.add_argument("--model-id", required=True)
     parser.add_argument("--weights")
-    parser.add_argument("--max-new-tokens", type=int, default=64)
+    parser.add_argument("--max-new-tokens", type=int, default=256)
     args = parser.parse_args()
 
     cases = load_training_cases(pathlib.Path(args.training_jsonl)) if args.training_jsonl else load_cases(pathlib.Path(args.cases))
