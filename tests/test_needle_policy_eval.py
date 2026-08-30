@@ -113,3 +113,27 @@ class TrainReplayContractTest(unittest.TestCase):
         self.assertIn("results/train-tuned.jsonl", text)
         self.assertIn("results/train-replay-receipt.json", text)
         self.assertNotIn("needle finetune", text)
+
+class CompareOptionalMetricTest(unittest.TestCase):
+    def test_compare_keeps_negative_control_delta_null_when_metric_not_applicable(self):
+        module = load_module("compare_policy_eval_optional", COMPARE)
+        base = [{"id": "a", "category": "training_replay", "expected": "PROBE", "predicted": "PROBE", "correct": True}]
+        tuned = [{"id": "a", "category": "training_replay", "expected": "PROBE", "predicted": "READY", "correct": False}]
+        result = module.compare(base, tuned)
+        self.assertIsNone(result["base"]["negative_control_no_call_rate"])
+        self.assertIsNone(result["tuned"]["negative_control_no_call_rate"])
+        self.assertIsNone(result["delta"]["negative_control_no_call_rate"])
+
+class MarkdownOptionalMetricTest(unittest.TestCase):
+    def test_markdown_renders_inapplicable_negative_control_metric_as_na(self):
+        module = load_module("compare_policy_eval_markdown_optional", COMPARE)
+        receipt = {"comparison": {
+            "base": {"overall_accuracy": 0.5, "routing_accuracy": 0.5, "negative_control_no_call_rate": None},
+            "tuned": {"overall_accuracy": 0.75, "routing_accuracy": 0.75, "negative_control_no_call_rate": None},
+            "delta": {"overall_accuracy": 0.25, "routing_accuracy": 0.25, "negative_control_no_call_rate": None},
+            "changed_predictions": [],
+        }}
+        text = module.markdown(receipt)
+        self.assertIn("Base negative-control no-call rate: n/a", text)
+        self.assertIn("Tuned negative-control no-call rate: n/a", text)
+        self.assertIn("Delta negative-control no-call: n/a", text)

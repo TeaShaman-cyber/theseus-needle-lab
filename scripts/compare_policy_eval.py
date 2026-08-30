@@ -11,6 +11,18 @@ LABELS = ["PROBE", "READY", "UNKNOWN", "NO_CALL", "INVALID"]
 ROUTING = {"PROBE", "READY", "UNKNOWN"}
 
 
+def _delta(base, tuned):
+    if base is None or tuned is None:
+        return None
+    return tuned - base
+
+
+def _fmt(value, signed=False):
+    if value is None:
+        return "n/a"
+    return f"{value:+.3f}" if signed else f"{value:.3f}"
+
+
 def load_jsonl(path: pathlib.Path) -> list[dict]:
     return [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
 
@@ -69,9 +81,9 @@ def compare(base: list[dict], tuned: list[dict]) -> dict:
         "base": base_score,
         "tuned": tuned_score,
         "delta": {
-            "overall_accuracy": tuned_score["overall_accuracy"] - base_score["overall_accuracy"],
-            "routing_accuracy": tuned_score["routing_accuracy"] - base_score["routing_accuracy"],
-            "negative_control_no_call_rate": tuned_score["negative_control_no_call_rate"] - base_score["negative_control_no_call_rate"],
+            "overall_accuracy": _delta(base_score["overall_accuracy"], tuned_score["overall_accuracy"]),
+            "routing_accuracy": _delta(base_score["routing_accuracy"], tuned_score["routing_accuracy"]),
+            "negative_control_no_call_rate": _delta(base_score["negative_control_no_call_rate"], tuned_score["negative_control_no_call_rate"]),
         },
         "changed_predictions": changed,
     }
@@ -89,15 +101,15 @@ def markdown(receipt: dict) -> str:
     b, t, d = receipt["comparison"]["base"], receipt["comparison"]["tuned"], receipt["comparison"]["delta"]
     return f"""# Needle policy evaluation result
 
-- Base overall accuracy: {b['overall_accuracy']:.3f}
-- Tuned overall accuracy: {t['overall_accuracy']:.3f}
-- Delta overall: {d['overall_accuracy']:+.3f}
-- Base routing accuracy: {b['routing_accuracy']:.3f}
-- Tuned routing accuracy: {t['routing_accuracy']:.3f}
-- Delta routing: {d['routing_accuracy']:+.3f}
-- Base negative-control no-call rate: {b['negative_control_no_call_rate']:.3f}
-- Tuned negative-control no-call rate: {t['negative_control_no_call_rate']:.3f}
-- Delta negative-control no-call: {d['negative_control_no_call_rate']:+.3f}
+- Base overall accuracy: {_fmt(b['overall_accuracy'])}
+- Tuned overall accuracy: {_fmt(t['overall_accuracy'])}
+- Delta overall: {_fmt(d['overall_accuracy'], signed=True)}
+- Base routing accuracy: {_fmt(b['routing_accuracy'])}
+- Tuned routing accuracy: {_fmt(t['routing_accuracy'])}
+- Delta routing: {_fmt(d['routing_accuracy'], signed=True)}
+- Base negative-control no-call rate: {_fmt(b['negative_control_no_call_rate'])}
+- Tuned negative-control no-call rate: {_fmt(t['negative_control_no_call_rate'])}
+- Delta negative-control no-call: {_fmt(d['negative_control_no_call_rate'], signed=True)}
 - Changed predictions: {len(receipt['comparison']['changed_predictions'])}
 
 A workflow success means evaluation execution completed. These metrics do not by themselves establish generalization or acceptance authority.
