@@ -94,3 +94,22 @@ class PolicyEvalContractTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+class TrainReplayContractTest(unittest.TestCase):
+    def test_training_loader_recovers_twelve_original_labels(self):
+        module = load_module("run_policy_eval_train", RUNNER)
+        rows = module.load_training_cases(ROOT / "experiments" / "needle-cpu-smoke" / "data.jsonl")
+        self.assertEqual(len(rows), 12)
+        self.assertEqual(len({row["id"] for row in rows}), 12)
+        self.assertTrue(all(row["category"] == "training_replay" for row in rows))
+        self.assertEqual({k: sum(row["expected"] == k for row in rows) for k in ["PROBE", "READY", "UNKNOWN"]}, {
+            "PROBE": 4, "READY": 4, "UNKNOWN": 4,
+        })
+
+    def test_workflow_replays_training_set_without_finetuning(self):
+        text = WORKFLOW.read_text()
+        self.assertIn("--training-jsonl experiments/needle-cpu-smoke/data.jsonl", text)
+        self.assertIn("results/train-base.jsonl", text)
+        self.assertIn("results/train-tuned.jsonl", text)
+        self.assertIn("results/train-replay-receipt.json", text)
+        self.assertNotIn("needle finetune", text)

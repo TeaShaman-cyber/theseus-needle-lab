@@ -112,6 +112,7 @@ def main() -> None:
     parser.add_argument("--tuned-artifact", required=True)
     parser.add_argument("--output", required=True)
     parser.add_argument("--markdown", required=True)
+    parser.add_argument("--scope", default="bounded_held_out_behavioral_comparison_not_generalization")
     args = parser.parse_args()
 
     base_path = pathlib.Path(args.base)
@@ -122,7 +123,7 @@ def main() -> None:
     receipt = {
         "schema": "theseus.needle.policy_eval.v1",
         "generated_at": datetime.now(timezone.utc).isoformat(),
-        "scope": "bounded_held_out_behavioral_comparison_not_generalization",
+        "scope": args.scope,
         "source": {
             "repository": os.environ.get("GITHUB_REPOSITORY"),
             "commit": os.environ.get("GITHUB_SHA"),

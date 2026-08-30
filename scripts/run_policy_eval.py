@@ -34,6 +34,27 @@ def load_cases(path: pathlib.Path) -> list[dict]:
     return [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
 
 
+def load_training_cases(path: pathlib.Path) -> list[dict]:
+    rows = []
+    for index, raw in enumerate(load_cases(path), start=1):
+        answers = raw.get("answers") or []
+        if not answers:
+            expected = "NO_CALL"
+        elif len(answers) == 1 and answers[0].get("name") == "route":
+            expected = (answers[0].get("arguments") or {}).get("decision")
+            if expected not in DECISIONS:
+                raise ValueError(f"invalid training decision at row {index}: {expected!r}")
+        else:
+            raise ValueError(f"unsupported training answer shape at row {index}")
+        rows.append({
+            "id": f"train-{index:03d}",
+            "category": "training_replay",
+            "query": raw["query"],
+            "expected": expected,
+        })
+    return rows
+
+
 def evaluate(cases: list[dict], weights: str | None, model_id: str, max_new_tokens: int) -> list[dict]:
     import needle
 
@@ -62,15 +83,18 @@ def evaluate(cases: list[dict], weights: str | None, model_id: str, max_new_toke
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--cases", required=True)
+    source = parser.add_mutually_exclusive_group(required=True)
+    source.add_argument("--cases")
+    source.add_argument("--training-jsonl")
     parser.add_argument("--output", required=True)
     parser.add_argument("--model-id", required=True)
     parser.add_argument("--weights")
     parser.add_argument("--max-new-tokens", type=int, default=64)
     args = parser.parse_args()
 
+    cases = load_training_cases(pathlib.Path(args.training_jsonl)) if args.training_jsonl else load_cases(pathlib.Path(args.cases))
     records = evaluate(
-        load_cases(pathlib.Path(args.cases)),
+        cases,
         args.weights,
         args.model_id,
         args.max_new_tokens,

@@ -100,6 +100,44 @@ jobs:
           cat results/summary.md
           cat results/receipt.json
 
+      - name: Replay exact training set on base
+        shell: bash
+        run: |
+          set -o pipefail
+          /usr/bin/time -v -o metrics/train-base.time \
+            python scripts/run_policy_eval.py \
+              --training-jsonl experiments/needle-cpu-smoke/data.jsonl \
+              --output results/train-base.jsonl \
+              --model-id base-train-replay \
+            2>&1 | tee logs/train-base.log
+
+      - name: Replay exact training set on tuned artifact
+        shell: bash
+        run: |
+          set -o pipefail
+          /usr/bin/time -v -o metrics/train-tuned.time \
+            python scripts/run_policy_eval.py \
+              --training-jsonl experiments/needle-cpu-smoke/data.jsonl \
+              --output results/train-tuned.jsonl \
+              --model-id tuned-train-replay \
+              --weights input/smoke/artifacts/tuned.cact \
+            2>&1 | tee logs/train-tuned.log
+
+      - name: Compare training-set replay
+        shell: bash
+        run: |
+          set -eu
+          python scripts/compare_policy_eval.py \
+            --base results/train-base.jsonl \
+            --tuned results/train-tuned.jsonl \
+            --cases experiments/needle-cpu-smoke/data.jsonl \
+            --tuned-artifact input/smoke/artifacts/tuned.cact \
+            --output results/train-replay-receipt.json \
+            --markdown results/train-replay-summary.md \
+            --scope training_replay_diagnostic
+          cat results/train-replay-summary.md
+          cat results/train-replay-receipt.json
+
       - name: Upload evaluation evidence
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
@@ -119,10 +157,18 @@ jobs:
           test -s results/tuned.jsonl
           test -s results/receipt.json
           test -s results/summary.md
+          test -s results/train-base.jsonl
+          test -s results/train-tuned.jsonl
+          test -s results/train-replay-receipt.json
+          test -s results/train-replay-summary.md
           python - <<'PY'
           import json
           receipt = json.load(open('results/receipt.json'))
+          replay = json.load(open('results/train-replay-receipt.json'))
           assert receipt['inputs']['tuned_cact_sha256'] == receipt['inputs']['expected_tuned_cact_sha256']
           assert receipt['comparison']['base']['n'] == 24
           assert receipt['comparison']['tuned']['n'] == 24
+          assert replay['scope'] == 'training_replay_diagnostic'
+          assert replay['comparison']['base']['n'] == 12
+          assert replay['comparison']['tuned']['n'] == 12
           PY
