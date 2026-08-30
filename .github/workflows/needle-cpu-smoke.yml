@@ -1,0 +1,180 @@
+name: Needle CPU smoke
+
+on:
+  push:
+    branches:
+      - experiment/needle-cpu-smoke
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      NEEDLE_TELEMETRY: "0"
+      DO_NOT_TRACK: "1"
+      HF_HUB_DISABLE_TELEMETRY: "1"
+      HF_HUB_DISABLE_PROGRESS_BARS: "1"
+      PYTHONUNBUFFERED: "1"
+      PIP_DISABLE_PIP_VERSION_CHECK: "1"
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.11"
+
+      - name: Record runner identity
+        shell: bash
+        run: |
+          set -eu
+          mkdir -p artifacts logs metrics
+          python - <<'PY'
+          import json, os, pathlib, shutil
+          mem_total_kb = None
+          for line in pathlib.Path('/proc/meminfo').read_text().splitlines():
+              if line.startswith('MemTotal:'):
+                  mem_total_kb = int(line.split()[1])
+                  break
+          disk = shutil.disk_usage('.')
+          payload = {
+              'mem_total_kb': mem_total_kb,
+              'disk_total_bytes': disk.total,
+              'disk_free_bytes_at_start': disk.free,
+              'image_os': os.environ.get('ImageOS'),
+              'image_version': os.environ.get('ImageVersion'),
+          }
+          pathlib.Path('metrics/runner.json').write_text(json.dumps(payload, indent=2) + '\n')
+          PY
+          uname -a | tee logs/uname.log
+          cat /etc/os-release | tee logs/os-release.log
+
+      - name: Install Needle training dependencies
+        id: install
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -uo pipefail
+          start=$(date +%s)
+          python -m pip install "cactus-needle[train]==2.0.8" 2>&1 | tee logs/install.log
+          rc=${PIPESTATUS[0]}
+          end=$(date +%s)
+          printf '%s\n' "$((end-start))" > metrics/install.seconds
+          exit "$rc"
+
+      - name: Record package versions
+        if: steps.install.outcome == 'success'
+        shell: bash
+        run: |
+          set -eu
+          python - <<'PY' | tee logs/package-versions.log
+          import importlib.metadata
+          for name in ['cactus-needle','jax','jaxlib','flax','optax','numpy','sentencepiece','huggingface-hub']:
+              try:
+                  print(f'{name}={importlib.metadata.version(name)}')
+              except importlib.metadata.PackageNotFoundError:
+                  print(f'{name}=MISSING')
+          PY
+          needle --help > logs/needle-help.log
+
+      - name: Download real Needle 2 checkpoint
+        id: checkpoint
+        if: steps.install.outcome == 'success'
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -eu
+          start=$(date +%s)
+          python - <<'PY' 2>&1 | tee logs/checkpoint-download.log
+          from huggingface_hub import hf_hub_download
+          path = hf_hub_download(
+              'Cactus-Compute/needle2',
+              'checkpoints/needle2.pkl',
+              repo_type='model',
+              local_dir='.',
+          )
+          print(path)
+          PY
+          end=$(date +%s)
+          printf '%s\n' "$((end-start))" > metrics/checkpoint.seconds
+          test -s checkpoints/needle2.pkl
+          sha256sum checkpoints/needle2.pkl | tee metrics/checkpoint.sha256
+
+      - name: Fine-tune LoRA adapter on CPU
+        id: finetune
+        if: steps.checkpoint.outcome == 'success'
+        continue-on-error: true
+        timeout-minutes: 35
+        shell: bash
+        run: |
+          set -o pipefail
+          /usr/bin/time -v -o metrics/finetune.time \
+            needle finetune experiments/needle-cpu-smoke/data.jsonl \
+              --checkpoint checkpoints/needle2.pkl \
+              --epochs 1 \
+              --batch-size 2 \
+              --lora-rank 4 \
+              --max-len 128 \
+              --out artifacts/adapter.pkl \
+            2>&1 | tee logs/finetune.log
+
+      - name: Build tuned cact
+        id: build
+        if: steps.finetune.outcome == 'success'
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          /usr/bin/time -v -o metrics/build.time \
+            needle build checkpoints/needle2.pkl \
+              --lora artifacts/adapter.pkl \
+              --out artifacts/tuned.cact \
+            2>&1 | tee logs/build.log
+
+      - name: Write receipt
+        if: always()
+        env:
+          INSTALL_OUTCOME: ${{ steps.install.outcome }}
+          CHECKPOINT_OUTCOME: ${{ steps.checkpoint.outcome }}
+          FINETUNE_OUTCOME: ${{ steps.finetune.outcome }}
+          BUILD_OUTCOME: ${{ steps.build.outcome }}
+        shell: bash
+        run: |
+          set -eu
+          python scripts/write_smoke_receipt.py \
+            --output artifacts/receipt.json \
+            --metrics-dir metrics \
+            --data experiments/needle-cpu-smoke/data.jsonl \
+            --workflow .github/workflows/needle-cpu-smoke.yml \
+            --checkpoint checkpoints/needle2.pkl \
+            --adapter artifacts/adapter.pkl \
+            --cact artifacts/tuned.cact
+          cat artifacts/receipt.json
+
+      - name: Upload smoke evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: needle-cpu-smoke-${{ github.run_id }}
+          path: |
+            artifacts/
+            logs/
+            metrics/
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Assert end-to-end smoke completed
+        if: always()
+        shell: bash
+        run: |
+          set -eu
+          test "${{ steps.install.outcome }}" = success
+          test "${{ steps.checkpoint.outcome }}" = success
+          test "${{ steps.finetune.outcome }}" = success
+          test "${{ steps.build.outcome }}" = success
+          test -s artifacts/receipt.json
+          test -s artifacts/adapter.pkl
+          test -s artifacts/tuned.cact

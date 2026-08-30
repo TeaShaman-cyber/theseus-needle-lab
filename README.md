@@ -11,7 +11,7 @@ Its purpose is to make Needle learning experiments observable, reproducible, and
 - Training or learning outputs become accepted results only after explicit evaluation and verification.
 - Secrets, credentials, private corpora, and user conversation data must not be committed to this public repository or emitted to public logs.
 - Public visibility is for research transparency. In the absence of an explicit license, public visibility does not grant open-source reuse rights.
-- Real Needle training CI is intentionally not implemented during bootstrap. The first research issue must establish the actual executable Needle interface and runtime requirements before a training workflow is proposed.
+- The first real Needle training CI is a bounded CPU feasibility smoke under Issue #1. It measures the supported `finetune -> build` path and does not establish model quality, scientific validity, or production readiness.
 
 ## Research flow
 

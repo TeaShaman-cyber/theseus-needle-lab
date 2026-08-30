@@ -21,4 +21,4 @@ Issue
 - GitHub Wiki and Pages are navigation/presentation layers, not authority over versioned repository records.
 - GitHub-hosted artifacts are retention-bound storage; integrity is established by recorded content hashes, not by assuming storage immutability.
 
-The bootstrap intentionally contains no Needle training command. A later reviewed change may add one only after the real interface and runtime requirements are measured.
+Issue #1 established the executable Needle interface well enough to add one bounded CPU feasibility smoke. The smoke is execution evidence only; broader training infrastructure still requires measured runtime evidence and separate review.
