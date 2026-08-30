@@ -1,0 +1,128 @@
+name: Needle policy eval
+
+on:
+  push:
+    branches:
+      - experiment/needle-policy-eval
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  evaluate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      NEEDLE_TELEMETRY: "0"
+      DO_NOT_TRACK: "1"
+      HF_HUB_DISABLE_TELEMETRY: "1"
+      HF_HUB_DISABLE_PROGRESS_BARS: "1"
+      PYTHONUNBUFFERED: "1"
+      PIP_DISABLE_PIP_VERSION_CHECK: "1"
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.11"
+
+      - name: Download exact CPU-smoke artifact
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: needle-cpu-smoke-33319821037
+          path: input/smoke
+          repository: TeaShaman-cyber/theseus-needle-lab
+          run-id: 33319821037
+          github-token: ${{ github.token }}
+
+      - name: Verify tuned artifact identity
+        shell: bash
+        run: |
+          set -eu
+          expected=3c0c684888c0d796e1b3a62326fbb1f3cc991f6ee5a0e596ac448df99edef10a
+          actual=$(sha256sum input/smoke/artifacts/tuned.cact | awk '{print $1}')
+          printf 'expected=%s\nactual=%s\n' "$expected" "$actual"
+          test "$actual" = "$expected"
+          test "$(stat -c %s input/smoke/artifacts/tuned.cact)" = 13737807
+
+      - name: Install Needle runtime
+        shell: bash
+        run: |
+          set -eu
+          mkdir -p results logs metrics
+          start=$(date +%s)
+          python -m pip install "cactus-needle==2.0.8" 2>&1 | tee logs/install.log
+          end=$(date +%s)
+          printf '%s\n' "$((end-start))" > metrics/install.seconds
+          python - <<'PY' | tee logs/package-versions.log
+          import importlib.metadata, platform
+          print('python=' + platform.python_version())
+          for name in ['cactus-needle','huggingface-hub']:
+              print(f'{name}={importlib.metadata.version(name)}')
+          PY
+
+      - name: Evaluate untouched base model
+        shell: bash
+        run: |
+          set -o pipefail
+          /usr/bin/time -v -o metrics/base.time \
+            python scripts/run_policy_eval.py \
+              --cases experiments/needle-policy-eval/cases.jsonl \
+              --output results/base.jsonl \
+              --model-id base \
+            2>&1 | tee logs/base.log
+
+      - name: Evaluate exact tuned artifact
+        shell: bash
+        run: |
+          set -o pipefail
+          /usr/bin/time -v -o metrics/tuned.time \
+            python scripts/run_policy_eval.py \
+              --cases experiments/needle-policy-eval/cases.jsonl \
+              --output results/tuned.jsonl \
+              --model-id tuned \
+              --weights input/smoke/artifacts/tuned.cact \
+            2>&1 | tee logs/tuned.log
+
+      - name: Compare base and tuned
+        shell: bash
+        run: |
+          set -eu
+          python scripts/compare_policy_eval.py \
+            --base results/base.jsonl \
+            --tuned results/tuned.jsonl \
+            --cases experiments/needle-policy-eval/cases.jsonl \
+            --tuned-artifact input/smoke/artifacts/tuned.cact \
+            --output results/receipt.json \
+            --markdown results/summary.md
+          cat results/summary.md
+          cat results/receipt.json
+
+      - name: Upload evaluation evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: needle-policy-eval-${{ github.run_id }}
+          path: |
+            results/
+            logs/
+            metrics/
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Assert evaluation completed
+        shell: bash
+        run: |
+          set -eu
+          test -s results/base.jsonl
+          test -s results/tuned.jsonl
+          test -s results/receipt.json
+          test -s results/summary.md
+          python - <<'PY'
+          import json
+          receipt = json.load(open('results/receipt.json'))
+          assert receipt['inputs']['tuned_cact_sha256'] == receipt['inputs']['expected_tuned_cact_sha256']
+          assert receipt['comparison']['base']['n'] == 24
+          assert receipt['comparison']['tuned']['n'] == 24
+          PY
