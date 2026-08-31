@@ -188,3 +188,95 @@ class QuantizationProbeContractTest(unittest.TestCase):
         self.assertIn("--weights results/tuned-w4.cact", text)
         self.assertIn("results/quantization-receipt.json", text)
         self.assertNotIn("needle finetune", text)
+
+FRAMING_RUNNER = ROOT / "scripts" / "run_framing_probe.py"
+FRAMING_RECEIPT = ROOT / "scripts" / "framing_probe_receipt.py"
+FRAMING_WORKFLOW = ROOT / ".github" / "workflows" / "needle-framing-2x2.yml"
+
+
+class FramingProbeContractTest(unittest.TestCase):
+    def test_schema_and_query_factors_form_exact_two_by_two(self):
+        self.assertTrue(FRAMING_RUNNER.is_file())
+        module = load_module("run_framing_probe_contract", FRAMING_RUNNER)
+        arms = module.arm_specs()
+        self.assertEqual(set(arms), {"A", "B", "C", "D"})
+        self.assertEqual(arms["A"], {"described_schema": False, "explicit_prefix": False})
+        self.assertEqual(arms["B"], {"described_schema": False, "explicit_prefix": True})
+        self.assertEqual(arms["C"], {"described_schema": True, "explicit_prefix": False})
+        self.assertEqual(arms["D"], {"described_schema": True, "explicit_prefix": True})
+
+        bare = module.route_schema(False)
+        described = module.route_schema(True)
+        self.assertNotIn("description", bare)
+        self.assertIn("Always use route for this classification", described["description"])
+        self.assertEqual(bare["parameters"], described["parameters"])
+
+        q = "Evidence statement."
+        self.assertEqual(module.frame_query(q, False), q)
+        self.assertEqual(
+            module.frame_query(q, True),
+            "Use route to classify the following evidence:\n\nEvidence statement.",
+        )
+
+    def test_direct_canaries_use_bare_schema_and_cover_all_three_decisions(self):
+        self.assertTrue(FRAMING_RUNNER.is_file())
+        module = load_module("run_framing_probe_canaries", FRAMING_RUNNER)
+        self.assertEqual(module.canary_cases(), [
+            {"id": "canary-PROBE", "query": "Call route with decision PROBE.", "expected": "PROBE"},
+            {"id": "canary-READY", "query": "Call route with decision READY.", "expected": "READY"},
+            {"id": "canary-UNKNOWN", "query": "Call route with decision UNKNOWN.", "expected": "UNKNOWN"},
+        ])
+        self.assertNotIn("description", module.route_schema(False))
+
+    def test_workflow_runs_base_only_and_never_trains_or_loads_tuned_weights(self):
+        self.assertTrue(FRAMING_WORKFLOW.is_file())
+        text = FRAMING_WORKFLOW.read_text()
+        self.assertIn("experiment/needle-framing-2x2", text)
+        self.assertIn('cactus-needle==2.0.8', text)
+        self.assertIn("experiments/needle-cpu-smoke/data.jsonl", text)
+        self.assertIn("run_framing_probe.py", text)
+        self.assertIn("framing_probe_receipt.py", text)
+        self.assertIn("--max-new-tokens 256", text)
+        self.assertNotIn("needle finetune", text)
+        self.assertNotIn("needle build", text)
+        self.assertNotIn("--weights", text)
+        self.assertNotIn("secrets.", text)
+
+
+class FramingProbeReceiptTest(unittest.TestCase):
+    def test_receipt_separates_call_reachability_from_decision_accuracy(self):
+        self.assertTrue(FRAMING_RECEIPT.is_file())
+        module = load_module("framing_probe_receipt_contract", FRAMING_RECEIPT)
+        canaries = [
+            {"id": "canary-PROBE", "expected": "PROBE", "predicted": "PROBE", "valid_route_call": True, "correct": True},
+            {"id": "canary-READY", "expected": "READY", "predicted": "READY", "valid_route_call": True, "correct": True},
+            {"id": "canary-UNKNOWN", "expected": "UNKNOWN", "predicted": "UNKNOWN", "valid_route_call": True, "correct": True},
+        ]
+        arms = {
+            "A": [
+                {"id": "train-001", "expected": "PROBE", "predicted": "NO_CALL", "valid_route_call": False, "correct": False},
+                {"id": "train-002", "expected": "READY", "predicted": "READY", "valid_route_call": True, "correct": True},
+            ],
+            "B": [
+                {"id": "train-001", "expected": "PROBE", "predicted": "PROBE", "valid_route_call": True, "correct": True},
+                {"id": "train-002", "expected": "READY", "predicted": "UNKNOWN", "valid_route_call": True, "correct": False},
+            ],
+            "C": [
+                {"id": "train-001", "expected": "PROBE", "predicted": "PROBE", "valid_route_call": True, "correct": True},
+                {"id": "train-002", "expected": "READY", "predicted": "READY", "valid_route_call": True, "correct": True},
+            ],
+            "D": [
+                {"id": "train-001", "expected": "PROBE", "predicted": "PROBE", "valid_route_call": True, "correct": True},
+                {"id": "train-002", "expected": "READY", "predicted": "READY", "valid_route_call": True, "correct": True},
+            ],
+        }
+        receipt = module.build_receipt(canaries, arms, commit="c" * 40, run_id="123")
+        self.assertTrue(receipt["canaries"]["all_pass"])
+        self.assertEqual(receipt["arms"]["A"]["valid_call_rate"], 0.5)
+        self.assertEqual(receipt["arms"]["A"]["decision_accuracy"], 0.5)
+        self.assertEqual(receipt["arms"]["B"]["valid_call_rate"], 1.0)
+        self.assertEqual(receipt["arms"]["B"]["decision_accuracy"], 0.5)
+        self.assertEqual(receipt["effects"]["call_rate"]["prefix_with_bare_schema"], 0.5)
+        self.assertEqual(receipt["effects"]["call_rate"]["description_without_prefix"], 0.5)
+        self.assertEqual(receipt["effects"]["decision_accuracy"]["prefix_with_bare_schema"], 0.0)
+        self.assertEqual(receipt["interpretation_boundary"], "descriptive_zero_training_probe_not_statistical_significance")
