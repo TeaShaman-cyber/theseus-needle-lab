@@ -188,3 +188,78 @@ class QuantizationProbeContractTest(unittest.TestCase):
         self.assertIn("--weights results/tuned-w4.cact", text)
         self.assertIn("results/quantization-receipt.json", text)
         self.assertNotIn("needle finetune", text)
+
+SEEDED_FINETUNE = ROOT / "scripts" / "run_seeded_finetune.py"
+TARGET_COVERAGE = ROOT / "scripts" / "target_coverage.py"
+MAXLEN_WORKFLOW = ROOT / ".github" / "workflows" / "needle-maxlen-ab.yml"
+
+class MaxLenABContractTest(unittest.TestCase):
+    def test_seeded_wrapper_exists_and_seeds_numpy_before_finetune(self):
+        self.assertTrue(SEEDED_FINETUNE.is_file())
+        text = SEEDED_FINETUNE.read_text()
+        self.assertIn("np.random.seed(args.seed)", text)
+        self.assertIn("finetune_local(args)", text)
+        self.assertIn("--seed", text)
+        self.assertIn("--max-len", text)
+
+    def test_target_coverage_math_detects_truncated_target(self):
+        self.assertTrue(TARGET_COVERAGE.is_file())
+        module = load_module("target_coverage", TARGET_COVERAGE)
+        complete = module.coverage_record(prompt_tokens=80, target_tokens=40, cap=128)
+        truncated = module.coverage_record(prompt_tokens=92, target_tokens=38, cap=128)
+        self.assertTrue(complete["target_complete"])
+        self.assertTrue(complete["eos_kept"])
+        self.assertEqual(complete["target_tokens_retained"], 40)
+        self.assertFalse(truncated["target_complete"])
+        self.assertFalse(truncated["eos_kept"])
+        self.assertEqual(truncated["target_tokens_retained"], 35)
+
+    def test_workflow_is_paired_seeded_and_changes_only_max_len_between_training_arms(self):
+        self.assertTrue(MAXLEN_WORKFLOW.is_file())
+        text = MAXLEN_WORKFLOW.read_text()
+        self.assertIn("experiment/needle-maxlen-ab", text)
+        self.assertIn("cactus-needle==2.0.8", text)
+        self.assertIn("4b0a972d163ffc7678fb3c36bace508114872e9d2ce9e10f225825752d3795bc", text)
+        self.assertEqual(text.count("--seed 0"), 2)
+        self.assertEqual(text.count("--epochs 1"), 2)
+        self.assertEqual(text.count("--batch-size 2"), 2)
+        self.assertEqual(text.count("--lr 1e-4"), 2)
+        self.assertEqual(text.count("--lora-rank 4"), 2)
+        self.assertEqual(text.count("--lora-alpha 32"), 2)
+        self.assertEqual(text.count("--max-len 128"), 1)
+        self.assertEqual(text.count("--max-len 1024"), 1)
+        self.assertEqual(text.count("--bits 4"), 2)
+        self.assertEqual(text.count("--max-new-tokens 256"), 4)
+        self.assertIn("target_coverage.py", text)
+        self.assertIn("assert_full_training_targets", text)
+        self.assertNotIn("OpenRouter", text)
+        self.assertNotIn("secrets.", text)
+
+MAXLEN_RECEIPT = ROOT / "scripts" / "maxlen_ab_receipt.py"
+
+class MaxLenABReceiptContractTest(unittest.TestCase):
+    def test_receipt_records_both_artifacts_coverage_seed_and_train_delta(self):
+        self.assertTrue(MAXLEN_RECEIPT.is_file())
+        module = load_module("maxlen_ab_receipt", MAXLEN_RECEIPT)
+        a = [{"id":"train-001","category":"training_replay","expected":"PROBE","predicted":"NO_CALL","correct":False,"max_new_tokens":256}]
+        b = [{"id":"train-001","category":"training_replay","expected":"PROBE","predicted":"PROBE","correct":True,"max_new_tokens":256}]
+        receipt = module.build_receipt(
+            train_a=a,
+            train_b=b,
+            heldout_a=[],
+            heldout_b=[],
+            coverage_a={"effective_max_len":128,"summary":{"training_truncated_rows":[7,9,12]}},
+            coverage_b={"effective_max_len":256,"summary":{"training_truncated_rows":[]}},
+            adapter_a_sha256="a"*64,
+            adapter_b_sha256="b"*64,
+            cact_a_sha256="c"*64,
+            cact_b_sha256="d"*64,
+            seed=0,
+        )
+        self.assertEqual(receipt["schema"], "theseus.needle.maxlen_ab.v1")
+        self.assertEqual(receipt["config"]["seed"], 0)
+        self.assertEqual(receipt["arms"]["a"]["effective_max_len"], 128)
+        self.assertEqual(receipt["arms"]["b"]["effective_max_len"], 256)
+        self.assertEqual(receipt["arms"]["a"]["training_truncated_rows"], [7,9,12])
+        self.assertEqual(receipt["arms"]["b"]["training_truncated_rows"], [])
+        self.assertEqual(receipt["train_comparison"]["delta"]["overall_accuracy"], 1.0)
