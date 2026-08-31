@@ -354,3 +354,73 @@ class TargetStrength2x2ReceiptTest(unittest.TestCase):
         self.assertEqual(effects["encoding_at_3_epochs"], 0.25)
         self.assertEqual(effects["interaction_difference_of_differences"], 0.0)
         self.assertEqual(receipt["interpretation_boundary"], "descriptive_effects_not_statistical_significance")
+
+CORRECTED_DERIVE = ROOT / "scripts" / "derive_corrected_contract.py"
+CORRECTED_EVAL = ROOT / "scripts" / "run_corrected_contract_eval.py"
+CORRECTED_RECEIPT = ROOT / "scripts" / "corrected_contract_receipt.py"
+CORRECTED_WORKFLOW = ROOT / ".github" / "workflows" / "needle-corrected-contract-ab.yml"
+
+class CorrectedContractExperimentTest(unittest.TestCase):
+    def test_derivation_changes_only_query_framing_and_route_description(self):
+        self.assertTrue(CORRECTED_DERIVE.is_file())
+        module = load_module("derive_corrected_contract", CORRECTED_DERIVE)
+        src = {
+            "query": "Evidence text.",
+            "reasoning": "reason",
+            "tools": [{"name": "route", "parameters": {"type":"object", "properties":{"decision":{"type":"string","enum":["PROBE","READY","UNKNOWN"]}}, "required":["decision"]}}],
+            "answers": [{"name":"route", "arguments":{"decision":"PROBE"}}],
+        }
+        dst = module.correct_row(src)
+        self.assertEqual(dst["query"], module.CLASSIFICATION_PREFIX + "\n\n" + src["query"])
+        self.assertEqual(dst["reasoning"], src["reasoning"])
+        self.assertEqual(dst["answers"], src["answers"])
+        self.assertEqual(dst["tools"][0]["name"], "route")
+        self.assertEqual(dst["tools"][0]["parameters"], src["tools"][0]["parameters"])
+        self.assertEqual(dst["tools"][0]["description"], module.ROUTE_DESCRIPTION)
+
+    def test_corrected_evaluator_uses_described_schema_and_explicit_prefix(self):
+        self.assertTrue(CORRECTED_EVAL.is_file())
+        module = load_module("run_corrected_contract_eval", CORRECTED_EVAL)
+        self.assertEqual(module.ROUTE_SCHEMA["description"], module.ROUTE_DESCRIPTION)
+        self.assertIn("Always use route", module.ROUTE_DESCRIPTION)
+        self.assertEqual(module.frame_query("abc"), module.CLASSIFICATION_PREFIX + "\n\nabc")
+        self.assertEqual(module.classify_response({"type":"call","function_calls":[{"name":"route","arguments":{"decision":"READY"}}]}), "READY")
+
+    def test_workflow_reuses_frozen_old_control_and_trains_exactly_one_corrected_arm(self):
+        self.assertTrue(CORRECTED_WORKFLOW.is_file())
+        text = CORRECTED_WORKFLOW.read_text()
+        self.assertIn("run-id: 33432515778", text)
+        self.assertIn("needle-target-strength-2x2-33432515778", text)
+        self.assertIn("04373540e8e69c54fbab4e714681a610b4115ec3b60fade8fff4391bf95841de", text)
+        self.assertEqual(text.count("run_seeded_finetune.py"), 1)
+        self.assertIn("--epochs 3", text)
+        self.assertIn("--batch-size 2", text)
+        self.assertIn("--lr 1e-4", text)
+        self.assertIn("--lora-rank 4", text)
+        self.assertIn("--lora-alpha 32", text)
+        self.assertIn("--max-len 1024", text)
+        self.assertIn("--bits 4", text)
+        self.assertIn("--model-id base-corrected-framing", text)
+        self.assertIn("--model-id old-tuned-corrected-framing", text)
+        self.assertIn("--model-id corrected-tuned-corrected-framing", text)
+        self.assertNotIn("secrets.", text)
+
+class CorrectedContractReceiptTest(unittest.TestCase):
+    def test_receipt_reports_call_rate_and_decision_accuracy_for_three_models(self):
+        self.assertTrue(CORRECTED_RECEIPT.is_file())
+        module = load_module("corrected_contract_receipt", CORRECTED_RECEIPT)
+        rows = lambda preds: [
+            {"id":"a","expected":"PROBE","predicted":preds[0],"correct":preds[0]=="PROBE","valid_route_call":preds[0] not in {"NO_CALL","INVALID"}},
+            {"id":"b","expected":"READY","predicted":preds[1],"correct":preds[1]=="READY","valid_route_call":preds[1] not in {"NO_CALL","INVALID"}},
+        ]
+        receipt = module.build_receipt(
+            rows(["NO_CALL","READY"]), rows(["PROBE","NO_CALL"]), rows(["PROBE","READY"]),
+            rows(["NO_CALL","READY"]), rows(["PROBE","NO_CALL"]), rows(["PROBE","READY"]),
+            source_sha256="s"*64, corrected_sha256="c"*64,
+            old_cact_sha256="o"*64, corrected_adapter_sha256="a"*64, corrected_cact_sha256="n"*64,
+        )
+        self.assertEqual(receipt["schema"], "theseus.needle.corrected_contract_ab.v1")
+        self.assertEqual(receipt["train"]["base"]["valid_call_rate"], 0.5)
+        self.assertEqual(receipt["train"]["old_tuned"]["decision_accuracy"], 0.5)
+        self.assertEqual(receipt["train"]["corrected_tuned"]["decision_accuracy"], 1.0)
+        self.assertEqual(receipt["effects"]["corrected_minus_old_train_accuracy"], 0.5)

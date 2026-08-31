@@ -1,0 +1,177 @@
+name: Needle corrected contract A/B
+
+on:
+  push:
+    branches:
+      - experiment/needle-corrected-contract-ab
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  NEEDLE_TELEMETRY: "0"
+  DO_NOT_TRACK: "1"
+  HF_HUB_DISABLE_TELEMETRY: "1"
+  HF_HUB_DISABLE_PROGRESS_BARS: "1"
+  PYTHONUNBUFFERED: "1"
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+
+jobs:
+  compare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.11"
+
+      - name: Download frozen old-contract control
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: needle-target-strength-2x2-33432515778
+          path: input/old
+          repository: TeaShaman-cyber/theseus-needle-lab
+          run-id: 33432515778
+          github-token: ${{ github.token }}
+
+      - name: Verify frozen control identity
+        shell: bash
+        run: |
+          set -eu
+          expected=04373540e8e69c54fbab4e714681a610b4115ec3b60fade8fff4391bf95841de
+          actual=$(sha256sum input/old/artifacts/b-w4.cact | awk '{print $1}')
+          printf 'expected=%s\nactual=%s\n' "$expected" "$actual"
+          test "$actual" = "$expected"
+
+      - name: Install pinned Needle
+        shell: bash
+        run: |
+          set -eu
+          mkdir -p checkpoints artifacts results logs metrics
+          python -m pip install "cactus-needle==2.0.8" 2>&1 | tee logs/install.log
+          python - <<'PY' | tee logs/package-versions.log
+          import importlib.metadata, platform
+          print('python=' + platform.python_version())
+          for name in ['cactus-needle','jax','jaxlib','flax','optax','sentencepiece','huggingface-hub']:
+              print(f'{name}={importlib.metadata.version(name)}')
+          PY
+
+      - name: Download and verify exact base checkpoint
+        shell: bash
+        run: |
+          set -eu
+          python - <<'PY' 2>&1 | tee logs/checkpoint-download.log
+          from huggingface_hub import hf_hub_download
+          print(hf_hub_download('Cactus-Compute/needle2','checkpoints/needle2.pkl',repo_type='model',local_dir='.'))
+          PY
+          expected=4b0a972d163ffc7678fb3c36bace508114872e9d2ce9e10f225825752d3795bc
+          actual=$(sha256sum checkpoints/needle2.pkl | awk '{print $1}')
+          test "$actual" = "$expected"
+
+      - name: Derive corrected-contract dataset
+        shell: bash
+        run: |
+          set -eu
+          python scripts/derive_corrected_contract.py experiments/needle-cpu-smoke/data.jsonl --output results/corrected.jsonl
+          python - <<'PY'
+          import json
+          src=[json.loads(x) for x in open('experiments/needle-cpu-smoke/data.jsonl') if x.strip()]
+          dst=[json.loads(x) for x in open('results/corrected.jsonl') if x.strip()]
+          assert len(src) == len(dst) == 12
+          for s,d in zip(src,dst):
+              assert d['query'].endswith(s['query'])
+              assert d['answers'] == s['answers']
+              assert d.get('reasoning') == s.get('reasoning')
+              assert d['tools'][0]['parameters'] == s['tools'][0]['parameters']
+              assert d['tools'][0].get('description')
+          PY
+          sha256sum experiments/needle-cpu-smoke/data.jsonl results/corrected.jsonl | tee metrics/datasets.sha256
+
+      - name: Assert corrected targets fit without truncation
+        shell: bash
+        run: |
+          set -eu
+          python scripts/target_coverage.py --data results/corrected.jsonl --cap 1024 --output results/coverage.json --assert-full-training-targets
+          python - <<'PY'
+          import json
+          c=json.load(open('results/coverage.json'))
+          assert c['summary']['training_truncated_rows'] == []
+          assert c['validation_rows'] == [10]
+          PY
+
+      - name: Fine-tune corrected contract once
+        shell: bash
+        run: |
+          set -o pipefail
+          /usr/bin/time -v -o metrics/finetune.time \
+            python scripts/run_seeded_finetune.py results/corrected.jsonl \
+              --checkpoint checkpoints/needle2.pkl --seed 0 --epochs 3 --batch-size 2 --lr 1e-4 \
+              --lora-rank 4 --lora-alpha 32 --max-len 1024 --out artifacts/corrected-adapter.pkl \
+            2>&1 | tee logs/finetune.log
+
+      - name: Build corrected uniform W4
+        shell: bash
+        run: |
+          set -o pipefail
+          /usr/bin/time -v -o metrics/build.time \
+            needle build checkpoints/needle2.pkl --lora artifacts/corrected-adapter.pkl --bits 4 --out artifacts/corrected-w4.cact \
+            2>&1 | tee logs/build.log
+          sha256sum artifacts/* input/old/artifacts/b-w4.cact | tee metrics/artifacts.sha256
+
+      - name: Replay training task under corrected framing
+        shell: bash
+        run: |
+          set -o pipefail
+          python scripts/run_corrected_contract_eval.py --training-jsonl experiments/needle-cpu-smoke/data.jsonl --output results/train-base.jsonl --model-id base-corrected-framing --max-new-tokens 256 2>&1 | tee logs/train-base.log
+          python scripts/run_corrected_contract_eval.py --training-jsonl experiments/needle-cpu-smoke/data.jsonl --output results/train-old.jsonl --model-id old-tuned-corrected-framing --max-new-tokens 256 --weights input/old/artifacts/b-w4.cact 2>&1 | tee logs/train-old.log
+          python scripts/run_corrected_contract_eval.py --training-jsonl experiments/needle-cpu-smoke/data.jsonl --output results/train-new.jsonl --model-id corrected-tuned-corrected-framing --max-new-tokens 256 --weights artifacts/corrected-w4.cact 2>&1 | tee logs/train-new.log
+
+      - name: Evaluate held-out task under corrected framing
+        shell: bash
+        run: |
+          set -o pipefail
+          python scripts/run_corrected_contract_eval.py --cases experiments/needle-policy-eval/cases.jsonl --output results/heldout-base.jsonl --model-id base-corrected-framing --max-new-tokens 256 2>&1 | tee logs/heldout-base.log
+          python scripts/run_corrected_contract_eval.py --cases experiments/needle-policy-eval/cases.jsonl --output results/heldout-old.jsonl --model-id old-tuned-corrected-framing --max-new-tokens 256 --weights input/old/artifacts/b-w4.cact 2>&1 | tee logs/heldout-old.log
+          python scripts/run_corrected_contract_eval.py --cases experiments/needle-policy-eval/cases.jsonl --output results/heldout-new.jsonl --model-id corrected-tuned-corrected-framing --max-new-tokens 256 --weights artifacts/corrected-w4.cact 2>&1 | tee logs/heldout-new.log
+
+      - name: Write comparison receipt
+        shell: bash
+        run: |
+          set -eu
+          python scripts/corrected_contract_receipt.py \
+            --train-base results/train-base.jsonl --train-old results/train-old.jsonl --train-new results/train-new.jsonl \
+            --heldout-base results/heldout-base.jsonl --heldout-old results/heldout-old.jsonl --heldout-new results/heldout-new.jsonl \
+            --source-dataset experiments/needle-cpu-smoke/data.jsonl --corrected-dataset results/corrected.jsonl \
+            --old-cact input/old/artifacts/b-w4.cact --corrected-adapter artifacts/corrected-adapter.pkl --corrected-cact artifacts/corrected-w4.cact \
+            --output results/receipt.json --markdown results/summary.md
+          cat results/summary.md
+          cat results/receipt.json
+
+      - name: Assert evidence shape only
+        shell: bash
+        run: |
+          set -eu
+          python - <<'PY'
+          import json
+          r=json.load(open('results/receipt.json'))
+          assert r['schema'] == 'theseus.needle.corrected_contract_ab.v1'
+          assert r['evaluation_contract'] == 'all_models_use_same_corrected_framing'
+          for scope,n in [('train',12),('heldout',24)]:
+              for model in ['base','old_tuned','corrected_tuned']:
+                  assert r[scope][model]['n'] == n
+          PY
+
+      - name: Upload comparison evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: needle-corrected-contract-ab-${{ github.run_id }}
+          path: |
+            artifacts/
+            results/
+            logs/
+            metrics/
+          if-no-files-found: error
+          retention-days: 14
