@@ -14,7 +14,6 @@ ROUTE_DESCRIPTION = (
 )
 ROUTE_SCHEMA = {
     "name": "route",
-    "description": ROUTE_DESCRIPTION,
     "parameters": {
         "type": "object",
         "properties": {
@@ -22,6 +21,7 @@ ROUTE_SCHEMA = {
         },
         "required": ["decision"],
     },
+    "description": ROUTE_DESCRIPTION,
 }
 
 

@@ -23,6 +23,10 @@ def correct_row(row: dict) -> dict:
     return out
 
 
+def serialize_row(row: dict) -> str:
+    return json.dumps(row, ensure_ascii=False)
+
+
 def main() -> None:
     p = argparse.ArgumentParser()
     p.add_argument("source")
@@ -32,7 +36,7 @@ def main() -> None:
     out = pathlib.Path(args.output)
     rows = [json.loads(line) for line in src.read_text().splitlines() if line.strip()]
     out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text("".join(json.dumps(correct_row(row), ensure_ascii=False, sort_keys=True) + "\n" for row in rows))
+    out.write_text("".join(serialize_row(correct_row(row)) + "\n" for row in rows))
     print(json.dumps({"rows": len(rows), "output": str(out)}, sort_keys=True))
 
 

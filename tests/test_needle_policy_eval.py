@@ -424,3 +424,35 @@ class CorrectedContractReceiptTest(unittest.TestCase):
         self.assertEqual(receipt["train"]["old_tuned"]["decision_accuracy"], 0.5)
         self.assertEqual(receipt["train"]["corrected_tuned"]["decision_accuracy"], 1.0)
         self.assertEqual(receipt["effects"]["corrected_minus_old_train_accuracy"], 0.5)
+
+class CorrectedContractSerializationRegressionTest(unittest.TestCase):
+    def test_training_and_evaluation_route_schema_serialize_identically(self):
+        derive = load_module("derive_corrected_contract_serialization", CORRECTED_DERIVE)
+        evaluate = load_module("run_corrected_contract_eval_serialization", CORRECTED_EVAL)
+        src = {
+            "query": "Evidence.",
+            "tools": [{"name":"route","parameters":{"type":"object","properties":{"decision":{"type":"string","enum":["PROBE","READY","UNKNOWN"]}},"required":["decision"]}}],
+            "answers": [{"name":"route","arguments":{"decision":"PROBE"}}],
+        }
+        trained_schema = derive.correct_row(src)["tools"][0]
+        self.assertEqual(
+            json.dumps(trained_schema, separators=(",", ":"), ensure_ascii=False),
+            json.dumps(evaluate.ROUTE_SCHEMA, separators=(",", ":"), ensure_ascii=False),
+        )
+
+class CorrectedContractDatasetRoundTripRegressionTest(unittest.TestCase):
+    def test_written_corrected_row_roundtrips_to_exact_evaluation_schema_order(self):
+        derive = load_module("derive_corrected_contract_roundtrip", CORRECTED_DERIVE)
+        evaluate = load_module("run_corrected_contract_eval_roundtrip", CORRECTED_EVAL)
+        src = {
+            "query": "Evidence.",
+            "tools": [{"name":"route","parameters":{"type":"object","properties":{"decision":{"type":"string","enum":["PROBE","READY","UNKNOWN"]}},"required":["decision"]}}],
+            "answers": [{"name":"route","arguments":{"decision":"PROBE"}}],
+        }
+        line = derive.serialize_row(derive.correct_row(src))
+        roundtripped = json.loads(line)["tools"][0]
+        self.assertEqual(list(roundtripped), ["name", "parameters", "description"])
+        self.assertEqual(
+            json.dumps(roundtripped, separators=(",", ":"), ensure_ascii=False),
+            json.dumps(evaluate.ROUTE_SCHEMA, separators=(",", ":"), ensure_ascii=False),
+        )
