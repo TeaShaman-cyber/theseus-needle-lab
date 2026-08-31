@@ -1,0 +1,207 @@
+name: Needle target strength 2x2
+
+on:
+  push:
+    branches:
+      - experiment/needle-target-strength-2x2
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  NEEDLE_TELEMETRY: "0"
+  DO_NOT_TRACK: "1"
+  HF_HUB_DISABLE_TELEMETRY: "1"
+  HF_HUB_DISABLE_PROGRESS_BARS: "1"
+  PYTHONUNBUFFERED: "1"
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+  SEED: "0"
+
+jobs:
+  factorial:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.11"
+
+      - name: Install pinned Needle
+        shell: bash
+        run: |
+          set -eu
+          mkdir -p checkpoints artifacts results logs metrics
+          python -m pip install "cactus-needle==2.0.8" 2>&1 | tee logs/install.log
+          python - <<'PY' | tee logs/package-versions.log
+          import importlib.metadata, platform
+          print('python=' + platform.python_version())
+          for name in ['cactus-needle','jax','jaxlib','flax','optax','sentencepiece','huggingface-hub']:
+              print(f'{name}={importlib.metadata.version(name)}')
+          PY
+
+      - name: Download and verify exact Needle 2 checkpoint
+        shell: bash
+        run: |
+          set -eu
+          python - <<'PY' 2>&1 | tee logs/checkpoint-download.log
+          from huggingface_hub import hf_hub_download
+          print(hf_hub_download('Cactus-Compute/needle2','checkpoints/needle2.pkl',repo_type='model',local_dir='.'))
+          PY
+          expected=4b0a972d163ffc7678fb3c36bace508114872e9d2ce9e10f225825752d3795bc
+          actual=$(sha256sum checkpoints/needle2.pkl | awk '{print $1}')
+          printf 'expected=%s\nactual=%s\n' "$expected" "$actual"
+          test "$actual" = "$expected"
+
+      - name: Derive tool-call-only training data
+        shell: bash
+        run: |
+          set -eu
+          python scripts/derive_toolcall_only.py experiments/needle-cpu-smoke/data.jsonl --output results/toolcall-only.jsonl
+          python - <<'PY'
+          import json
+          src=[json.loads(x) for x in open('experiments/needle-cpu-smoke/data.jsonl') if x.strip()]
+          dst=[json.loads(x) for x in open('results/toolcall-only.jsonl') if x.strip()]
+          assert len(src) == len(dst) == 12
+          for s,d in zip(src,dst):
+              assert 'reasoning' not in d
+              assert d == {k:v for k,v in s.items() if k != 'reasoning'}
+          PY
+          sha256sum experiments/needle-cpu-smoke/data.jsonl results/toolcall-only.jsonl | tee metrics/datasets.sha256
+
+      - name: Assert both target representations fit without truncation
+        shell: bash
+        run: |
+          set -eu
+          python scripts/target_coverage.py --data experiments/needle-cpu-smoke/data.jsonl --cap 1024 --output results/coverage-reasoning.json --assert-full-training-targets
+          python scripts/target_coverage.py --data results/toolcall-only.jsonl --cap 1024 --output results/coverage-toolcall.json --assert-full-training-targets
+          python - <<'PY'
+          import json
+          a=json.load(open('results/coverage-reasoning.json'))
+          b=json.load(open('results/coverage-toolcall.json'))
+          assert a['summary']['training_truncated_rows'] == []
+          assert b['summary']['training_truncated_rows'] == []
+          assert a['validation_rows'] == b['validation_rows'] == [10]
+          PY
+
+      - name: Fine-tune arm A reasoning plus tool-call one epoch
+        shell: bash
+        run: |
+          set -o pipefail
+          /usr/bin/time -v -o metrics/finetune-a.time \
+            python scripts/run_seeded_finetune.py experiments/needle-cpu-smoke/data.jsonl \
+              --checkpoint checkpoints/needle2.pkl --seed 0 --epochs 1 --batch-size 2 --lr 1e-4 \
+              --lora-rank 4 --lora-alpha 32 --max-len 1024 --out artifacts/adapter-a.pkl \
+            2>&1 | tee logs/finetune-a.log
+
+      - name: Fine-tune arm B reasoning plus tool-call three epochs
+        shell: bash
+        run: |
+          set -o pipefail
+          /usr/bin/time -v -o metrics/finetune-b.time \
+            python scripts/run_seeded_finetune.py experiments/needle-cpu-smoke/data.jsonl \
+              --checkpoint checkpoints/needle2.pkl --seed 0 --epochs 3 --batch-size 2 --lr 1e-4 \
+              --lora-rank 4 --lora-alpha 32 --max-len 1024 --out artifacts/adapter-b.pkl \
+            2>&1 | tee logs/finetune-b.log
+
+      - name: Fine-tune arm C tool-call only one epoch
+        shell: bash
+        run: |
+          set -o pipefail
+          /usr/bin/time -v -o metrics/finetune-c.time \
+            python scripts/run_seeded_finetune.py results/toolcall-only.jsonl \
+              --checkpoint checkpoints/needle2.pkl --seed 0 --epochs 1 --batch-size 2 --lr 1e-4 \
+              --lora-rank 4 --lora-alpha 32 --max-len 1024 --out artifacts/adapter-c.pkl \
+            2>&1 | tee logs/finetune-c.log
+
+      - name: Fine-tune arm D tool-call only three epochs
+        shell: bash
+        run: |
+          set -o pipefail
+          /usr/bin/time -v -o metrics/finetune-d.time \
+            python scripts/run_seeded_finetune.py results/toolcall-only.jsonl \
+              --checkpoint checkpoints/needle2.pkl --seed 0 --epochs 3 --batch-size 2 --lr 1e-4 \
+              --lora-rank 4 --lora-alpha 32 --max-len 1024 --out artifacts/adapter-d.pkl \
+            2>&1 | tee logs/finetune-d.log
+
+      - name: Build uniform W4 artifacts
+        shell: bash
+        run: |
+          set -o pipefail
+          /usr/bin/time -v -o metrics/build-a.time needle build checkpoints/needle2.pkl --lora artifacts/adapter-a.pkl --bits 4 --out artifacts/a-w4.cact 2>&1 | tee logs/build-a.log
+          /usr/bin/time -v -o metrics/build-b.time needle build checkpoints/needle2.pkl --lora artifacts/adapter-b.pkl --bits 4 --out artifacts/b-w4.cact 2>&1 | tee logs/build-b.log
+          /usr/bin/time -v -o metrics/build-c.time needle build checkpoints/needle2.pkl --lora artifacts/adapter-c.pkl --bits 4 --out artifacts/c-w4.cact 2>&1 | tee logs/build-c.log
+          /usr/bin/time -v -o metrics/build-d.time needle build checkpoints/needle2.pkl --lora artifacts/adapter-d.pkl --bits 4 --out artifacts/d-w4.cact 2>&1 | tee logs/build-d.log
+          sha256sum artifacts/*.pkl artifacts/*.cact | tee metrics/artifacts.sha256
+
+      - name: Replay original training task on all four arms
+        shell: bash
+        run: |
+          set -o pipefail
+          python scripts/run_policy_eval.py --training-jsonl experiments/needle-cpu-smoke/data.jsonl --output results/train-a.jsonl --model-id A --max-new-tokens 256 --weights artifacts/a-w4.cact 2>&1 | tee logs/train-a.log
+          python scripts/run_policy_eval.py --training-jsonl experiments/needle-cpu-smoke/data.jsonl --output results/train-b.jsonl --model-id B --max-new-tokens 256 --weights artifacts/b-w4.cact 2>&1 | tee logs/train-b.log
+          python scripts/run_policy_eval.py --training-jsonl experiments/needle-cpu-smoke/data.jsonl --output results/train-c.jsonl --model-id C --max-new-tokens 256 --weights artifacts/c-w4.cact 2>&1 | tee logs/train-c.log
+          python scripts/run_policy_eval.py --training-jsonl experiments/needle-cpu-smoke/data.jsonl --output results/train-d.jsonl --model-id D --max-new-tokens 256 --weights artifacts/d-w4.cact 2>&1 | tee logs/train-d.log
+
+      - name: Evaluate held-out policy on all four arms
+        shell: bash
+        run: |
+          set -o pipefail
+          python scripts/run_policy_eval.py --cases experiments/needle-policy-eval/cases.jsonl --output results/heldout-a.jsonl --model-id A --max-new-tokens 256 --weights artifacts/a-w4.cact 2>&1 | tee logs/heldout-a.log
+          python scripts/run_policy_eval.py --cases experiments/needle-policy-eval/cases.jsonl --output results/heldout-b.jsonl --model-id B --max-new-tokens 256 --weights artifacts/b-w4.cact 2>&1 | tee logs/heldout-b.log
+          python scripts/run_policy_eval.py --cases experiments/needle-policy-eval/cases.jsonl --output results/heldout-c.jsonl --model-id C --max-new-tokens 256 --weights artifacts/c-w4.cact 2>&1 | tee logs/heldout-c.log
+          python scripts/run_policy_eval.py --cases experiments/needle-policy-eval/cases.jsonl --output results/heldout-d.jsonl --model-id D --max-new-tokens 256 --weights artifacts/d-w4.cact 2>&1 | tee logs/heldout-d.log
+
+      - name: Write factorial receipt
+        shell: bash
+        run: |
+          set -eu
+          python scripts/target_strength_2x2_receipt.py \
+            --train-a results/train-a.jsonl --train-b results/train-b.jsonl --train-c results/train-c.jsonl --train-d results/train-d.jsonl \
+            --heldout-a results/heldout-a.jsonl --heldout-b results/heldout-b.jsonl --heldout-c results/heldout-c.jsonl --heldout-d results/heldout-d.jsonl \
+            --adapter-a artifacts/adapter-a.pkl --adapter-b artifacts/adapter-b.pkl --adapter-c artifacts/adapter-c.pkl --adapter-d artifacts/adapter-d.pkl \
+            --cact-a artifacts/a-w4.cact --cact-b artifacts/b-w4.cact --cact-c artifacts/c-w4.cact --cact-d artifacts/d-w4.cact \
+            --source-dataset experiments/needle-cpu-smoke/data.jsonl --derived-dataset results/toolcall-only.jsonl \
+            --seed "$SEED" --output results/receipt.json --markdown results/summary.md
+          cat results/summary.md
+          cat results/receipt.json
+
+      - name: Assert experiment contract
+        shell: bash
+        run: |
+          set -eu
+          python - <<'PY'
+          import json
+          r=json.load(open('results/receipt.json'))
+          assert r['schema'] == 'theseus.needle.target_strength_2x2.v1'
+          assert r['config']['seed'] == 0
+          assert r['config']['batch_size'] == 2
+          assert r['config']['lr'] == 1e-4
+          assert r['config']['lora_rank'] == 4
+          assert r['config']['lora_alpha'] == 32.0
+          assert r['config']['max_len_cap'] == 1024
+          assert r['config']['export_bits'] == 4
+          assert r['config']['max_new_tokens'] == 256
+          assert {k:(r['arms'][k]['target_representation'],r['arms'][k]['epochs']) for k in 'ABCD'} == {
+              'A':('reasoning_plus_tool_call',1), 'B':('reasoning_plus_tool_call',3),
+              'C':('tool_call_only',1), 'D':('tool_call_only',3),
+          }
+          for k in 'ABCD':
+              assert r['arms'][k]['train']['n'] == 12
+              assert r['arms'][k]['heldout']['n'] == 24
+          assert r['interpretation_boundary'] == 'descriptive_effects_not_statistical_significance'
+          PY
+
+      - name: Upload factorial evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: needle-target-strength-2x2-${{ github.run_id }}
+          path: |
+            artifacts/
+            results/
+            logs/
+            metrics/
+          if-no-files-found: error
+          retention-days: 14

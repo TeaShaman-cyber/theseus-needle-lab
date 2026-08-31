@@ -265,3 +265,92 @@ class MaxLenABReceiptContractTest(unittest.TestCase):
         self.assertEqual(receipt["arms"]["a"]["training_truncated_rows"], [7,9,12])
         self.assertEqual(receipt["arms"]["b"]["training_truncated_rows"], [])
         self.assertEqual(receipt["train_comparison"]["delta"]["overall_accuracy"], 1.0)
+
+DERIVE_TOOLCALL = ROOT / "scripts" / "derive_toolcall_only.py"
+FACTORIAL_RECEIPT = ROOT / "scripts" / "target_strength_2x2_receipt.py"
+FACTORIAL_WORKFLOW = ROOT / ".github" / "workflows" / "needle-target-strength-2x2.yml"
+
+class TargetStrength2x2ContractTest(unittest.TestCase):
+    def test_toolcall_only_derivation_removes_reasoning_and_preserves_task_fields(self):
+        self.assertTrue(DERIVE_TOOLCALL.is_file())
+        module = load_module("derive_toolcall_only", DERIVE_TOOLCALL)
+        source = {
+            "query": "q",
+            "tools": [{"name": "route"}],
+            "reasoning": "because",
+            "answers": [{"name": "route", "arguments": {"decision": "READY"}}],
+            "system": "keep",
+        }
+        derived = module.derive_row(source)
+        self.assertNotIn("reasoning", derived)
+        self.assertEqual(derived["query"], source["query"])
+        self.assertEqual(derived["tools"], source["tools"])
+        self.assertEqual(derived["answers"], source["answers"])
+        self.assertEqual(derived["system"], "keep")
+        self.assertEqual(set(derived), set(source) - {"reasoning"})
+
+    def test_workflow_has_four_factorial_arms_and_holds_other_training_controls_fixed(self):
+        self.assertTrue(FACTORIAL_WORKFLOW.is_file())
+        text = FACTORIAL_WORKFLOW.read_text()
+        self.assertIn("experiment/needle-target-strength-2x2", text)
+        self.assertIn("cactus-needle==2.0.8", text)
+        self.assertIn("4b0a972d163ffc7678fb3c36bace508114872e9d2ce9e10f225825752d3795bc", text)
+        self.assertIn("derive_toolcall_only.py", text)
+        self.assertEqual(text.count("run_seeded_finetune.py"), 4)
+        self.assertEqual(text.count("--seed 0"), 4)
+        self.assertEqual(text.count("--batch-size 2"), 4)
+        self.assertEqual(text.count("--lr 1e-4"), 4)
+        self.assertEqual(text.count("--lora-rank 4"), 4)
+        self.assertEqual(text.count("--lora-alpha 32"), 4)
+        self.assertEqual(text.count("--max-len 1024"), 4)
+        self.assertEqual(text.count("--epochs 1"), 2)
+        self.assertEqual(text.count("--epochs 3"), 2)
+        self.assertEqual(text.count("--bits 4"), 4)
+        self.assertEqual(text.count("--max-new-tokens 256"), 8)
+        self.assertIn("experiments/needle-cpu-smoke/data.jsonl", text)
+        self.assertIn("results/toolcall-only.jsonl", text)
+        self.assertNotIn("OpenRouter", text)
+        self.assertNotIn("secrets.", text)
+
+class TargetStrength2x2ReceiptTest(unittest.TestCase):
+    @staticmethod
+    def _records(correct, n=4):
+        rows=[]
+        for i in range(n):
+            ok=i < correct
+            rows.append({
+                "id": f"x{i}", "category": "training_replay", "expected": "READY",
+                "predicted": "READY" if ok else "NO_CALL", "correct": ok,
+                "max_new_tokens": 256,
+            })
+        return rows
+
+    def test_receipt_exposes_main_effects_and_interaction_without_claiming_significance(self):
+        self.assertTrue(FACTORIAL_RECEIPT.is_file())
+        module = load_module("target_strength_2x2_receipt", FACTORIAL_RECEIPT)
+        arms = {
+            "A": {"train": self._records(1), "heldout": self._records(1)},
+            "B": {"train": self._records(2), "heldout": self._records(2)},
+            "C": {"train": self._records(2), "heldout": self._records(2)},
+            "D": {"train": self._records(3), "heldout": self._records(3)},
+        }
+        receipt = module.build_receipt(
+            arms=arms,
+            source_dataset_sha256="s"*64,
+            derived_dataset_sha256="d"*64,
+            artifact_sha256={k: {"adapter": k.lower()*64, "cact": k.lower()*64} for k in arms},
+            seed=0,
+        )
+        self.assertEqual(receipt["schema"], "theseus.needle.target_strength_2x2.v1")
+        self.assertEqual(receipt["config"]["seed"], 0)
+        self.assertEqual(receipt["arms"]["A"]["epochs"], 1)
+        self.assertEqual(receipt["arms"]["B"]["epochs"], 3)
+        self.assertEqual(receipt["arms"]["C"]["target_representation"], "tool_call_only")
+        self.assertEqual(receipt["arms"]["D"]["target_representation"], "tool_call_only")
+        effects = receipt["factor_effects"]["train_overall_accuracy"]
+        self.assertEqual(effects["strength_with_reasoning"], 0.25)
+        self.assertEqual(effects["encoding_at_1_epoch"], 0.25)
+        self.assertEqual(effects["strength_tool_call_only"], 0.25)
+        self.assertEqual(effects["encoding_at_3_epochs"], 0.25)
+        self.assertEqual(effects["interaction_difference_of_differences"], 0.0)
+        self.assertEqual(receipt["interpretation_boundary"], "descriptive_effects_not_statistical_significance")
