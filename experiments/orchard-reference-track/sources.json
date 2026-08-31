@@ -1,0 +1,70 @@
+{
+  "schema": "theseus.needle.reference-sources.v0.1",
+  "research_issue": 6,
+  "topic": "Orchard teacher trajectories and cumulative agent learning",
+  "observed_date": "2026-08-31",
+  "primary_sources": [
+    {
+      "kind": "microsoft_research_publication",
+      "url": "https://www.microsoft.com/en-us/research/publication/orchard-an-open-source-agentic-modeling-framework/",
+      "supports": [
+        "Orchard framework overview",
+        "Orchard-SWE 107K teacher trajectories",
+        "credit-assignment SFT",
+        "reinforcement-learning recipe",
+        "Orchard-GUI and Orchard-Claw reported results"
+      ]
+    },
+    {
+      "kind": "microsoft_research_blog",
+      "url": "https://www.microsoft.com/en-us/research/blog/orchard-an-open-framework-for-scalable-agentic-ai/",
+      "supports": [
+        "on-policy teacher scoring",
+        "process reward supervision",
+        "reuse of past rollouts for value-model training",
+        "training across real deployment harnesses"
+      ]
+    },
+    {
+      "kind": "arxiv",
+      "url": "https://arxiv.org/abs/2605.15040",
+      "identifier": "arXiv:2605.15040",
+      "supports": [
+        "paper-level Orchard claims and benchmark summary"
+      ]
+    },
+    {
+      "kind": "source_repository",
+      "url": "https://github.com/microsoft/Orchard",
+      "ref": "refs/heads/main",
+      "sha": "3d7d7e992f56e3fec98f80f52afd7bc2e90af0f4",
+      "supports": [
+        "Orchard Env architecture",
+        "portable environment substrate",
+        "any-harness training intent and current repository state"
+      ]
+    }
+  ],
+  "adjacent_sources": [
+    {
+      "title": "Multi-Turn On-Policy Distillation with Prefix Replay",
+      "url": "https://www.microsoft.com/en-us/research/publication/multi-turn-on-policy-distillation-with-prefix-replay/",
+      "status": "adjacent_not_orchard"
+    },
+    {
+      "title": "LLM-as-a-Coach: Experiential Learning for Non-Verifiable Tasks",
+      "url": "https://www.microsoft.com/en-us/research/publication/llm-as-a-coach-experiential-learning-for-non-verifiable-tasks/",
+      "status": "adjacent_not_orchard"
+    },
+    {
+      "title": "Weak-to-Strong On-Policy Distillation",
+      "url": "https://www.microsoft.com/en-us/research/publication/weak-to-strong-on-policy-distillation/",
+      "status": "adjacent_not_orchard"
+    }
+  ],
+  "boundaries": [
+    "Orchard is an external reference case, not evidence of Needle transfer.",
+    "No Needle teacher-trajectory experiment has been executed yet.",
+    "Unverified secondary claims are excluded from the evidence map."
+  ]
+}
