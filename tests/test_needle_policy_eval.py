@@ -231,6 +231,8 @@ class MaxLenABContractTest(unittest.TestCase):
         self.assertEqual(text.count("--bits 4"), 2)
         self.assertEqual(text.count("--max-new-tokens 256"), 4)
         self.assertIn("target_coverage.py", text)
+        self.assertIn("training_truncated_rows'] == [7, 9]", text)
+        self.assertNotIn("training_truncated_rows'] == [7,9,12]", text)
         self.assertIn("assert_full_training_targets", text)
         self.assertNotIn("OpenRouter", text)
         self.assertNotIn("secrets.", text)

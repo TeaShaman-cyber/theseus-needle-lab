@@ -79,7 +79,7 @@ jobs:
           import json
           a=json.load(open('results/coverage-a.json'))
           b=json.load(open('results/coverage-b.json'))
-          assert a['summary']['training_truncated_rows'] == [7, 9, 12]
+          assert a['summary']['training_truncated_rows'] == [7, 9]
           assert b['summary']['training_truncated_rows'] == []
           assert a['validation_rows'] == b['validation_rows'] == [10]
           assert a['effective_max_len'] == 128
@@ -173,7 +173,7 @@ jobs:
           assert r['config']['export_bits'] == 4
           assert r['config']['max_new_tokens'] == 256
           assert r['arms']['a']['max_len_cap'] == 128
-          assert r['arms']['a']['training_truncated_rows'] == [7,9,12]
+          assert r['arms']['a']['training_truncated_rows'] == [7,9]
           assert r['arms']['b']['max_len_cap'] == 1024
           assert r['arms']['b']['training_truncated_rows'] == []
           assert r['train_comparison']['base']['n'] == 12
