@@ -1,0 +1,37 @@
+{
+  "schema_version": "needle-watch-config-v0.1",
+  "github": {
+    "queries": [
+      {
+        "id": "tiny-model",
+        "query": "tiny language model",
+        "watch_lines": ["tiny-model"],
+        "per_page": 10
+      },
+      {
+        "id": "helper-model",
+        "query": "speculative decoding helper model",
+        "watch_lines": ["helper-model", "weak-hardware"],
+        "per_page": 10
+      },
+      {
+        "id": "low-memory-training",
+        "query": "low memory training language model",
+        "watch_lines": ["low-memory-training"],
+        "per_page": 10
+      },
+      {
+        "id": "parameter-offload",
+        "query": "LLM offload out-of-core inference",
+        "watch_lines": ["parameter-storage", "weak-hardware"],
+        "per_page": 10
+      },
+      {
+        "id": "moe-cache",
+        "query": "MoE expert cache inference",
+        "watch_lines": ["parameter-storage", "sparse-execution"],
+        "per_page": 10
+      }
+    ]
+  }
+}

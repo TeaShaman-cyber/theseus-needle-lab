@@ -18,3 +18,9 @@ Its purpose is to make Needle learning experiments observable, reproducible, and
 `Issue -> commit/PR -> Action -> artifact/hash -> evaluation -> receipt -> disposition`
 
 See [architecture](docs/architecture.md) and [experiment lifecycle](docs/experiment-lifecycle.md).
+
+## Needle Watch discovery receipts
+
+The lab includes a small public-source discovery experiment for the A/B/C Needle Watch study in Issue #21. A scheduled GitHub Action runs deterministic, bounded collectors and publishes provenance-bearing JSON receipts under `data/`. The collector does not decide scientific importance, does not call an LLM, and does not write Notion; ChatGPT shadow tasks perform later verification and interpretation.
+
+The discovery layer follows the same authority rule as the rest of the lab: a green collection workflow proves only the declared collection/validation postconditions.
