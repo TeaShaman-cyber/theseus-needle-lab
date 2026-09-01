@@ -1,0 +1,549 @@
+{
+  "arms": {
+    "A": {
+      "collapsed": false,
+      "correct": 3,
+      "decision_accuracy": 0.25,
+      "dominant_prediction": "UNKNOWN",
+      "dominant_prediction_rate": 0.6,
+      "label_tokenization": {
+        "PROBE": {
+          "json_value_context": "{\"decision\":\"PROBE\"}",
+          "pieces": [
+            "▁",
+            "{\"",
+            "dec",
+            "ision",
+            "\":\"",
+            "P",
+            "R",
+            "O",
+            "B",
+            "E",
+            "\"",
+            "}"
+          ]
+        },
+        "READY": {
+          "json_value_context": "{\"decision\":\"READY\"}",
+          "pieces": [
+            "▁",
+            "{\"",
+            "dec",
+            "ision",
+            "\":\"",
+            "R",
+            "E",
+            "A",
+            "D",
+            "Y",
+            "\"",
+            "}"
+          ]
+        },
+        "UNKNOWN": {
+          "json_value_context": "{\"decision\":\"UNKNOWN\"}",
+          "pieces": [
+            "▁",
+            "{\"",
+            "dec",
+            "ision",
+            "\":\"",
+            "U",
+            "N",
+            "K",
+            "N",
+            "O",
+            "W",
+            "N",
+            "\"",
+            "}"
+          ]
+        }
+      },
+      "n": 12,
+      "prediction_distribution": {
+        "NO_CALL": 2,
+        "READY": 4,
+        "UNKNOWN": 6
+      },
+      "prediction_vector": [
+        {
+          "correct": false,
+          "expected": "PROBE",
+          "id": "train-001",
+          "predicted": "READY",
+          "predicted_label": "READY",
+          "valid_structured_call": true
+        },
+        {
+          "correct": false,
+          "expected": "PROBE",
+          "id": "train-002",
+          "predicted": "NO_CALL",
+          "predicted_label": "NO_CALL",
+          "valid_structured_call": false
+        },
+        {
+          "correct": false,
+          "expected": "PROBE",
+          "id": "train-003",
+          "predicted": "UNKNOWN",
+          "predicted_label": "UNKNOWN",
+          "valid_structured_call": true
+        },
+        {
+          "correct": false,
+          "expected": "PROBE",
+          "id": "train-004",
+          "predicted": "READY",
+          "predicted_label": "READY",
+          "valid_structured_call": true
+        },
+        {
+          "correct": false,
+          "expected": "READY",
+          "id": "train-005",
+          "predicted": "UNKNOWN",
+          "predicted_label": "UNKNOWN",
+          "valid_structured_call": true
+        },
+        {
+          "correct": false,
+          "expected": "READY",
+          "id": "train-006",
+          "predicted": "UNKNOWN",
+          "predicted_label": "UNKNOWN",
+          "valid_structured_call": true
+        },
+        {
+          "correct": true,
+          "expected": "READY",
+          "id": "train-007",
+          "predicted": "READY",
+          "predicted_label": "READY",
+          "valid_structured_call": true
+        },
+        {
+          "correct": false,
+          "expected": "READY",
+          "id": "train-008",
+          "predicted": "UNKNOWN",
+          "predicted_label": "UNKNOWN",
+          "valid_structured_call": true
+        },
+        {
+          "correct": false,
+          "expected": "UNKNOWN",
+          "id": "train-009",
+          "predicted": "NO_CALL",
+          "predicted_label": "NO_CALL",
+          "valid_structured_call": false
+        },
+        {
+          "correct": true,
+          "expected": "UNKNOWN",
+          "id": "train-010",
+          "predicted": "UNKNOWN",
+          "predicted_label": "UNKNOWN",
+          "valid_structured_call": true
+        },
+        {
+          "correct": false,
+          "expected": "UNKNOWN",
+          "id": "train-011",
+          "predicted": "READY",
+          "predicted_label": "READY",
+          "valid_structured_call": true
+        },
+        {
+          "correct": true,
+          "expected": "UNKNOWN",
+          "id": "train-012",
+          "predicted": "UNKNOWN",
+          "predicted_label": "UNKNOWN",
+          "valid_structured_call": true
+        }
+      ],
+      "raw_label_distribution": {
+        "NO_CALL": 2,
+        "READY": 4,
+        "UNKNOWN": 6
+      },
+      "semantic_prediction_n": 10,
+      "valid_call_rate": 0.8333333333333334,
+      "valid_calls": 10
+    },
+    "B": {
+      "collapsed": true,
+      "correct": 5,
+      "decision_accuracy": 0.4166666666666667,
+      "dominant_prediction": "PROBE",
+      "dominant_prediction_rate": 0.7777777777777778,
+      "label_tokenization": {
+        "probe": {
+          "json_value_context": "{\"decision\":\"probe\"}",
+          "pieces": [
+            "▁",
+            "{\"",
+            "dec",
+            "ision",
+            "\":\"",
+            "pro",
+            "be",
+            "\"",
+            "}"
+          ]
+        },
+        "ready": {
+          "json_value_context": "{\"decision\":\"ready\"}",
+          "pieces": [
+            "▁",
+            "{\"",
+            "dec",
+            "ision",
+            "\":\"",
+            "ready",
+            "\"",
+            "}"
+          ]
+        },
+        "unknown": {
+          "json_value_context": "{\"decision\":\"unknown\"}",
+          "pieces": [
+            "▁",
+            "{\"",
+            "dec",
+            "ision",
+            "\":\"",
+            "un",
+            "known",
+            "\"",
+            "}"
+          ]
+        }
+      },
+      "n": 12,
+      "prediction_distribution": {
+        "INVALID": 1,
+        "NO_CALL": 2,
+        "PROBE": 7,
+        "READY": 1,
+        "UNKNOWN": 1
+      },
+      "prediction_vector": [
+        {
+          "correct": true,
+          "expected": "PROBE",
+          "id": "train-001",
+          "predicted": "PROBE",
+          "predicted_label": "probe",
+          "valid_structured_call": true
+        },
+        {
+          "correct": false,
+          "expected": "PROBE",
+          "id": "train-002",
+          "predicted": "NO_CALL",
+          "predicted_label": "NO_CALL",
+          "valid_structured_call": false
+        },
+        {
+          "correct": true,
+          "expected": "PROBE",
+          "id": "train-003",
+          "predicted": "PROBE",
+          "predicted_label": "probe",
+          "valid_structured_call": true
+        },
+        {
+          "correct": true,
+          "expected": "PROBE",
+          "id": "train-004",
+          "predicted": "PROBE",
+          "predicted_label": "probe",
+          "valid_structured_call": true
+        },
+        {
+          "correct": false,
+          "expected": "READY",
+          "id": "train-005",
+          "predicted": "PROBE",
+          "predicted_label": "probe",
+          "valid_structured_call": true
+        },
+        {
+          "correct": true,
+          "expected": "READY",
+          "id": "train-006",
+          "predicted": "READY",
+          "predicted_label": "ready",
+          "valid_structured_call": true
+        },
+        {
+          "correct": false,
+          "expected": "READY",
+          "id": "train-007",
+          "predicted": "PROBE",
+          "predicted_label": "probe",
+          "valid_structured_call": true
+        },
+        {
+          "correct": false,
+          "expected": "READY",
+          "id": "train-008",
+          "predicted": "PROBE",
+          "predicted_label": "probe",
+          "valid_structured_call": true
+        },
+        {
+          "correct": false,
+          "expected": "UNKNOWN",
+          "id": "train-009",
+          "predicted": "NO_CALL",
+          "predicted_label": "NO_CALL",
+          "valid_structured_call": false
+        },
+        {
+          "correct": true,
+          "expected": "UNKNOWN",
+          "id": "train-010",
+          "predicted": "UNKNOWN",
+          "predicted_label": "unknown",
+          "valid_structured_call": true
+        },
+        {
+          "correct": false,
+          "expected": "UNKNOWN",
+          "id": "train-011",
+          "predicted": "INVALID",
+          "predicted_label": "INVALID",
+          "valid_structured_call": false
+        },
+        {
+          "correct": false,
+          "expected": "UNKNOWN",
+          "id": "train-012",
+          "predicted": "PROBE",
+          "predicted_label": "probe",
+          "valid_structured_call": true
+        }
+      ],
+      "raw_label_distribution": {
+        "INVALID": 1,
+        "NO_CALL": 2,
+        "probe": 7,
+        "ready": 1,
+        "unknown": 1
+      },
+      "semantic_prediction_n": 9,
+      "valid_call_rate": 0.75,
+      "valid_calls": 9
+    },
+    "C": {
+      "collapsed": true,
+      "correct": 3,
+      "decision_accuracy": 0.25,
+      "dominant_prediction": "PROBE",
+      "dominant_prediction_rate": 0.8,
+      "label_tokenization": {
+        "check": {
+          "json_value_context": "{\"decision\":\"check\"}",
+          "pieces": [
+            "▁",
+            "{\"",
+            "dec",
+            "ision",
+            "\":\"",
+            "check",
+            "\"",
+            "}"
+          ]
+        },
+        "ready": {
+          "json_value_context": "{\"decision\":\"ready\"}",
+          "pieces": [
+            "▁",
+            "{\"",
+            "dec",
+            "ision",
+            "\":\"",
+            "ready",
+            "\"",
+            "}"
+          ]
+        },
+        "unknown": {
+          "json_value_context": "{\"decision\":\"unknown\"}",
+          "pieces": [
+            "▁",
+            "{\"",
+            "dec",
+            "ision",
+            "\":\"",
+            "un",
+            "known",
+            "\"",
+            "}"
+          ]
+        }
+      },
+      "n": 12,
+      "prediction_distribution": {
+        "NO_CALL": 7,
+        "PROBE": 4,
+        "UNKNOWN": 1
+      },
+      "prediction_vector": [
+        {
+          "correct": false,
+          "expected": "PROBE",
+          "id": "train-001",
+          "predicted": "NO_CALL",
+          "predicted_label": "NO_CALL",
+          "valid_structured_call": false
+        },
+        {
+          "correct": false,
+          "expected": "PROBE",
+          "id": "train-002",
+          "predicted": "NO_CALL",
+          "predicted_label": "NO_CALL",
+          "valid_structured_call": false
+        },
+        {
+          "correct": true,
+          "expected": "PROBE",
+          "id": "train-003",
+          "predicted": "PROBE",
+          "predicted_label": "check",
+          "valid_structured_call": true
+        },
+        {
+          "correct": true,
+          "expected": "PROBE",
+          "id": "train-004",
+          "predicted": "PROBE",
+          "predicted_label": "check",
+          "valid_structured_call": true
+        },
+        {
+          "correct": false,
+          "expected": "READY",
+          "id": "train-005",
+          "predicted": "PROBE",
+          "predicted_label": "check",
+          "valid_structured_call": true
+        },
+        {
+          "correct": false,
+          "expected": "READY",
+          "id": "train-006",
+          "predicted": "NO_CALL",
+          "predicted_label": "NO_CALL",
+          "valid_structured_call": false
+        },
+        {
+          "correct": false,
+          "expected": "READY",
+          "id": "train-007",
+          "predicted": "PROBE",
+          "predicted_label": "check",
+          "valid_structured_call": true
+        },
+        {
+          "correct": false,
+          "expected": "READY",
+          "id": "train-008",
+          "predicted": "NO_CALL",
+          "predicted_label": "NO_CALL",
+          "valid_structured_call": false
+        },
+        {
+          "correct": false,
+          "expected": "UNKNOWN",
+          "id": "train-009",
+          "predicted": "NO_CALL",
+          "predicted_label": "NO_CALL",
+          "valid_structured_call": false
+        },
+        {
+          "correct": true,
+          "expected": "UNKNOWN",
+          "id": "train-010",
+          "predicted": "UNKNOWN",
+          "predicted_label": "unknown",
+          "valid_structured_call": true
+        },
+        {
+          "correct": false,
+          "expected": "UNKNOWN",
+          "id": "train-011",
+          "predicted": "NO_CALL",
+          "predicted_label": "NO_CALL",
+          "valid_structured_call": false
+        },
+        {
+          "correct": false,
+          "expected": "UNKNOWN",
+          "id": "train-012",
+          "predicted": "NO_CALL",
+          "predicted_label": "NO_CALL",
+          "valid_structured_call": false
+        }
+      ],
+      "raw_label_distribution": {
+        "NO_CALL": 7,
+        "check": 4,
+        "unknown": 1
+      },
+      "semantic_prediction_n": 5,
+      "valid_call_rate": 0.4166666666666667,
+      "valid_calls": 5
+    }
+  },
+  "interpretation_boundary": "zero_training_interface_prior_selection_not_evidence_of_learned_policy",
+  "reproducibility": {
+    "prediction_vector_exact_matches": {
+      "A": {
+        "matched": 12,
+        "n": 12
+      },
+      "B": {
+        "matched": 12,
+        "n": 12
+      },
+      "C": {
+        "matched": 12,
+        "n": 12
+      }
+    },
+    "prompt_contracts_equal": true,
+    "tokenization_equal": true
+  },
+  "schema": "theseus.needle.semantic_verbalizer_preflight.public_receipt.v1",
+  "source": {
+    "attempt_receipt_sha256": {
+      "1": "e0e942b7101d3af47b583208a8ae953b425e470a70419f1dbe87f96b143d4707",
+      "2": "724814dce8011e7f6226ffd476ff9f2c66ada6faad0ad64f1c4f09a8d98c3c01"
+    },
+    "cactus_needle_version": "2.0.8",
+    "experiment_commit": "1435f3edd38ef0f4e9d066935be75a0100091eb3",
+    "issue": 26,
+    "predecessor_commit": "2c674600c17c06ced1683fe72af9c2ab22fa0927",
+    "repository": "TeaShaman-cyber/theseus-needle-lab",
+    "workflow_attempts": [
+      1,
+      2
+    ],
+    "workflow_run_id": "33557711455"
+  },
+  "stage_a_disposition": {
+    "boundary": "interface-prior selection only; not evidence that the selected verbalizer is optimal after supervised training",
+    "rejected_for_stage_b": {
+      "B_lowercase_probe_ready_unknown": "dominant PROBE semantic prediction rate 0.7778 crosses the predeclared 0.75 collapse threshold",
+      "C_check_ready_unknown": "valid call rate falls to 5/12 and dominant PROBE semantic prediction rate 0.8 crosses the predeclared collapse threshold"
+    },
+    "selected_interface_prior_for_stage_b": "A_uppercase_PROBE_READY_UNKNOWN"
+  }
+}
