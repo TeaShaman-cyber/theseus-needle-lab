@@ -63,13 +63,13 @@ def flat_schema(arm: str) -> dict:
 
 def evidence_schema() -> dict:
     return {
-        "name": "evidence_state",
+        "name": "route",
         "parameters": {
             "type": "object",
             "properties": {
-                "state": {"type": "string", "enum": ["verified", "insufficient"]},
+                "decision": {"type": "string", "enum": ["verified", "insufficient"]},
             },
-            "required": ["state"],
+            "required": ["decision"],
         },
         "description": (
             "Classify current evidence. verified = current authoritative evidence verifies the state. "
@@ -80,13 +80,13 @@ def evidence_schema() -> dict:
 
 def probe_schema() -> dict:
     return {
-        "name": "probe_state",
+        "name": "route",
         "parameters": {
             "type": "object",
             "properties": {
-                "availability": {"type": "string", "enum": ["available", "unavailable"]},
+                "decision": {"type": "string", "enum": ["available", "unavailable"]},
             },
-            "required": ["availability"],
+            "required": ["decision"],
         },
         "description": (
             "Classify safe current probe availability. available = a safe current distinguishing probe can be run now. "
@@ -104,13 +104,13 @@ def frame_query(query: str) -> str:
 
 
 def evidence_query(query: str) -> str:
-    return "Classify current evidence as verified or insufficient. Use evidence_state.\n\n" + query
+    return "Classify current evidence as verified or insufficient. Use route.\n\n" + query
 
 
 def probe_query(query: str) -> str:
     return (
         "Current evidence is insufficient. Classify whether a safe current distinguishing probe is available or unavailable. "
-        "Use probe_state.\n\n" + query
+        "Use route.\n\n" + query
     )
 
 
@@ -221,8 +221,8 @@ def evaluate_factorized(cases: list[dict], max_new_tokens: int) -> list[dict]:
         stage1_ms = (time.perf_counter() - started) * 1000.0
         stage1_predicted, stage1_valid = _classify_call(
             r1,
-            tool="evidence_state",
-            field="state",
+            tool="route",
+            field="decision",
             allowed={"verified", "insufficient"},
         )
 
@@ -238,8 +238,8 @@ def evaluate_factorized(cases: list[dict], max_new_tokens: int) -> list[dict]:
             stage2_ms = (time.perf_counter() - started) * 1000.0
             stage2_predicted, stage2_valid = _classify_call(
                 r2,
-                tool="probe_state",
-                field="availability",
+                tool="route",
+                field="decision",
                 allowed={"available", "unavailable"},
             )
 

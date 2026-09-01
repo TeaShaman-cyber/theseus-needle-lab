@@ -377,3 +377,15 @@ class VerbalizerFactorizedReceiptContractTest(unittest.TestCase):
         self.assertEqual(receipt["arms"]["D"]["stage2_expected_n"], 2)
         self.assertEqual(receipt["arms"]["D"]["stage2_attempted_n"], 1)
         self.assertEqual(receipt["interpretation_boundary"], "descriptive_zero_training_representation_probe_not_statistical_significance")
+
+class VerbalizerFactorizedToolApplicabilityRegressionTest(unittest.TestCase):
+    def test_factorized_stages_preserve_route_tool_name_and_explicit_route_prefix(self):
+        module = load_module("verbalizer_factorized_route_regression", VERBALIZER_RUNNER)
+        evidence = module.evidence_schema()
+        probe = module.probe_schema()
+        self.assertEqual(evidence["name"], "route")
+        self.assertEqual(probe["name"], "route")
+        self.assertEqual(list(evidence["parameters"]["properties"]), ["decision"])
+        self.assertEqual(list(probe["parameters"]["properties"]), ["decision"])
+        self.assertIn("Use route", module.evidence_query("Evidence statement."))
+        self.assertIn("Use route", module.probe_query("Evidence statement."))
