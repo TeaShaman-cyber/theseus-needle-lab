@@ -129,4 +129,4 @@
 - [x] **Step 2: Verify RED.**
 - [x] **Step 3: Add only the fixture/documentation needed to make the gate reproducible.**
 - [x] **Step 4: Run full suite and a local fixture collection; verify exact receipt bytes and required fields.**
-- [ ] **Step 5: Push branch with MarcoPolo write profile, read back remote branch SHA/files, and record evidence in Issue #21.**
+- [x] **Step 5: Push branch with MarcoPolo write profile, read back remote branch SHA/files, and record evidence in Issue #21.**
