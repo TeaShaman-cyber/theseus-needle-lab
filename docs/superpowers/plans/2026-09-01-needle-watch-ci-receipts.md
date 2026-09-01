@@ -90,11 +90,11 @@
 - Consumes: `config/needle-watch.json`, optional `GITHUB_TOKEN`, optional GitHub Actions environment IDs.
 - Produces: dated/latest receipt files and terminal summary `NEEDLE_WATCH_RECEIPT PASS ...` or nonzero failure.
 
-- [ ] **Step 1: Write failing CLI test against a temporary repo using an injected fixture source mode.**
+- [x] **Step 1: Write failing CLI test against a temporary repo using an injected fixture source mode.**
 - [x] **Step 2: Verify RED.**
-- [ ] **Step 3: Implement CLI orchestration with no scientific filtering.**
+- [x] **Step 3: Implement CLI orchestration with no scientific filtering.**
 - [x] **Step 4: Verify GREEN and full suite.**
-- [ ] **Step 5: Commit Task 4.**
+- [x] **Step 5: Commit Task 4.**
 
 ### Task 5: GitHub Actions workflow and repository contract docs
 
