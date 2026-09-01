@@ -24,3 +24,5 @@ See [architecture](docs/architecture.md) and [experiment lifecycle](docs/experim
 The lab includes a small public-source discovery experiment for the A/B/C Needle Watch study in Issue #21. A scheduled GitHub Action runs deterministic, bounded collectors and publishes provenance-bearing JSON receipts under `data/`. The collector does not decide scientific importance, does not call an LLM, and does not write Notion; ChatGPT shadow tasks perform later verification and interpretation.
 
 The discovery layer follows the same authority rule as the rest of the lab: a green collection workflow proves only the declared collection/validation postconditions.
+
+Receipt contract v0.2 preserves immutable per-run replay records, explicit search-coverage health, and immutable upstream GitHub revisions; see [Needle Watch receipt](docs/needle-watch-receipt.md).

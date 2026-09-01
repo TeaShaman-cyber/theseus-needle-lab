@@ -1,13 +1,17 @@
 {
+  "candidates": [],
   "source_health": [
     {
+      "checked_at": "2026-09-01T12:00:00Z",
+      "cursor_or_watermark": "2026-08-31",
+      "error_class": null,
+      "incomplete_results": false,
+      "records_seen": 0,
+      "returned_count": 0,
       "source_id": "fixture:healthy",
       "status": "ok",
-      "checked_at": "2026-09-01T12:00:00Z",
-      "records_seen": 0,
-      "cursor_or_watermark": "2026-08-31",
-      "error_class": null
+      "total_count": 0,
+      "truncated": false
     }
-  ],
-  "candidates": []
+  ]
 }
