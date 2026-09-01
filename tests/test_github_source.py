@@ -13,6 +13,7 @@ from needle_watch.github_source import (
 
 
 REPO_ITEM = {
+    "id": 123456,
     "full_name": "example/tiny-agent",
     "html_url": "https://github.com/example/tiny-agent",
     "name": "tiny-agent",
@@ -60,11 +61,51 @@ class GithubSourceTests(unittest.TestCase):
             discovery_route="github_search:tiny-model",
             matched_watch_lines=["tiny-model"],
             observed_at="2026-09-01T10:00:00Z",
+            upstream_revision="e" * 40,
         )
         self.assertEqual(candidate["canonical_url"], REPO_ITEM["html_url"])
         self.assertEqual(candidate["source_identity"], "example/tiny-agent@main")
-        self.assertEqual(candidate["content_fingerprint"], "pushed:2026-09-01T09:15:00Z")
+        self.assertEqual(candidate["source_entity_id"], "github-repo:123456")
+        self.assertEqual(candidate["upstream_revision"], "e" * 40)
+        self.assertEqual(candidate["content_fingerprint"], "commit:" + "e" * 40)
         self.assertEqual(candidate["matched_watch_lines"], ["tiny-model"])
+
+    def test_collect_github_queries_resolves_immutable_default_branch_head(self):
+        config = {
+            "github": {
+                "queries": [{
+                    "id": "tiny-model",
+                    "query": "tiny language model",
+                    "watch_lines": ["tiny-model"],
+                    "per_page": 5,
+                }]
+            }
+        }
+        seen_urls = []
+
+        def opener(request, timeout=0):
+            seen_urls.append(request.full_url)
+            if "/commits/main" in request.full_url:
+                return FakeResponse({"sha": "e" * 40})
+            return FakeResponse({
+                "total_count": 1,
+                "incomplete_results": False,
+                "items": [REPO_ITEM],
+            })
+
+        candidates, health = collect_github_queries(
+            config,
+            token="test-token",
+            observed_at="2026-09-01T10:00:00Z",
+            since_date="2026-08-31T10:00:00Z",
+            opener=opener,
+        )
+        self.assertEqual(health[0]["status"], "ok")
+        self.assertEqual(len(candidates), 1)
+        self.assertEqual(candidates[0]["source_entity_id"], "github-repo:123456")
+        self.assertEqual(candidates[0]["upstream_revision"], "e" * 40)
+        self.assertEqual(candidates[0]["content_fingerprint"], "commit:" + "e" * 40)
+        self.assertTrue(any("/repos/example/tiny-agent/commits/main" in url for url in seen_urls))
 
     def test_collect_github_queries_returns_candidates_and_healthy_source_record(self):
         config = {
@@ -81,6 +122,8 @@ class GithubSourceTests(unittest.TestCase):
 
         def opener(request, timeout=0):
             seen_requests.append(request)
+            if "/commits/" in request.full_url:
+                return FakeResponse({"sha": "e" * 40})
             return FakeResponse({"items": [REPO_ITEM]})
 
         candidates, health = collect_github_queries(
@@ -96,6 +139,76 @@ class GithubSourceTests(unittest.TestCase):
         self.assertEqual(health[0]["cursor_or_watermark"], "2026-08-31")
         self.assertIn("pushed%3A%3E%3D2026-08-31", seen_requests[0].full_url)
         self.assertEqual(seen_requests[0].get_header("Authorization"), "Bearer test-token")
+        self.assertEqual(seen_requests[0].get_header("User-agent"), "theseus-needle-watch/0.2")
+
+    def test_collect_github_queries_marks_truncated_search_as_partial(self):
+        config = {
+            "github": {
+                "queries": [{
+                    "id": "tiny-model",
+                    "query": "tiny language model",
+                    "watch_lines": ["tiny-model"],
+                    "per_page": 1,
+                }]
+            }
+        }
+
+        def opener(request, timeout=0):
+            if "/commits/" in request.full_url:
+                return FakeResponse({"sha": "e" * 40})
+            return FakeResponse({
+                "total_count": 14,
+                "incomplete_results": False,
+                "items": [REPO_ITEM],
+            })
+
+        candidates, health = collect_github_queries(
+            config,
+            token=None,
+            observed_at="2026-09-01T10:00:00Z",
+            since_date="2026-08-31",
+            opener=opener,
+        )
+        self.assertEqual(len(candidates), 1)
+        self.assertEqual(health[0]["status"], "partial")
+        self.assertEqual(health[0]["total_count"], 14)
+        self.assertEqual(health[0]["returned_count"], 1)
+        self.assertTrue(health[0]["truncated"])
+        self.assertFalse(health[0]["incomplete_results"])
+        self.assertEqual(health[0]["error_class"], "ResultTruncated")
+
+    def test_collect_github_queries_marks_incomplete_search_as_partial(self):
+        config = {
+            "github": {
+                "queries": [{
+                    "id": "tiny-model",
+                    "query": "tiny language model",
+                    "watch_lines": ["tiny-model"],
+                    "per_page": 5,
+                }]
+            }
+        }
+
+        def opener(request, timeout=0):
+            if "/commits/" in request.full_url:
+                return FakeResponse({"sha": "e" * 40})
+            return FakeResponse({
+                "total_count": 1,
+                "incomplete_results": True,
+                "items": [REPO_ITEM],
+            })
+
+        _, health = collect_github_queries(
+            config,
+            token=None,
+            observed_at="2026-09-01T10:00:00Z",
+            since_date="2026-08-31",
+            opener=opener,
+        )
+        self.assertEqual(health[0]["status"], "partial")
+        self.assertTrue(health[0]["incomplete_results"])
+        self.assertFalse(health[0]["truncated"])
+        self.assertEqual(health[0]["error_class"], "IncompleteResults")
 
     def test_collect_github_queries_marks_partial_when_one_item_is_malformed(self):
         config = {
@@ -110,6 +223,8 @@ class GithubSourceTests(unittest.TestCase):
         }
 
         def opener(request, timeout=0):
+            if "/commits/" in request.full_url:
+                return FakeResponse({"sha": "e" * 40})
             return FakeResponse({"items": [REPO_ITEM, {"name": "broken"}]})
 
         candidates, health = collect_github_queries(
@@ -123,6 +238,43 @@ class GithubSourceTests(unittest.TestCase):
         self.assertEqual(health[0]["status"], "partial")
         self.assertEqual(health[0]["records_seen"], 2)
         self.assertEqual(health[0]["error_class"], "MalformedItem")
+
+    def test_collect_github_queries_keeps_other_candidates_when_revision_resolution_fails(self):
+        config = {
+            "github": {
+                "queries": [{
+                    "id": "tiny-model",
+                    "query": "tiny language model",
+                    "watch_lines": ["tiny-model"],
+                    "per_page": 5,
+                }]
+            }
+        }
+        broken = dict(REPO_ITEM, id=654321, full_name="example/gone", html_url="https://github.com/example/gone")
+
+        def opener(request, timeout=0):
+            if "/repos/example/tiny-agent/commits/main" in request.full_url:
+                return FakeResponse({"sha": "e" * 40})
+            if "/repos/example/gone/commits/main" in request.full_url:
+                raise OSError("repository disappeared")
+            return FakeResponse({
+                "total_count": 2,
+                "incomplete_results": False,
+                "items": [REPO_ITEM, broken],
+            })
+
+        candidates, health = collect_github_queries(
+            config,
+            token=None,
+            observed_at="2026-09-01T10:00:00Z",
+            since_date="2026-08-31T10:00:00Z",
+            opener=opener,
+        )
+        self.assertEqual(len(candidates), 1)
+        self.assertEqual(candidates[0]["source_entity_id"], "github-repo:123456")
+        self.assertEqual(health[0]["status"], "partial")
+        self.assertEqual(health[0]["error_class"], "RevisionResolutionFailed")
+        self.assertEqual(health[0]["records_seen"], 2)
 
     def test_collect_github_queries_marks_failed_source_without_candidates(self):
         config = {

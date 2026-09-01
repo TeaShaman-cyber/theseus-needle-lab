@@ -14,7 +14,11 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from needle_watch.github_source import collect_github_queries, load_watch_config
 from needle_watch.receipt import build_receipt, validate_receipt
-from needle_watch.storage import load_prior_candidate_ids, write_receipt_snapshot
+from needle_watch.storage import (
+    load_prior_candidate_ids,
+    load_prior_entity_ids,
+    write_receipt_snapshot,
+)
 
 
 def parse_args() -> argparse.Namespace:
@@ -60,13 +64,18 @@ def main() -> int:
     window_start = iso_z(window_start_dt)
     window_end = observed_at
     date_key = now.date().isoformat()
-    since_date = window_start_dt.date().isoformat()
+    since_date = window_start
 
     prior_path = args.repo_root / "data" / "latest" / "needle-watch.json"
     prior_ids = load_prior_candidate_ids(prior_path)
+    prior_entity_ids = load_prior_entity_ids(prior_path)
     candidates, source_health = load_source_data(args, observed_at, since_date)
 
-    run_id = os.environ.get("NEEDLE_WATCH_RUN_ID") or os.environ.get("GITHUB_RUN_ID") or f"local-{date_key}"
+    run_id = (
+        os.environ.get("NEEDLE_WATCH_RUN_ID")
+        or os.environ.get("GITHUB_RUN_ID")
+        or f"local-{now.strftime('%Y%m%dT%H%M%SZ')}"
+    )
     collector_revision = (
         os.environ.get("NEEDLE_WATCH_COLLECTOR_REVISION")
         or os.environ.get("GITHUB_SHA")
@@ -81,6 +90,7 @@ def main() -> int:
         source_health=source_health,
         candidates=candidates,
         prior_ids=prior_ids,
+        prior_entity_ids=prior_entity_ids,
     )
     errors = validate_receipt(receipt)
     if errors:
@@ -88,11 +98,11 @@ def main() -> int:
             print(f"NEEDLE_WATCH_RECEIPT ERROR {error}", file=sys.stderr)
         return 2
 
-    dated, latest = write_receipt_snapshot(receipt, repo_root=args.repo_root, date_key=date_key)
+    run, daily, latest = write_receipt_snapshot(receipt, repo_root=args.repo_root, date_key=date_key)
     print(
         "NEEDLE_WATCH_RECEIPT PASS "
         f"run_id={run_id} candidates={len(receipt['candidates'])} "
-        f"sources={len(receipt['source_health'])} dated={dated} latest={latest}"
+        f"sources={len(receipt['source_health'])} run={run} daily={daily} latest={latest}"
     )
     return 0
 
