@@ -55,13 +55,13 @@
 - Produces: `load_watch_config(path: Path) -> dict`
 - Produces: `build_search_url(query: str, per_page: int) -> str`
 - Produces: `parse_repository_item(item: dict, *, source_id: str, discovery_route: str, matched_watch_lines: list[str], observed_at: str) -> dict`
-- Produces: `collect_github_queries(config: dict, *, token: str | None, observed_at: str, opener=urlopen) -> tuple[list[dict], list[dict]]`
+- Produces: `collect_github_queries(config: dict, *, token: str | None, observed_at: str, since_date: str, opener=urlopen) -> tuple[list[dict], list[dict]]`
 
-- [ ] **Step 1: Write failing tests using fixed GitHub API JSON fixtures; no network in tests.**
-- [ ] **Step 2: Verify RED.**
-- [ ] **Step 3: Implement URL construction, parsing, bounded requests, and per-query `ok|partial|failed` health.**
-- [ ] **Step 4: Verify GREEN and full test suite.**
-- [ ] **Step 5: Commit Task 2.**
+- [x] **Step 1: Write failing tests using fixed GitHub API JSON fixtures; no network in tests.**
+- [x] **Step 2: Verify RED.**
+- [x] **Step 3: Implement URL construction, parsing, bounded requests, and per-query `ok|partial|failed` health.**
+- [x] **Step 4: Verify GREEN and full test suite.**
+- [x] **Step 5: Commit Task 2.**
 
 ### Task 3: Snapshot writer and previous-state comparison
 
@@ -75,7 +75,7 @@
 - Guarantee: dated and latest bytes are identical.
 
 - [ ] **Step 1: Write failing tests for absent prior file, prior ID loading, deterministic bytes, and identical dated/latest snapshots.**
-- [ ] **Step 2: Verify RED.**
+- [x] **Step 2: Verify RED.**
 - [ ] **Step 3: Implement minimal storage functions.**
 - [ ] **Step 4: Verify GREEN and full suite.**
 - [ ] **Step 5: Commit Task 3.**
@@ -91,7 +91,7 @@
 - Produces: dated/latest receipt files and terminal summary `NEEDLE_WATCH_RECEIPT PASS ...` or nonzero failure.
 
 - [ ] **Step 1: Write failing CLI test against a temporary repo using an injected fixture source mode.**
-- [ ] **Step 2: Verify RED.**
+- [x] **Step 2: Verify RED.**
 - [ ] **Step 3: Implement CLI orchestration with no scientific filtering.**
 - [ ] **Step 4: Verify GREEN and full suite.**
 - [ ] **Step 5: Commit Task 4.**
@@ -110,7 +110,7 @@
 - Commit scope: only `data/YYYY-MM-DD/needle-watch.json` and `data/latest/needle-watch.json`.
 
 - [ ] **Step 1: Add a failing structural test asserting workflow schedule, permissions, test-before-collect ordering, and constrained git-add paths.**
-- [ ] **Step 2: Verify RED.**
+- [x] **Step 2: Verify RED.**
 - [ ] **Step 3: Add minimal workflow/docs satisfying the structural contract.**
 - [ ] **Step 4: Verify GREEN and full suite.**
 - [ ] **Step 5: Commit Task 5.**
@@ -126,7 +126,7 @@
 - A failure fixture must produce `is_valid_null == false`.
 
 - [ ] **Step 1: Write/extend failing tests for deliberate null-day vs source-failure distinction.**
-- [ ] **Step 2: Verify RED.**
+- [x] **Step 2: Verify RED.**
 - [ ] **Step 3: Add only the fixture/documentation needed to make the gate reproducible.**
 - [ ] **Step 4: Run full suite and a local fixture collection; verify exact receipt bytes and required fields.**
 - [ ] **Step 5: Push branch with MarcoPolo write profile, read back remote branch SHA/files, and record evidence in Issue #21.**
