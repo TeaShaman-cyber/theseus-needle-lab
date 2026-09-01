@@ -109,11 +109,11 @@
 - Validation command: `python -m unittest discover -s tests -v` followed by collector execution and receipt validation.
 - Commit scope: only `data/YYYY-MM-DD/needle-watch.json` and `data/latest/needle-watch.json`.
 
-- [ ] **Step 1: Add a failing structural test asserting workflow schedule, permissions, test-before-collect ordering, and constrained git-add paths.**
+- [x] **Step 1: Add a failing structural test asserting workflow schedule, permissions, test-before-collect ordering, and constrained git-add paths.**
 - [x] **Step 2: Verify RED.**
-- [ ] **Step 3: Add minimal workflow/docs satisfying the structural contract.**
+- [x] **Step 3: Add minimal workflow/docs satisfying the structural contract.**
 - [x] **Step 4: Verify GREEN and full suite.**
-- [ ] **Step 5: Commit Task 5.**
+- [x] **Step 5: Commit Task 5.**
 
 ### Task 6: Activation-gate verification
 
