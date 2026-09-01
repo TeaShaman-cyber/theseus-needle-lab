@@ -10,6 +10,34 @@ from needle_watch.receipt import (
 
 
 class ReceiptContractTests(unittest.TestCase):
+    def test_build_receipt_records_prior_schema_version(self):
+        receipt = build_receipt(
+            run_id="run-lineage",
+            generated_at="2026-09-01T10:00:00Z",
+            window_start="2026-08-31T10:00:00Z",
+            window_end="2026-09-01T10:00:00Z",
+            collector_revision="a" * 40,
+            source_health=[{
+                "source_id": "fixture:healthy",
+                "status": "ok",
+                "checked_at": "2026-09-01T10:00:00Z",
+                "records_seen": 0,
+                "total_count": 0,
+                "returned_count": 0,
+                "incomplete_results": False,
+                "truncated": False,
+                "cursor_or_watermark": "2026-08-31T10:00:00Z",
+                "error_class": None,
+            }],
+            candidates=[],
+            prior_ids=set(),
+            prior_entity_ids=set(),
+            prior_schema_version="needle-watch-receipt-v0.1",
+        )
+        self.assertEqual(
+            receipt["prior_schema_version"], "needle-watch-receipt-v0.1"
+        )
+
     def test_schema_version_marks_v02_contract(self):
         self.assertEqual(SCHEMA_VERSION, "needle-watch-receipt-v0.2")
 

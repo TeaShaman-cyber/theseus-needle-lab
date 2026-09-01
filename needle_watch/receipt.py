@@ -13,6 +13,7 @@ TOP_LEVEL_FIELDS = (
     "window_start",
     "window_end",
     "collector_revision",
+    "prior_schema_version",
     "source_health",
     "candidates",
 )
@@ -89,6 +90,7 @@ def build_receipt(
     candidates: list[dict],
     prior_ids: set[str],
     prior_entity_ids: set[str] | None = None,
+    prior_schema_version: str | None = None,
 ) -> dict:
     return {
         "schema_version": SCHEMA_VERSION,
@@ -97,6 +99,7 @@ def build_receipt(
         "window_start": window_start,
         "window_end": window_end,
         "collector_revision": collector_revision,
+        "prior_schema_version": prior_schema_version,
         "source_health": deepcopy(source_health),
         "candidates": [
             normalize_candidate(item, prior_ids, prior_entity_ids or set())
@@ -113,6 +116,10 @@ def validate_receipt(receipt: dict) -> list[str]:
 
     if receipt.get("schema_version") != SCHEMA_VERSION:
         errors.append(f"schema_version must be {SCHEMA_VERSION}")
+
+    prior_schema_version = receipt.get("prior_schema_version")
+    if prior_schema_version is not None and not isinstance(prior_schema_version, str):
+        errors.append("prior_schema_version must be a string or null")
 
     try:
         window_start = datetime.fromisoformat(

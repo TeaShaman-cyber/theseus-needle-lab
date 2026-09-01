@@ -6,6 +6,7 @@ from tempfile import TemporaryDirectory
 from needle_watch.storage import (
     load_prior_candidate_ids,
     load_prior_entity_ids,
+    load_prior_schema_version,
     write_receipt_snapshot,
 )
 
@@ -25,6 +26,15 @@ class StorageTests(unittest.TestCase):
                 {"title": "missing-id"},
             ]}))
             self.assertEqual(load_prior_candidate_ids(path), {"a" * 64, "b" * 64})
+
+    def test_prior_snapshot_loads_schema_version(self):
+        with TemporaryDirectory() as tmp:
+            path = Path(tmp) / "prior.json"
+            path.write_text(json.dumps({"schema_version": "needle-watch-receipt-v0.1"}))
+            self.assertEqual(
+                load_prior_schema_version(path), "needle-watch-receipt-v0.1"
+            )
+            self.assertIsNone(load_prior_schema_version(Path(tmp) / "missing.json"))
 
     def test_prior_snapshot_loads_stable_source_entity_ids(self):
         with TemporaryDirectory() as tmp:

@@ -15,6 +15,14 @@ def load_prior_candidate_ids(path: Path) -> set[str]:
     }
 
 
+def load_prior_schema_version(path: Path) -> str | None:
+    if not path.exists():
+        return None
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    value = payload.get("schema_version")
+    return value if isinstance(value, str) else None
+
+
 def load_prior_entity_ids(path: Path) -> set[str]:
     if not path.exists():
         return set()

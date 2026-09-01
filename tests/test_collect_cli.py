@@ -214,6 +214,7 @@ class CollectCliTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stderr)
             migrated = json.loads((repo_root / "data" / "latest" / "needle-watch.json").read_text())
             self.assertEqual(migrated["schema_version"], "needle-watch-receipt-v0.2")
+            self.assertEqual(migrated["prior_schema_version"], "needle-watch-receipt-v0.1")
             self.assertEqual(migrated["run_id"], "migration-run")
 
     def test_fixture_mode_writes_valid_run_daily_and_latest_receipts(self):

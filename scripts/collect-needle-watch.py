@@ -17,6 +17,7 @@ from needle_watch.receipt import build_receipt, validate_receipt
 from needle_watch.storage import (
     load_prior_candidate_ids,
     load_prior_entity_ids,
+    load_prior_schema_version,
     write_receipt_snapshot,
 )
 
@@ -69,6 +70,7 @@ def main() -> int:
     prior_path = args.repo_root / "data" / "latest" / "needle-watch.json"
     prior_ids = load_prior_candidate_ids(prior_path)
     prior_entity_ids = load_prior_entity_ids(prior_path)
+    prior_schema_version = load_prior_schema_version(prior_path)
     candidates, source_health = load_source_data(args, observed_at, since_date)
 
     run_id = (
@@ -91,6 +93,7 @@ def main() -> int:
         candidates=candidates,
         prior_ids=prior_ids,
         prior_entity_ids=prior_entity_ids,
+        prior_schema_version=prior_schema_version,
     )
     errors = validate_receipt(receipt)
     if errors:

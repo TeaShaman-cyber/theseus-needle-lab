@@ -20,6 +20,7 @@ The legacy v0.1 path `data/YYYY-MM-DD/needle-watch.json` remains historical data
 - `run_id`: immutable execution identity. In GitHub Actions this is `<github.run_id>-attempt-<github.run_attempt>` because `run_id` alone is reused across reruns; local fallback IDs include the UTC timestamp.
 - `generated_at`, `window_start`, `window_end`: UTC RFC3339 timestamps.
 - `collector_revision`: source Git commit used by the collector.
+- `prior_schema_version`: schema version observed in the previous `latest` snapshot, or `null` when no prior snapshot exists. A schema transition is a provenance boundary: previous-snapshot identity flags may not be comparable when the older schema did not carry the same identity fields.
 - `source_health[]`: operational and coverage evidence for each configured source/query family.
 - `candidates[]`: normalized discovery observations with stable entity and immutable revision identity.
 
@@ -72,3 +73,14 @@ A/B/C tasks must not equate a structurally valid `latest` receipt with the curre
 ## Task routing
 
 During the shadow experiment, ChatGPT Tasks may use the native GitHub app as a read-only sensor for these public receipts and referenced public GitHub evidence. Native GitHub mutations are prohibited by experiment policy. MarcoPolo remains the engineering/write route for repository changes and verified read-back.
+
+## Schema transition semantics
+
+The first production v0.2 run may restore a v0.1 `latest` snapshot. That is supported and recorded explicitly:
+
+```text
+schema_version       = needle-watch-receipt-v0.2
+prior_schema_version = needle-watch-receipt-v0.1
+```
+
+During such a transition, `seen_in_previous_snapshot=false` or `entity_seen_in_previous_snapshot=false` must not by itself be interpreted as scientific novelty. The older schema may not have carried the same immutable candidate or stable entity identity. Downstream tasks must use semantic/historical deduplication and preserve the migration boundary in their evaluation record.
