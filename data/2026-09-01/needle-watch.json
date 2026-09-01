@@ -1,0 +1,246 @@
+{
+  "candidates": [
+    {
+      "candidate_id": "30519d149df57b3a6493864f842e4eaea47075b9648baa123c67702c32424776",
+      "canonical_url": "https://github.com/SurathDurgaprasad/tiny-language-model",
+      "content_fingerprint": "pushed:2026-09-01T10:28:03Z",
+      "discovery_route": "github_search:tiny-model",
+      "matched_watch_lines": [
+        "tiny-model"
+      ],
+      "observed_at": "2026-09-01T12:29:24Z",
+      "prior_seen": false,
+      "published_or_pushed_at": "2026-09-01T10:28:03Z",
+      "source_class": "github_repo",
+      "source_id": "github-search:tiny-model",
+      "source_identity": "SurathDurgaprasad/tiny-language-model@main",
+      "title": "SurathDurgaprasad/tiny-language-model"
+    },
+    {
+      "candidate_id": "7010e8b66df94550f330de659b51c0f66b96779ba504dd7112bd02105991619c",
+      "canonical_url": "https://github.com/NullPointeer/tiny-transformer",
+      "content_fingerprint": "pushed:2026-09-01T10:12:19Z",
+      "discovery_route": "github_search:tiny-model",
+      "matched_watch_lines": [
+        "tiny-model"
+      ],
+      "observed_at": "2026-09-01T12:29:24Z",
+      "prior_seen": false,
+      "published_or_pushed_at": "2026-09-01T10:12:19Z",
+      "source_class": "github_repo",
+      "source_id": "github-search:tiny-model",
+      "source_identity": "NullPointeer/tiny-transformer@main",
+      "title": "NullPointeer/tiny-transformer"
+    },
+    {
+      "candidate_id": "f7376a12d3ac7452e6a7e1184f59b0dd850fbce02affd656d2b1200382a4e858",
+      "canonical_url": "https://github.com/kakesson/tinysim",
+      "content_fingerprint": "pushed:2026-09-01T09:32:37Z",
+      "discovery_route": "github_search:tiny-model",
+      "matched_watch_lines": [
+        "tiny-model"
+      ],
+      "observed_at": "2026-09-01T12:29:24Z",
+      "prior_seen": false,
+      "published_or_pushed_at": "2026-09-01T09:32:37Z",
+      "source_class": "github_repo",
+      "source_id": "github-search:tiny-model",
+      "source_identity": "kakesson/tinysim@main",
+      "title": "kakesson/tinysim"
+    },
+    {
+      "candidate_id": "681e5a903576ed2a275d948c937699695eed1aefca5e77353165e20eb98d2e94",
+      "canonical_url": "https://github.com/saumik-automates/tiny-gpt-from-scratch",
+      "content_fingerprint": "pushed:2026-09-01T08:21:51Z",
+      "discovery_route": "github_search:tiny-model",
+      "matched_watch_lines": [
+        "tiny-model"
+      ],
+      "observed_at": "2026-09-01T12:29:24Z",
+      "prior_seen": false,
+      "published_or_pushed_at": "2026-09-01T08:21:51Z",
+      "source_class": "github_repo",
+      "source_id": "github-search:tiny-model",
+      "source_identity": "saumik-automates/tiny-gpt-from-scratch@main",
+      "title": "saumik-automates/tiny-gpt-from-scratch"
+    },
+    {
+      "candidate_id": "e114f093c6bd7331a73031eb01cb0fd7197e75f8a56291845c6744baee6da01c",
+      "canonical_url": "https://github.com/Indrawn-amphibiousoperation692/Tiny-Lab",
+      "content_fingerprint": "pushed:2026-09-01T07:04:23Z",
+      "discovery_route": "github_search:tiny-model",
+      "matched_watch_lines": [
+        "tiny-model"
+      ],
+      "observed_at": "2026-09-01T12:29:24Z",
+      "prior_seen": false,
+      "published_or_pushed_at": "2026-09-01T07:04:23Z",
+      "source_class": "github_repo",
+      "source_id": "github-search:tiny-model",
+      "source_identity": "Indrawn-amphibiousoperation692/Tiny-Lab@main",
+      "title": "Indrawn-amphibiousoperation692/Tiny-Lab"
+    },
+    {
+      "candidate_id": "4732789541b92d37e5c7e1887128353a088a33a6ca786e0e080432bd29733584",
+      "canonical_url": "https://github.com/avikds/tiny-gpt-from-scratch",
+      "content_fingerprint": "pushed:2026-09-01T05:42:38Z",
+      "discovery_route": "github_search:tiny-model",
+      "matched_watch_lines": [
+        "tiny-model"
+      ],
+      "observed_at": "2026-09-01T12:29:24Z",
+      "prior_seen": false,
+      "published_or_pushed_at": "2026-09-01T05:42:38Z",
+      "source_class": "github_repo",
+      "source_id": "github-search:tiny-model",
+      "source_identity": "avikds/tiny-gpt-from-scratch@main",
+      "title": "avikds/tiny-gpt-from-scratch"
+    },
+    {
+      "candidate_id": "4785534e08f062386e9fb927ed2f5f27978b795cbcf5db718e71600e5bb41feb",
+      "canonical_url": "https://github.com/avikds/mamba-from-scratch-selective-state-spaces",
+      "content_fingerprint": "pushed:2026-09-01T04:32:55Z",
+      "discovery_route": "github_search:tiny-model",
+      "matched_watch_lines": [
+        "tiny-model"
+      ],
+      "observed_at": "2026-09-01T12:29:24Z",
+      "prior_seen": false,
+      "published_or_pushed_at": "2026-09-01T04:32:55Z",
+      "source_class": "github_repo",
+      "source_id": "github-search:tiny-model",
+      "source_identity": "avikds/mamba-from-scratch-selective-state-spaces@main",
+      "title": "avikds/mamba-from-scratch-selective-state-spaces"
+    },
+    {
+      "candidate_id": "ab013a9cc21481011da3b1dca314698c8fef35020fa02409ed1f2f10db8a9c4b",
+      "canonical_url": "https://github.com/felladrin/gguf-trainer",
+      "content_fingerprint": "pushed:2026-09-01T00:10:44Z",
+      "discovery_route": "github_search:tiny-model",
+      "matched_watch_lines": [
+        "tiny-model"
+      ],
+      "observed_at": "2026-09-01T12:29:24Z",
+      "prior_seen": false,
+      "published_or_pushed_at": "2026-09-01T00:10:44Z",
+      "source_class": "github_repo",
+      "source_id": "github-search:tiny-model",
+      "source_identity": "felladrin/gguf-trainer@main",
+      "title": "felladrin/gguf-trainer"
+    },
+    {
+      "candidate_id": "19ebbc7579bdbb163b39a449e25ba568882e4e2c1770f5721039b628fac3df3f",
+      "canonical_url": "https://github.com/Asembris/tiny-gpt-from-scratch",
+      "content_fingerprint": "pushed:2026-08-31T23:52:19Z",
+      "discovery_route": "github_search:tiny-model",
+      "matched_watch_lines": [
+        "tiny-model"
+      ],
+      "observed_at": "2026-09-01T12:29:24Z",
+      "prior_seen": false,
+      "published_or_pushed_at": "2026-08-31T23:52:19Z",
+      "source_class": "github_repo",
+      "source_id": "github-search:tiny-model",
+      "source_identity": "Asembris/tiny-gpt-from-scratch@main",
+      "title": "Asembris/tiny-gpt-from-scratch"
+    },
+    {
+      "candidate_id": "8b8a3401cb18e3ada444b707aa65a408cd26a4ab6d2c38c61a1a612b62928a8d",
+      "canonical_url": "https://github.com/caveofprogramming/CaveGPT",
+      "content_fingerprint": "pushed:2026-08-31T22:00:56Z",
+      "discovery_route": "github_search:tiny-model",
+      "matched_watch_lines": [
+        "tiny-model"
+      ],
+      "observed_at": "2026-09-01T12:29:24Z",
+      "prior_seen": false,
+      "published_or_pushed_at": "2026-08-31T22:00:56Z",
+      "source_class": "github_repo",
+      "source_id": "github-search:tiny-model",
+      "source_identity": "caveofprogramming/CaveGPT@main",
+      "title": "caveofprogramming/CaveGPT"
+    },
+    {
+      "candidate_id": "ed9c6da0b8814ad77ceb0fde570e802b13d17e54742fc24cc3a2a6c445e94524",
+      "canonical_url": "https://github.com/georgemoncure/moe-expert-cache",
+      "content_fingerprint": "pushed:2026-09-01T11:29:53Z",
+      "discovery_route": "github_search:moe-cache",
+      "matched_watch_lines": [
+        "parameter-storage",
+        "sparse-execution"
+      ],
+      "observed_at": "2026-09-01T12:29:24Z",
+      "prior_seen": false,
+      "published_or_pushed_at": "2026-09-01T11:29:53Z",
+      "source_class": "github_repo",
+      "source_id": "github-search:moe-cache",
+      "source_identity": "georgemoncure/moe-expert-cache@master",
+      "title": "georgemoncure/moe-expert-cache"
+    },
+    {
+      "candidate_id": "96858b353987c018f49f83b1f628be7c6f94ea13bcd2de8375a76eb762a6b5fa",
+      "canonical_url": "https://github.com/xero00000/expert-streaming-engine",
+      "content_fingerprint": "pushed:2026-08-31T13:59:12Z",
+      "discovery_route": "github_search:moe-cache",
+      "matched_watch_lines": [
+        "parameter-storage",
+        "sparse-execution"
+      ],
+      "observed_at": "2026-09-01T12:29:24Z",
+      "prior_seen": false,
+      "published_or_pushed_at": "2026-08-31T13:59:12Z",
+      "source_class": "github_repo",
+      "source_id": "github-search:moe-cache",
+      "source_identity": "xero00000/expert-streaming-engine@main",
+      "title": "xero00000/expert-streaming-engine"
+    }
+  ],
+  "collector_revision": "b81ff532bd4b36a58e1826813977d568fd652fee",
+  "generated_at": "2026-09-01T12:29:24Z",
+  "run_id": "33507943557",
+  "schema_version": "needle-watch-receipt-v0.1",
+  "source_health": [
+    {
+      "checked_at": "2026-09-01T12:29:24Z",
+      "cursor_or_watermark": "2026-08-31",
+      "error_class": null,
+      "records_seen": 10,
+      "source_id": "github-search:tiny-model",
+      "status": "ok"
+    },
+    {
+      "checked_at": "2026-09-01T12:29:24Z",
+      "cursor_or_watermark": "2026-08-31",
+      "error_class": null,
+      "records_seen": 0,
+      "source_id": "github-search:helper-model",
+      "status": "ok"
+    },
+    {
+      "checked_at": "2026-09-01T12:29:24Z",
+      "cursor_or_watermark": "2026-08-31",
+      "error_class": null,
+      "records_seen": 0,
+      "source_id": "github-search:low-memory-training",
+      "status": "ok"
+    },
+    {
+      "checked_at": "2026-09-01T12:29:24Z",
+      "cursor_or_watermark": "2026-08-31",
+      "error_class": null,
+      "records_seen": 0,
+      "source_id": "github-search:parameter-offload",
+      "status": "ok"
+    },
+    {
+      "checked_at": "2026-09-01T12:29:24Z",
+      "cursor_or_watermark": "2026-08-31",
+      "error_class": null,
+      "records_seen": 2,
+      "source_id": "github-search:moe-cache",
+      "status": "ok"
+    }
+  ],
+  "window_end": "2026-09-01T12:29:24Z",
+  "window_start": "2026-08-31T12:29:24Z"
+}
