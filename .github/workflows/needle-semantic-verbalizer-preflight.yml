@@ -1,0 +1,122 @@
+name: Needle semantic verbalizer preflight
+
+on:
+  push:
+    branches:
+      - experiment/needle-semantic-verbalizer-preflight
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  NEEDLE_TELEMETRY: "0"
+  DO_NOT_TRACK: "1"
+  HF_HUB_DISABLE_TELEMETRY: "1"
+  HF_HUB_DISABLE_PROGRESS_BARS: "1"
+  PYTHONUNBUFFERED: "1"
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.11"
+
+      - name: Install pinned Needle runtime
+        shell: bash
+        run: |
+          set -eu
+          mkdir -p results logs metrics
+          python -m pip install "cactus-needle==2.0.8" 2>&1 | tee logs/install.log
+          python - <<'PY' | tee logs/package-versions.log
+          import importlib.metadata, platform
+          print('python=' + platform.python_version())
+          for name in ['cactus-needle','sentencepiece','huggingface-hub']:
+              print(f'{name}={importlib.metadata.version(name)}')
+          PY
+
+      - name: Assert exact A/B predecessor contracts
+        shell: bash
+        run: |
+          set -eu
+          python - <<'PY'
+          import importlib.util, pathlib
+          def load(name, path):
+              s=importlib.util.spec_from_file_location(name, path)
+              m=importlib.util.module_from_spec(s); s.loader.exec_module(m); return m
+          prior=load('prior', pathlib.Path('scripts/run_verbalizer_factorized_probe.py'))
+          current=load('current', pathlib.Path('scripts/run_semantic_verbalizer_preflight.py'))
+          assert current.PREFIX == prior.PREFIX
+          for arm in 'AB':
+              assert current.arm_specs()[arm] == prior.flat_specs()[arm]
+              assert current.serialize_schema(current.route_schema(arm)) == prior.serialize_schema(prior.flat_schema(arm))
+          assert current.arm_specs()['C']['to_decision'] == {'check':'PROBE','ready':'READY','unknown':'UNKNOWN'}
+          print('SEMANTIC_PREFLIGHT_PREDECESSOR_IDENTITY=PASS')
+          PY
+
+      - name: Run arm A uppercase reference
+        shell: bash
+        run: |
+          set -o pipefail
+          /usr/bin/time -v -o metrics/arm-a.time python scripts/run_semantic_verbalizer_preflight.py \
+            --arm A --training-jsonl experiments/needle-cpu-smoke/data.jsonl \
+            --output results/arm-a.jsonl --max-new-tokens 256 2>&1 | tee logs/arm-a.log
+
+      - name: Run arm B lowercase reference
+        shell: bash
+        run: |
+          set -o pipefail
+          /usr/bin/time -v -o metrics/arm-b.time python scripts/run_semantic_verbalizer_preflight.py \
+            --arm B --training-jsonl experiments/needle-cpu-smoke/data.jsonl \
+            --output results/arm-b.jsonl --max-new-tokens 256 2>&1 | tee logs/arm-b.log
+
+      - name: Run arm C semantic check
+        shell: bash
+        run: |
+          set -o pipefail
+          /usr/bin/time -v -o metrics/arm-c.time python scripts/run_semantic_verbalizer_preflight.py \
+            --arm C --training-jsonl experiments/needle-cpu-smoke/data.jsonl \
+            --output results/arm-c.jsonl --max-new-tokens 256 2>&1 | tee logs/arm-c.log
+
+      - name: Write semantic preflight receipt
+        shell: bash
+        run: |
+          set -eu
+          python scripts/semantic_verbalizer_preflight_receipt.py \
+            --arm-a results/arm-a.jsonl --arm-b results/arm-b.jsonl --arm-c results/arm-c.jsonl \
+            --commit "$GITHUB_SHA" --run-id "$GITHUB_RUN_ID" \
+            --output results/receipt.json --markdown results/summary.md
+          cat results/summary.md
+
+      - name: Assert evidence shape only
+        shell: bash
+        run: |
+          set -eu
+          python - <<'PY'
+          import json
+          r=json.load(open('results/receipt.json'))
+          assert r['schema'] == 'theseus.needle.semantic_verbalizer_preflight.v1'
+          assert r['source']['parent_issue'] == 26
+          assert r['source']['predecessor_commit'] == '2c674600c17c06ced1683fe72af9c2ab22fa0927'
+          for arm in 'ABC':
+              assert r['arms'][arm]['n'] == 12
+              assert r['arms'][arm]['label_tokenization']
+          assert r['interpretation_boundary'] == 'zero_training_interface_prior_selection_not_evidence_of_learned_policy'
+          PY
+
+      - name: Upload semantic preflight evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: needle-semantic-verbalizer-preflight-${{ github.run_id }}
+          path: |
+            results/
+            logs/
+            metrics/
+          if-no-files-found: error
+          retention-days: 14

@@ -474,3 +474,98 @@ class VerbalizerPermutationReceiptContractTest(unittest.TestCase):
         self.assertIn("raw_token_distribution", receipt["arms"]["P1"])
         self.assertIn("decision_accuracy", receipt["arms"]["P1"])
         self.assertEqual(receipt["interpretation_boundary"], "descriptive_zero_training_permutation_probe_not_statistical_significance")
+
+
+SEMANTIC_PREFLIGHT_RUNNER = ROOT / "scripts" / "run_semantic_verbalizer_preflight.py"
+SEMANTIC_PREFLIGHT_RECEIPT = ROOT / "scripts" / "semantic_verbalizer_preflight_receipt.py"
+SEMANTIC_PREFLIGHT_WORKFLOW = ROOT / ".github" / "workflows" / "needle-semantic-verbalizer-preflight.yml"
+SEMANTIC_PREFLIGHT_README = ROOT / "experiments" / "needle-semantic-verbalizer-preflight" / "README.md"
+
+
+class SemanticVerbalizerPreflightContractTest(unittest.TestCase):
+    def test_three_arms_preserve_predecessor_a_b_and_add_semantic_check_arm(self):
+        self.assertTrue(SEMANTIC_PREFLIGHT_RUNNER.is_file())
+        current = load_module("semantic_verbalizer_preflight_runner", SEMANTIC_PREFLIGHT_RUNNER)
+        predecessor = load_module("semantic_verbalizer_predecessor", ROOT / "scripts" / "run_verbalizer_factorized_probe.py")
+        specs = current.arm_specs()
+        self.assertEqual(list(specs), ["A", "B", "C"])
+        self.assertEqual(specs["A"], predecessor.flat_specs()["A"])
+        self.assertEqual(specs["B"], predecessor.flat_specs()["B"])
+        self.assertEqual(specs["C"]["labels"], ["check", "ready", "unknown"])
+        self.assertEqual(
+            specs["C"]["to_decision"],
+            {"check": "PROBE", "ready": "READY", "unknown": "UNKNOWN"},
+        )
+        self.assertEqual(current.PREFIX, predecessor.PREFIX)
+        for arm in "AB":
+            self.assertEqual(
+                current.serialize_schema(current.route_schema(arm)),
+                predecessor.serialize_schema(predecessor.flat_schema(arm)),
+            )
+
+    def test_records_exact_prompt_contract_raw_label_and_label_tokenization(self):
+        self.assertTrue(SEMANTIC_PREFLIGHT_RUNNER.is_file())
+        text = SEMANTIC_PREFLIGHT_RUNNER.read_text()
+        self.assertIn('"predicted_label": raw_label', text)
+        self.assertIn('"predicted": predicted', text)
+        self.assertIn('"schema_json": schema_json', text)
+        self.assertIn('"framed_query": query', text)
+        self.assertIn('"label_tokenization": label_tokenization', text)
+
+    def test_workflow_is_base_only_exact_three_arms_and_asserts_predecessor_identity(self):
+        self.assertTrue(SEMANTIC_PREFLIGHT_WORKFLOW.is_file())
+        text = SEMANTIC_PREFLIGHT_WORKFLOW.read_text()
+        self.assertIn("experiment/needle-semantic-verbalizer-preflight", text)
+        self.assertIn('cactus-needle==2.0.8', text)
+        self.assertIn("Assert exact A/B predecessor contracts", text)
+        for arm in "ABC":
+            self.assertEqual(text.count(f"--arm {arm}"), 1)
+            self.assertIn(f"results/arm-{arm.lower()}.jsonl", text)
+        self.assertNotIn("needle finetune", text)
+        self.assertNotIn("needle build", text)
+        self.assertNotIn("--weights", text)
+        self.assertNotIn("secrets.", text)
+
+    def test_readme_declares_interface_selection_not_learning_claim(self):
+        self.assertTrue(SEMANTIC_PREFLIGHT_README.is_file())
+        text = SEMANTIC_PREFLIGHT_README.read_text()
+        self.assertIn("#26", text)
+        self.assertIn("zero-training", text.lower())
+        self.assertIn("interface prior", text.lower())
+        self.assertIn("not evidence of learned policy", text.lower())
+
+
+class SemanticVerbalizerPreflightReceiptContractTest(unittest.TestCase):
+    def test_receipt_scores_accuracy_applicability_and_collapse_separately(self):
+        self.assertTrue(SEMANTIC_PREFLIGHT_RECEIPT.is_file())
+        module = load_module("semantic_verbalizer_preflight_receipt", SEMANTIC_PREFLIGHT_RECEIPT)
+        arms = {
+            "A": [
+                {"id": "x1", "expected": "PROBE", "predicted_label": "PROBE", "predicted": "PROBE", "valid_structured_call": True, "correct": True},
+                {"id": "x2", "expected": "READY", "predicted_label": "NO_CALL", "predicted": "NO_CALL", "valid_structured_call": False, "correct": False},
+                {"id": "x3", "expected": "UNKNOWN", "predicted_label": "UNKNOWN", "predicted": "UNKNOWN", "valid_structured_call": True, "correct": True},
+            ],
+            "B": [
+                {"id": "x1", "expected": "PROBE", "predicted_label": "probe", "predicted": "PROBE", "valid_structured_call": True, "correct": True},
+                {"id": "x2", "expected": "READY", "predicted_label": "probe", "predicted": "PROBE", "valid_structured_call": True, "correct": False},
+                {"id": "x3", "expected": "UNKNOWN", "predicted_label": "probe", "predicted": "PROBE", "valid_structured_call": True, "correct": False},
+            ],
+            "C": [
+                {"id": "x1", "expected": "PROBE", "predicted_label": "check", "predicted": "PROBE", "valid_structured_call": True, "correct": True},
+                {"id": "x2", "expected": "READY", "predicted_label": "ready", "predicted": "READY", "valid_structured_call": True, "correct": True},
+                {"id": "x3", "expected": "UNKNOWN", "predicted_label": "unknown", "predicted": "UNKNOWN", "valid_structured_call": True, "correct": True},
+            ],
+        }
+        receipt = module.build_receipt(arms, commit="c" * 40, run_id="123")
+        self.assertEqual(receipt["schema"], "theseus.needle.semantic_verbalizer_preflight.v1")
+        self.assertEqual(receipt["arms"]["A"]["valid_call_rate"], 2 / 3)
+        self.assertEqual(receipt["arms"]["A"]["decision_accuracy"], 2 / 3)
+        self.assertEqual(receipt["arms"]["B"]["dominant_prediction"], "PROBE")
+        self.assertEqual(receipt["arms"]["B"]["dominant_prediction_rate"], 1.0)
+        self.assertTrue(receipt["arms"]["B"]["collapsed"])
+        self.assertFalse(receipt["arms"]["C"]["collapsed"])
+        self.assertEqual(receipt["arms"]["C"]["decision_accuracy"], 1.0)
+        self.assertEqual(
+            receipt["interpretation_boundary"],
+            "zero_training_interface_prior_selection_not_evidence_of_learned_policy",
+        )
