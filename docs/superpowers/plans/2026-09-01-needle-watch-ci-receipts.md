@@ -41,7 +41,7 @@
 - [x] **Step 2: Run `python -m unittest tests.test_receipt -v` and verify RED failures are feature-missing failures.**
 - [x] **Step 3: Implement the minimal receipt functions.**
 - [x] **Step 4: Re-run receipt tests and verify GREEN.**
-- [ ] **Step 5: Commit Task 1.**
+- [x] **Step 5: Commit Task 1.**
 
 ### Task 2: GitHub repository discovery adapter
 
@@ -125,8 +125,8 @@
 - A fixture run must produce `candidates: []` with healthy source records and `is_valid_null == true`.
 - A failure fixture must produce `is_valid_null == false`.
 
-- [ ] **Step 1: Write/extend failing tests for deliberate null-day vs source-failure distinction.**
+- [x] **Step 1: Write/extend failing tests for deliberate null-day vs source-failure distinction.**
 - [x] **Step 2: Verify RED.**
-- [ ] **Step 3: Add only the fixture/documentation needed to make the gate reproducible.**
-- [ ] **Step 4: Run full suite and a local fixture collection; verify exact receipt bytes and required fields.**
+- [x] **Step 3: Add only the fixture/documentation needed to make the gate reproducible.**
+- [x] **Step 4: Run full suite and a local fixture collection; verify exact receipt bytes and required fields.**
 - [ ] **Step 5: Push branch with MarcoPolo write profile, read back remote branch SHA/files, and record evidence in Issue #21.**
