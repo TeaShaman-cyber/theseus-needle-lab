@@ -74,11 +74,11 @@
 - Produces: `write_receipt_snapshot(receipt: dict, *, repo_root: Path, date_key: str) -> tuple[Path, Path]`
 - Guarantee: dated and latest bytes are identical.
 
-- [ ] **Step 1: Write failing tests for absent prior file, prior ID loading, deterministic bytes, and identical dated/latest snapshots.**
+- [x] **Step 1: Write failing tests for absent prior file, prior ID loading, deterministic bytes, and identical dated/latest snapshots.**
 - [x] **Step 2: Verify RED.**
-- [ ] **Step 3: Implement minimal storage functions.**
-- [ ] **Step 4: Verify GREEN and full suite.**
-- [ ] **Step 5: Commit Task 3.**
+- [x] **Step 3: Implement minimal storage functions.**
+- [x] **Step 4: Verify GREEN and full suite.**
+- [x] **Step 5: Commit Task 3.**
 
 ### Task 4: CLI collector
 
@@ -93,7 +93,7 @@
 - [ ] **Step 1: Write failing CLI test against a temporary repo using an injected fixture source mode.**
 - [x] **Step 2: Verify RED.**
 - [ ] **Step 3: Implement CLI orchestration with no scientific filtering.**
-- [ ] **Step 4: Verify GREEN and full suite.**
+- [x] **Step 4: Verify GREEN and full suite.**
 - [ ] **Step 5: Commit Task 4.**
 
 ### Task 5: GitHub Actions workflow and repository contract docs
@@ -112,7 +112,7 @@
 - [ ] **Step 1: Add a failing structural test asserting workflow schedule, permissions, test-before-collect ordering, and constrained git-add paths.**
 - [x] **Step 2: Verify RED.**
 - [ ] **Step 3: Add minimal workflow/docs satisfying the structural contract.**
-- [ ] **Step 4: Verify GREEN and full suite.**
+- [x] **Step 4: Verify GREEN and full suite.**
 - [ ] **Step 5: Commit Task 5.**
 
 ### Task 6: Activation-gate verification
