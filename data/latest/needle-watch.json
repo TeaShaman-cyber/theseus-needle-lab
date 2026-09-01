@@ -5,13 +5,13 @@
       "canonical_url": "https://github.com/Rhytham4306/tinygpt-from-scratch",
       "content_fingerprint": "commit:a573b241450cc4844c2cbc491c5f15e901605ffe",
       "discovery_route": "github_search:tiny-model",
-      "entity_seen_in_previous_snapshot": false,
+      "entity_seen_in_previous_snapshot": true,
       "matched_watch_lines": [
         "tiny-model"
       ],
-      "observed_at": "2026-09-01T15:35:59Z",
+      "observed_at": "2026-09-01T15:37:04Z",
       "published_or_pushed_at": "2026-09-01T15:15:04Z",
-      "seen_in_previous_snapshot": false,
+      "seen_in_previous_snapshot": true,
       "source_class": "github_repo",
       "source_entity_id": "github-repo:1353713551",
       "source_id": "github-search:tiny-model",
@@ -24,13 +24,13 @@
       "canonical_url": "https://github.com/asoloveii/tiny-mla-lm",
       "content_fingerprint": "commit:49b0e9c8562ffd9564ad4d901c03496cc93272c4",
       "discovery_route": "github_search:tiny-model",
-      "entity_seen_in_previous_snapshot": false,
+      "entity_seen_in_previous_snapshot": true,
       "matched_watch_lines": [
         "tiny-model"
       ],
-      "observed_at": "2026-09-01T15:35:59Z",
+      "observed_at": "2026-09-01T15:37:04Z",
       "published_or_pushed_at": "2026-09-01T14:42:50Z",
-      "seen_in_previous_snapshot": false,
+      "seen_in_previous_snapshot": true,
       "source_class": "github_repo",
       "source_entity_id": "github-repo:1338647917",
       "source_id": "github-search:tiny-model",
@@ -47,7 +47,7 @@
       "matched_watch_lines": [
         "tiny-model"
       ],
-      "observed_at": "2026-09-01T15:35:59Z",
+      "observed_at": "2026-09-01T15:37:04Z",
       "published_or_pushed_at": "2026-09-01T10:28:03Z",
       "seen_in_previous_snapshot": true,
       "source_class": "github_repo",
@@ -66,7 +66,7 @@
       "matched_watch_lines": [
         "tiny-model"
       ],
-      "observed_at": "2026-09-01T15:35:59Z",
+      "observed_at": "2026-09-01T15:37:04Z",
       "published_or_pushed_at": "2026-09-01T10:12:19Z",
       "seen_in_previous_snapshot": true,
       "source_class": "github_repo",
@@ -85,7 +85,7 @@
       "matched_watch_lines": [
         "tiny-model"
       ],
-      "observed_at": "2026-09-01T15:35:59Z",
+      "observed_at": "2026-09-01T15:37:04Z",
       "published_or_pushed_at": "2026-09-01T09:32:37Z",
       "seen_in_previous_snapshot": true,
       "source_class": "github_repo",
@@ -104,7 +104,7 @@
       "matched_watch_lines": [
         "tiny-model"
       ],
-      "observed_at": "2026-09-01T15:35:59Z",
+      "observed_at": "2026-09-01T15:37:04Z",
       "published_or_pushed_at": "2026-09-01T08:21:51Z",
       "seen_in_previous_snapshot": true,
       "source_class": "github_repo",
@@ -123,7 +123,7 @@
       "matched_watch_lines": [
         "tiny-model"
       ],
-      "observed_at": "2026-09-01T15:35:59Z",
+      "observed_at": "2026-09-01T15:37:04Z",
       "published_or_pushed_at": "2026-09-01T07:04:23Z",
       "seen_in_previous_snapshot": true,
       "source_class": "github_repo",
@@ -142,7 +142,7 @@
       "matched_watch_lines": [
         "tiny-model"
       ],
-      "observed_at": "2026-09-01T15:35:59Z",
+      "observed_at": "2026-09-01T15:37:04Z",
       "published_or_pushed_at": "2026-09-01T05:42:38Z",
       "seen_in_previous_snapshot": true,
       "source_class": "github_repo",
@@ -161,7 +161,7 @@
       "matched_watch_lines": [
         "tiny-model"
       ],
-      "observed_at": "2026-09-01T15:35:59Z",
+      "observed_at": "2026-09-01T15:37:04Z",
       "published_or_pushed_at": "2026-09-01T04:32:55Z",
       "seen_in_previous_snapshot": true,
       "source_class": "github_repo",
@@ -180,7 +180,7 @@
       "matched_watch_lines": [
         "tiny-model"
       ],
-      "observed_at": "2026-09-01T15:35:59Z",
+      "observed_at": "2026-09-01T15:37:04Z",
       "published_or_pushed_at": "2026-09-01T00:10:44Z",
       "seen_in_previous_snapshot": true,
       "source_class": "github_repo",
@@ -195,14 +195,14 @@
       "canonical_url": "https://github.com/ap03906101/moe-hotcache",
       "content_fingerprint": "commit:d9194687eaebc540efb18f1cbfe3e80024c88e76",
       "discovery_route": "github_search:moe-cache",
-      "entity_seen_in_previous_snapshot": false,
+      "entity_seen_in_previous_snapshot": true,
       "matched_watch_lines": [
         "parameter-storage",
         "sparse-execution"
       ],
-      "observed_at": "2026-09-01T15:35:59Z",
+      "observed_at": "2026-09-01T15:37:04Z",
       "published_or_pushed_at": "2026-09-01T15:11:14Z",
-      "seen_in_previous_snapshot": false,
+      "seen_in_previous_snapshot": true,
       "source_class": "github_repo",
       "source_entity_id": "github-repo:1353702680",
       "source_id": "github-search:moe-cache",
@@ -220,7 +220,7 @@
         "parameter-storage",
         "sparse-execution"
       ],
-      "observed_at": "2026-09-01T15:35:59Z",
+      "observed_at": "2026-09-01T15:37:04Z",
       "published_or_pushed_at": "2026-09-01T11:29:53Z",
       "seen_in_previous_snapshot": true,
       "source_class": "github_repo",
@@ -232,14 +232,14 @@
     }
   ],
   "collector_revision": "b668c4f22f92be1f4b9aeaf32db75c47abd10a79",
-  "generated_at": "2026-09-01T15:35:59Z",
+  "generated_at": "2026-09-01T15:37:04Z",
   "prior_schema_version": "needle-watch-receipt-v0.2",
-  "run_id": "33526698484-attempt-1",
+  "run_id": "33526698484-attempt-2",
   "schema_version": "needle-watch-receipt-v0.2",
   "source_health": [
     {
-      "checked_at": "2026-09-01T15:35:59Z",
-      "cursor_or_watermark": "2026-08-31T15:35:59Z",
+      "checked_at": "2026-09-01T15:37:04Z",
+      "cursor_or_watermark": "2026-08-31T15:37:04Z",
       "error_class": "ResultTruncated",
       "incomplete_results": false,
       "records_seen": 10,
@@ -250,8 +250,8 @@
       "truncated": true
     },
     {
-      "checked_at": "2026-09-01T15:35:59Z",
-      "cursor_or_watermark": "2026-08-31T15:35:59Z",
+      "checked_at": "2026-09-01T15:37:04Z",
+      "cursor_or_watermark": "2026-08-31T15:37:04Z",
       "error_class": null,
       "incomplete_results": false,
       "records_seen": 0,
@@ -262,8 +262,8 @@
       "truncated": false
     },
     {
-      "checked_at": "2026-09-01T15:35:59Z",
-      "cursor_or_watermark": "2026-08-31T15:35:59Z",
+      "checked_at": "2026-09-01T15:37:04Z",
+      "cursor_or_watermark": "2026-08-31T15:37:04Z",
       "error_class": null,
       "incomplete_results": false,
       "records_seen": 0,
@@ -274,8 +274,8 @@
       "truncated": false
     },
     {
-      "checked_at": "2026-09-01T15:35:59Z",
-      "cursor_or_watermark": "2026-08-31T15:35:59Z",
+      "checked_at": "2026-09-01T15:37:04Z",
+      "cursor_or_watermark": "2026-08-31T15:37:04Z",
       "error_class": null,
       "incomplete_results": false,
       "records_seen": 0,
@@ -286,8 +286,8 @@
       "truncated": false
     },
     {
-      "checked_at": "2026-09-01T15:35:59Z",
-      "cursor_or_watermark": "2026-08-31T15:35:59Z",
+      "checked_at": "2026-09-01T15:37:04Z",
+      "cursor_or_watermark": "2026-08-31T15:37:04Z",
       "error_class": null,
       "incomplete_results": false,
       "records_seen": 2,
@@ -298,6 +298,6 @@
       "truncated": false
     }
   ],
-  "window_end": "2026-09-01T15:35:59Z",
-  "window_start": "2026-08-31T15:35:59Z"
+  "window_end": "2026-09-01T15:37:04Z",
+  "window_start": "2026-08-31T15:37:04Z"
 }
