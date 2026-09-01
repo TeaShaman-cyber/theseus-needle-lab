@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import hashlib
 from copy import deepcopy
+from datetime import datetime
 
-SCHEMA_VERSION = "needle-watch-receipt-v0.1"
+SCHEMA_VERSION = "needle-watch-receipt-v0.2"
 
 TOP_LEVEL_FIELDS = (
     "schema_version",
@@ -12,6 +13,7 @@ TOP_LEVEL_FIELDS = (
     "window_start",
     "window_end",
     "collector_revision",
+    "prior_schema_version",
     "source_health",
     "candidates",
 )
@@ -19,11 +21,13 @@ TOP_LEVEL_FIELDS = (
 CANDIDATE_FIELDS = (
     "source_id",
     "source_class",
+    "source_entity_id",
     "canonical_url",
     "title",
     "observed_at",
     "published_or_pushed_at",
     "source_identity",
+    "upstream_revision",
     "discovery_route",
     "matched_watch_lines",
     "content_fingerprint",
@@ -34,6 +38,10 @@ HEALTH_FIELDS = (
     "status",
     "checked_at",
     "records_seen",
+    "total_count",
+    "returned_count",
+    "incomplete_results",
+    "truncated",
     "cursor_or_watermark",
     "error_class",
 )
@@ -51,7 +59,11 @@ def stable_candidate_id(
     return hashlib.sha256(payload).hexdigest()
 
 
-def normalize_candidate(raw: dict, prior_ids: set[str]) -> dict:
+def normalize_candidate(
+    raw: dict,
+    prior_ids: set[str],
+    prior_entity_ids: set[str],
+) -> dict:
     candidate = {field: deepcopy(raw.get(field)) for field in CANDIDATE_FIELDS}
     candidate_id = stable_candidate_id(
         candidate["source_class"],
@@ -60,7 +72,10 @@ def normalize_candidate(raw: dict, prior_ids: set[str]) -> dict:
         candidate["content_fingerprint"],
     )
     candidate["candidate_id"] = candidate_id
-    candidate["prior_seen"] = candidate_id in prior_ids
+    candidate["seen_in_previous_snapshot"] = candidate_id in prior_ids
+    candidate["entity_seen_in_previous_snapshot"] = (
+        candidate["source_entity_id"] in prior_entity_ids
+    )
     return candidate
 
 
@@ -74,6 +89,8 @@ def build_receipt(
     source_health: list[dict],
     candidates: list[dict],
     prior_ids: set[str],
+    prior_entity_ids: set[str] | None = None,
+    prior_schema_version: str | None = None,
 ) -> dict:
     return {
         "schema_version": SCHEMA_VERSION,
@@ -82,8 +99,12 @@ def build_receipt(
         "window_start": window_start,
         "window_end": window_end,
         "collector_revision": collector_revision,
+        "prior_schema_version": prior_schema_version,
         "source_health": deepcopy(source_health),
-        "candidates": [normalize_candidate(item, prior_ids) for item in candidates],
+        "candidates": [
+            normalize_candidate(item, prior_ids, prior_entity_ids or set())
+            for item in candidates
+        ],
     }
 
 
@@ -95,6 +116,23 @@ def validate_receipt(receipt: dict) -> list[str]:
 
     if receipt.get("schema_version") != SCHEMA_VERSION:
         errors.append(f"schema_version must be {SCHEMA_VERSION}")
+
+    prior_schema_version = receipt.get("prior_schema_version")
+    if prior_schema_version is not None and not isinstance(prior_schema_version, str):
+        errors.append("prior_schema_version must be a string or null")
+
+    try:
+        window_start = datetime.fromisoformat(
+            receipt["window_start"].replace("Z", "+00:00")
+        )
+        window_end = datetime.fromisoformat(
+            receipt["window_end"].replace("Z", "+00:00")
+        )
+    except (KeyError, AttributeError, TypeError, ValueError):
+        errors.append("window_start and window_end must be valid RFC3339 timestamps")
+    else:
+        if window_start >= window_end:
+            errors.append("window_start must be before window_end")
 
     source_health = receipt.get("source_health")
     if not isinstance(source_health, list) or not source_health:
@@ -108,18 +146,42 @@ def validate_receipt(receipt: dict) -> list[str]:
                 )
             if health.get("status") not in {"ok", "partial", "failed"}:
                 errors.append(f"source_health[{index}] has invalid status")
+            if health.get("status") == "ok" and (
+                health.get("incomplete_results") is not False
+                or health.get("truncated") is not False
+            ):
+                errors.append(
+                    f"source_health[{index}] status ok requires complete coverage"
+                )
 
     candidates = receipt.get("candidates")
     if not isinstance(candidates, list):
         errors.append("candidates must be a list")
     else:
         for index, candidate in enumerate(candidates):
-            required = CANDIDATE_FIELDS + ("candidate_id", "prior_seen")
+            required = CANDIDATE_FIELDS + (
+                "candidate_id",
+                "seen_in_previous_snapshot",
+                "entity_seen_in_previous_snapshot",
+            )
             missing = [field for field in required if field not in candidate]
             if missing:
                 errors.append(
                     f"candidates[{index}] missing fields: {', '.join(missing)}"
                 )
+                continue
+            try:
+                expected_id = stable_candidate_id(
+                    candidate["source_class"],
+                    candidate["canonical_url"],
+                    candidate["source_identity"],
+                    candidate["content_fingerprint"],
+                )
+            except (TypeError, AttributeError):
+                errors.append(f"candidates[{index}] identity fields must be strings")
+            else:
+                if candidate["candidate_id"] != expected_id:
+                    errors.append(f"candidates[{index}] candidate_id mismatch")
 
     return errors
 

@@ -10,13 +10,26 @@ class WorkflowContractTests(unittest.TestCase):
         text = workflow.read_text(encoding="utf-8")
         self.assertIn('cron: "37 14 * * *"', text)
         self.assertIn("workflow_dispatch:", text)
+        self.assertIn("queue: max", text)
+        self.assertNotIn("cancel-in-progress: true", text)
         self.assertIn("contents: write", text)
         test_index = text.index("python -m unittest discover -s tests -v")
+        restore_index = text.index("python scripts/restore-needle-watch-state.py")
         collect_index = text.index("python scripts/collect-needle-watch.py")
-        self.assertLess(test_index, collect_index)
-        self.assertIn('git add "data/${DATE_KEY}/needle-watch.json" data/latest/needle-watch.json', text)
+        publish_index = text.index("python scripts/publish-needle-watch.py")
+        self.assertLess(test_index, restore_index)
+        self.assertLess(restore_index, collect_index)
+        self.assertLess(collect_index, publish_index)
+        self.assertIn("NEEDLE_WATCH_TARGET_REF: ${{ github.ref_name }}", text)
+        self.assertNotIn("DATE_KEY=$(date -u +%F)", text)
+        self.assertNotIn("data/${DATE_KEY}", text)
         self.assertNotIn("git add .", text)
+        self.assertNotIn("git push\n", text)
         self.assertIn('python-version: "3.12"', text)
+        self.assertIn(
+            'NEEDLE_WATCH_RUN_ID: ${{ github.run_id }}-attempt-${{ github.run_attempt }}',
+            text,
+        )
 
 
 if __name__ == "__main__":

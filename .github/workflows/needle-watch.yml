@@ -10,7 +10,7 @@ permissions:
 
 concurrency:
   group: needle-watch-${{ github.ref }}
-  cancel-in-progress: true
+  queue: max
 
 jobs:
   collect:
@@ -30,23 +30,23 @@ jobs:
       - name: Run contract tests
         run: python -m unittest discover -s tests -v
 
+      - name: Restore latest published receipt state
+        env:
+          NEEDLE_WATCH_TARGET_REF: ${{ github.ref_name }}
+        run: python scripts/restore-needle-watch-state.py
+
       - name: Collect public discovery candidates
         env:
           GITHUB_TOKEN: ${{ github.token }}
-          NEEDLE_WATCH_RUN_ID: ${{ github.run_id }}
+          NEEDLE_WATCH_RUN_ID: ${{ github.run_id }}-attempt-${{ github.run_attempt }}
           NEEDLE_WATCH_COLLECTOR_REVISION: ${{ github.sha }}
         run: python scripts/collect-needle-watch.py
 
-      - name: Commit validated receipt snapshots
+      - name: Publish validated receipt snapshots
+        env:
+          NEEDLE_WATCH_TARGET_REF: ${{ github.ref_name }}
         run: |
           set -eu
-          DATE_KEY=$(date -u +%F)
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add "data/${DATE_KEY}/needle-watch.json" data/latest/needle-watch.json
-          if git diff --cached --quiet; then
-            echo "No receipt changes to commit."
-          else
-            git commit -m "Collect Needle Watch discovery receipt"
-            git push
-          fi
+          python scripts/publish-needle-watch.py
