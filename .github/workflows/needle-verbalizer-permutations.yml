@@ -1,0 +1,128 @@
+name: Needle verbalizer permutation probe
+
+on:
+  push:
+    branches:
+      - experiment/needle-verbalizer-permutations
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  NEEDLE_TELEMETRY: "0"
+  DO_NOT_TRACK: "1"
+  HF_HUB_DISABLE_TELEMETRY: "1"
+  HF_HUB_DISABLE_PROGRESS_BARS: "1"
+  PYTHONUNBUFFERED: "1"
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.11"
+
+      - name: Install pinned Needle runtime
+        shell: bash
+        run: |
+          set -eu
+          mkdir -p results logs metrics
+          python -m pip install "cactus-needle==2.0.8" 2>&1 | tee logs/install.log
+          python - <<'PY' | tee logs/package-versions.log
+          import importlib.metadata, platform
+          print('python=' + platform.python_version())
+          for name in ['cactus-needle','jax','jaxlib','flax','optax','sentencepiece','huggingface-hub']:
+              print(f'{name}={importlib.metadata.version(name)}')
+          PY
+
+      - name: Assert exact predecessor P1 contract
+        shell: bash
+        run: |
+          set -eu
+          python - <<'PY'
+          import importlib.util, pathlib
+          def load(name, path):
+              s=importlib.util.spec_from_file_location(name, path)
+              m=importlib.util.module_from_spec(s); s.loader.exec_module(m); return m
+          prior=load('prior', pathlib.Path('scripts/run_verbalizer_factorized_probe.py'))
+          current=load('current', pathlib.Path('scripts/run_verbalizer_permutation_probe.py'))
+          assert current.PREFIX == prior.PREFIX
+          assert current.serialize_schema(current.route_schema('P1')) == prior.serialize_schema(prior.flat_schema('C'))
+          assert current.permutation_specs()['P1']['to_decision'] == {'A':'PROBE','B':'READY','C':'UNKNOWN'}
+          print('P1_PREDECESSOR_IDENTITY=PASS')
+          PY
+
+      - name: Run P1
+        shell: bash
+        run: |
+          set -o pipefail
+          /usr/bin/time -v -o metrics/p1.time python scripts/run_verbalizer_permutation_probe.py --mapping P1 --training-jsonl experiments/needle-cpu-smoke/data.jsonl --output results/p1.jsonl --max-new-tokens 256 2>&1 | tee logs/p1.log
+      - name: Run P2
+        shell: bash
+        run: |
+          set -o pipefail
+          /usr/bin/time -v -o metrics/p2.time python scripts/run_verbalizer_permutation_probe.py --mapping P2 --training-jsonl experiments/needle-cpu-smoke/data.jsonl --output results/p2.jsonl --max-new-tokens 256 2>&1 | tee logs/p2.log
+      - name: Run P3
+        shell: bash
+        run: |
+          set -o pipefail
+          /usr/bin/time -v -o metrics/p3.time python scripts/run_verbalizer_permutation_probe.py --mapping P3 --training-jsonl experiments/needle-cpu-smoke/data.jsonl --output results/p3.jsonl --max-new-tokens 256 2>&1 | tee logs/p3.log
+      - name: Run P4
+        shell: bash
+        run: |
+          set -o pipefail
+          /usr/bin/time -v -o metrics/p4.time python scripts/run_verbalizer_permutation_probe.py --mapping P4 --training-jsonl experiments/needle-cpu-smoke/data.jsonl --output results/p4.jsonl --max-new-tokens 256 2>&1 | tee logs/p4.log
+      - name: Run P5
+        shell: bash
+        run: |
+          set -o pipefail
+          /usr/bin/time -v -o metrics/p5.time python scripts/run_verbalizer_permutation_probe.py --mapping P5 --training-jsonl experiments/needle-cpu-smoke/data.jsonl --output results/p5.jsonl --max-new-tokens 256 2>&1 | tee logs/p5.log
+      - name: Run P6
+        shell: bash
+        run: |
+          set -o pipefail
+          /usr/bin/time -v -o metrics/p6.time python scripts/run_verbalizer_permutation_probe.py --mapping P6 --training-jsonl experiments/needle-cpu-smoke/data.jsonl --output results/p6.jsonl --max-new-tokens 256 2>&1 | tee logs/p6.log
+
+      - name: Write permutation receipt
+        shell: bash
+        run: |
+          set -eu
+          python scripts/verbalizer_permutation_receipt.py \
+            --p1 results/p1.jsonl --p2 results/p2.jsonl --p3 results/p3.jsonl \
+            --p4 results/p4.jsonl --p5 results/p5.jsonl --p6 results/p6.jsonl \
+            --commit "$GITHUB_SHA" --run-id "$GITHUB_RUN_ID" \
+            --output results/receipt.json --markdown results/summary.md
+          cat results/summary.md
+
+      - name: Assert evidence shape only
+        shell: bash
+        run: |
+          set -eu
+          python - <<'PY'
+          import json
+          r=json.load(open('results/receipt.json'))
+          assert r['schema'] == 'theseus.needle.verbalizer_permutation_probe.v1'
+          assert r['source']['parent_issue'] == 18
+          assert r['source']['cactus_needle_version'] == '2.0.8'
+          assert list(r['arms']) == ['P1','P2','P3','P4','P5','P6']
+          assert all(r['arms'][name]['n'] == 12 for name in r['arms'])
+          assert r['raw_token_stability']['n'] == 12
+          assert r['interpretation_boundary'] == 'descriptive_zero_training_permutation_probe_not_statistical_significance'
+          PY
+
+      - name: Upload permutation evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: needle-verbalizer-permutations-${{ github.run_id }}
+          path: |
+            results/
+            logs/
+            metrics/
+          if-no-files-found: error
+          retention-days: 14

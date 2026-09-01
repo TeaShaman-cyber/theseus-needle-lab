@@ -389,3 +389,88 @@ class VerbalizerFactorizedToolApplicabilityRegressionTest(unittest.TestCase):
         self.assertEqual(list(probe["parameters"]["properties"]), ["decision"])
         self.assertIn("Use route", module.evidence_query("Evidence statement."))
         self.assertIn("Use route", module.probe_query("Evidence statement."))
+
+PERM_RUNNER = ROOT / "scripts" / "run_verbalizer_permutation_probe.py"
+PERM_RECEIPT = ROOT / "scripts" / "verbalizer_permutation_receipt.py"
+PERM_WORKFLOW = ROOT / ".github" / "workflows" / "needle-verbalizer-permutations.yml"
+
+
+class VerbalizerPermutationProbeContractTest(unittest.TestCase):
+    def test_all_six_bijections_are_present_once(self):
+        self.assertTrue(PERM_RUNNER.is_file())
+        module = load_module("run_verbalizer_permutation_contract", PERM_RUNNER)
+        specs = module.permutation_specs()
+        self.assertEqual(list(specs), ["P1", "P2", "P3", "P4", "P5", "P6"])
+        mappings = []
+        for spec in specs.values():
+            self.assertEqual(spec["labels"], ["A", "B", "C"])
+            mapping = spec["to_decision"]
+            self.assertEqual(set(mapping), {"A", "B", "C"})
+            self.assertEqual(set(mapping.values()), {"PROBE", "READY", "UNKNOWN"})
+            mappings.append(tuple(mapping[x] for x in "ABC"))
+        self.assertEqual(len(set(mappings)), 6)
+
+    def test_p1_is_exact_predecessor_one_token_contract(self):
+        self.assertTrue(PERM_RUNNER.is_file())
+        current = load_module("run_verbalizer_permutation_p1", PERM_RUNNER)
+        predecessor = load_module("run_verbalizer_factorized_p1", ROOT / "scripts" / "run_verbalizer_factorized_probe.py")
+        p1 = current.permutation_specs()["P1"]
+        self.assertEqual(p1["to_decision"], {"A": "PROBE", "B": "READY", "C": "UNKNOWN"})
+        self.assertEqual(current.PREFIX, predecessor.PREFIX)
+        self.assertEqual(
+            current.serialize_schema(current.route_schema("P1")),
+            predecessor.serialize_schema(predecessor.flat_schema("C")),
+        )
+
+    def test_records_raw_token_and_mapped_decision_separately(self):
+        self.assertTrue(PERM_RUNNER.is_file())
+        text = PERM_RUNNER.read_text()
+        self.assertIn('"predicted_token": raw_label', text)
+        self.assertIn('"predicted": predicted', text)
+        self.assertIn('"schema_json": schema_json', text)
+        self.assertIn('"framed_query": query', text)
+
+    def test_workflow_is_base_only_and_runs_exactly_six_mappings(self):
+        self.assertTrue(PERM_WORKFLOW.is_file())
+        text = PERM_WORKFLOW.read_text()
+        self.assertIn("cactus-needle==2.0.8", text)
+        for name in ["P1", "P2", "P3", "P4", "P5", "P6"]:
+            self.assertEqual(text.count(f"--mapping {name}"), 1)
+        self.assertNotIn("needle finetune", text)
+        self.assertNotIn("needle build", text)
+        self.assertNotIn("--weights", text)
+        self.assertNotIn("secrets.", text)
+
+
+class VerbalizerPermutationReceiptContractTest(unittest.TestCase):
+    def test_receipt_measures_raw_token_stability_separately_from_semantic_accuracy(self):
+        self.assertTrue(PERM_RECEIPT.is_file())
+        module = load_module("verbalizer_permutation_receipt_contract", PERM_RECEIPT)
+        arms = {}
+        maps = [
+            {"A": "PROBE", "B": "READY", "C": "UNKNOWN"},
+            {"A": "PROBE", "B": "UNKNOWN", "C": "READY"},
+            {"A": "READY", "B": "PROBE", "C": "UNKNOWN"},
+            {"A": "READY", "B": "UNKNOWN", "C": "PROBE"},
+            {"A": "UNKNOWN", "B": "PROBE", "C": "READY"},
+            {"A": "UNKNOWN", "B": "READY", "C": "PROBE"},
+        ]
+        for idx, mapping in enumerate(maps, start=1):
+            token1 = "A"
+            token2 = "ABC"[(idx - 1) % 3]
+            arms[f"P{idx}"] = [
+                {"id": "x1", "expected": "PROBE", "predicted_token": token1,
+                 "predicted": mapping[token1], "valid_structured_call": True,
+                 "correct": mapping[token1] == "PROBE"},
+                {"id": "x2", "expected": "READY", "predicted_token": token2,
+                 "predicted": mapping[token2], "valid_structured_call": True,
+                 "correct": mapping[token2] == "READY"},
+            ]
+        receipt = module.build_receipt(arms, commit="c" * 40, run_id="123")
+        self.assertEqual(receipt["schema"], "theseus.needle.verbalizer_permutation_probe.v1")
+        self.assertEqual(receipt["raw_token_stability"]["all_mapping_same_n"], 1)
+        self.assertEqual(receipt["raw_token_stability"]["n"], 2)
+        self.assertEqual(receipt["raw_token_stability"]["all_mapping_same_rate"], 0.5)
+        self.assertIn("raw_token_distribution", receipt["arms"]["P1"])
+        self.assertIn("decision_accuracy", receipt["arms"]["P1"])
+        self.assertEqual(receipt["interpretation_boundary"], "descriptive_zero_training_permutation_probe_not_statistical_significance")
