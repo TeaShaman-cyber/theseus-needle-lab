@@ -5,17 +5,20 @@ on:
   schedule:
     - cron: "37 14 * * *"
 
-permissions:
-  contents: write
-
 concurrency:
   group: needle-watch-${{ github.ref }}
   queue: max
 
 jobs:
   collect:
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    outputs:
+      receipt_json: ${{ steps.handoff.outputs.receipt_json }}
+      receipt_sha256: ${{ steps.handoff.outputs.receipt_sha256 }}
+      receipt_bytes: ${{ steps.handoff.outputs.receipt_bytes }}
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -41,6 +44,33 @@ jobs:
           NEEDLE_WATCH_RUN_ID: ${{ github.run_id }}-attempt-${{ github.run_attempt }}
           NEEDLE_WATCH_COLLECTOR_REVISION: ${{ github.sha }}
         run: python scripts/collect-needle-watch.py
+
+      - name: Export validated receipt handoff
+        id: handoff
+        run: python scripts/export-needle-watch-output.py
+
+  publish:
+    needs: collect
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Import validated receipt handoff
+        env:
+          NEEDLE_WATCH_RECEIPT_JSON: ${{ needs.collect.outputs.receipt_json }}
+          NEEDLE_WATCH_RECEIPT_SHA256: ${{ needs.collect.outputs.receipt_sha256 }}
+        run: python scripts/import-needle-watch-output.py
 
       - name: Publish validated receipt snapshots
         env:

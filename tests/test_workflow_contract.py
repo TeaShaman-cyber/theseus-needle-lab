@@ -12,7 +12,6 @@ class WorkflowContractTests(unittest.TestCase):
         self.assertIn("workflow_dispatch:", text)
         self.assertIn("queue: max", text)
         self.assertNotIn("cancel-in-progress: true", text)
-        self.assertIn("contents: write", text)
         test_index = text.index("python -m unittest discover -s tests -v")
         restore_index = text.index("python scripts/restore-needle-watch-state.py")
         collect_index = text.index("python scripts/collect-needle-watch.py")
@@ -20,6 +19,27 @@ class WorkflowContractTests(unittest.TestCase):
         self.assertLess(test_index, restore_index)
         self.assertLess(restore_index, collect_index)
         self.assertLess(collect_index, publish_index)
+        self.assertEqual(text.count("contents: write"), 1)
+        collect_text, publish_text = text.split("  publish:\n", 1)
+        self.assertIn("  collect:\n", collect_text)
+        self.assertIn("permissions:\n      contents: read", collect_text)
+        self.assertNotIn("contents: write", collect_text)
+        self.assertIn("    needs: collect", publish_text)
+        self.assertIn("permissions:\n      contents: write", publish_text)
+        self.assertIn("receipt_json: ${{ steps.handoff.outputs.receipt_json }}", collect_text)
+        self.assertIn("receipt_sha256: ${{ steps.handoff.outputs.receipt_sha256 }}", collect_text)
+        self.assertIn("python scripts/export-needle-watch-output.py", collect_text)
+        self.assertIn("python scripts/import-needle-watch-output.py", publish_text)
+        self.assertIn(
+            "NEEDLE_WATCH_RECEIPT_JSON: ${{ needs.collect.outputs.receipt_json }}",
+            publish_text,
+        )
+        self.assertIn(
+            "NEEDLE_WATCH_RECEIPT_SHA256: ${{ needs.collect.outputs.receipt_sha256 }}",
+            publish_text,
+        )
+        self.assertNotIn("upload-artifact", text)
+        self.assertNotIn("download-artifact", text)
         self.assertIn("NEEDLE_WATCH_TARGET_REF: ${{ github.ref_name }}", text)
         self.assertNotIn("DATE_KEY=$(date -u +%F)", text)
         self.assertNotIn("data/${DATE_KEY}", text)
