@@ -25,6 +25,16 @@ class WorkflowContractTests(unittest.TestCase):
         self.assertNotIn("data/${DATE_KEY}", text)
         self.assertNotIn("git add .", text)
         self.assertNotIn("git push\n", text)
+        self.assertIn(
+            "uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1",
+            text,
+        )
+        self.assertIn(
+            "uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0",
+            text,
+        )
+        self.assertNotIn("uses: actions/checkout@v", text)
+        self.assertNotIn("uses: actions/setup-python@v", text)
         self.assertIn('python-version: "3.12"', text)
         self.assertIn(
             'NEEDLE_WATCH_RUN_ID: ${{ github.run_id }}-attempt-${{ github.run_attempt }}',
