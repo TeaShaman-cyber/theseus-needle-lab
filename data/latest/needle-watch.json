@@ -9,7 +9,7 @@
       "matched_watch_lines": [
         "tiny-model"
       ],
-      "observed_at": "2026-09-01T14:31:14Z",
+      "observed_at": "2026-09-01T14:31:46Z",
       "published_or_pushed_at": "2026-09-01T10:28:03Z",
       "seen_in_previous_snapshot": true,
       "source_class": "github_repo",
@@ -28,7 +28,7 @@
       "matched_watch_lines": [
         "tiny-model"
       ],
-      "observed_at": "2026-09-01T14:31:14Z",
+      "observed_at": "2026-09-01T14:31:46Z",
       "published_or_pushed_at": "2026-09-01T10:12:19Z",
       "seen_in_previous_snapshot": true,
       "source_class": "github_repo",
@@ -47,7 +47,7 @@
       "matched_watch_lines": [
         "tiny-model"
       ],
-      "observed_at": "2026-09-01T14:31:14Z",
+      "observed_at": "2026-09-01T14:31:46Z",
       "published_or_pushed_at": "2026-09-01T09:32:37Z",
       "seen_in_previous_snapshot": true,
       "source_class": "github_repo",
@@ -66,7 +66,7 @@
       "matched_watch_lines": [
         "tiny-model"
       ],
-      "observed_at": "2026-09-01T14:31:14Z",
+      "observed_at": "2026-09-01T14:31:46Z",
       "published_or_pushed_at": "2026-09-01T08:21:51Z",
       "seen_in_previous_snapshot": true,
       "source_class": "github_repo",
@@ -85,7 +85,7 @@
       "matched_watch_lines": [
         "tiny-model"
       ],
-      "observed_at": "2026-09-01T14:31:14Z",
+      "observed_at": "2026-09-01T14:31:46Z",
       "published_or_pushed_at": "2026-09-01T07:04:23Z",
       "seen_in_previous_snapshot": true,
       "source_class": "github_repo",
@@ -104,7 +104,7 @@
       "matched_watch_lines": [
         "tiny-model"
       ],
-      "observed_at": "2026-09-01T14:31:14Z",
+      "observed_at": "2026-09-01T14:31:46Z",
       "published_or_pushed_at": "2026-09-01T05:42:38Z",
       "seen_in_previous_snapshot": true,
       "source_class": "github_repo",
@@ -123,7 +123,7 @@
       "matched_watch_lines": [
         "tiny-model"
       ],
-      "observed_at": "2026-09-01T14:31:14Z",
+      "observed_at": "2026-09-01T14:31:46Z",
       "published_or_pushed_at": "2026-09-01T04:32:55Z",
       "seen_in_previous_snapshot": true,
       "source_class": "github_repo",
@@ -142,7 +142,7 @@
       "matched_watch_lines": [
         "tiny-model"
       ],
-      "observed_at": "2026-09-01T14:31:14Z",
+      "observed_at": "2026-09-01T14:31:46Z",
       "published_or_pushed_at": "2026-09-01T00:10:44Z",
       "seen_in_previous_snapshot": true,
       "source_class": "github_repo",
@@ -161,7 +161,7 @@
       "matched_watch_lines": [
         "tiny-model"
       ],
-      "observed_at": "2026-09-01T14:31:14Z",
+      "observed_at": "2026-09-01T14:31:46Z",
       "published_or_pushed_at": "2026-08-31T23:52:19Z",
       "seen_in_previous_snapshot": true,
       "source_class": "github_repo",
@@ -180,7 +180,7 @@
       "matched_watch_lines": [
         "tiny-model"
       ],
-      "observed_at": "2026-09-01T14:31:14Z",
+      "observed_at": "2026-09-01T14:31:46Z",
       "published_or_pushed_at": "2026-08-31T22:00:56Z",
       "seen_in_previous_snapshot": true,
       "source_class": "github_repo",
@@ -200,7 +200,7 @@
         "parameter-storage",
         "sparse-execution"
       ],
-      "observed_at": "2026-09-01T14:31:14Z",
+      "observed_at": "2026-09-01T14:31:46Z",
       "published_or_pushed_at": "2026-09-01T11:29:53Z",
       "seen_in_previous_snapshot": true,
       "source_class": "github_repo",
@@ -212,13 +212,13 @@
     }
   ],
   "collector_revision": "e58578d8feb1a1abf2d67245d3e290a65a5cc7ac",
-  "generated_at": "2026-09-01T14:31:14Z",
-  "run_id": "33519980435-attempt-1",
+  "generated_at": "2026-09-01T14:31:46Z",
+  "run_id": "33519980435-attempt-2",
   "schema_version": "needle-watch-receipt-v0.2",
   "source_health": [
     {
-      "checked_at": "2026-09-01T14:31:14Z",
-      "cursor_or_watermark": "2026-08-31T14:31:14Z",
+      "checked_at": "2026-09-01T14:31:46Z",
+      "cursor_or_watermark": "2026-08-31T14:31:46Z",
       "error_class": null,
       "incomplete_results": false,
       "records_seen": 10,
@@ -229,8 +229,8 @@
       "truncated": false
     },
     {
-      "checked_at": "2026-09-01T14:31:14Z",
-      "cursor_or_watermark": "2026-08-31T14:31:14Z",
+      "checked_at": "2026-09-01T14:31:46Z",
+      "cursor_or_watermark": "2026-08-31T14:31:46Z",
       "error_class": null,
       "incomplete_results": false,
       "records_seen": 0,
@@ -241,8 +241,8 @@
       "truncated": false
     },
     {
-      "checked_at": "2026-09-01T14:31:14Z",
-      "cursor_or_watermark": "2026-08-31T14:31:14Z",
+      "checked_at": "2026-09-01T14:31:46Z",
+      "cursor_or_watermark": "2026-08-31T14:31:46Z",
       "error_class": null,
       "incomplete_results": false,
       "records_seen": 0,
@@ -253,8 +253,8 @@
       "truncated": false
     },
     {
-      "checked_at": "2026-09-01T14:31:14Z",
-      "cursor_or_watermark": "2026-08-31T14:31:14Z",
+      "checked_at": "2026-09-01T14:31:46Z",
+      "cursor_or_watermark": "2026-08-31T14:31:46Z",
       "error_class": null,
       "incomplete_results": false,
       "records_seen": 0,
@@ -265,8 +265,8 @@
       "truncated": false
     },
     {
-      "checked_at": "2026-09-01T14:31:14Z",
-      "cursor_or_watermark": "2026-08-31T14:31:14Z",
+      "checked_at": "2026-09-01T14:31:46Z",
+      "cursor_or_watermark": "2026-08-31T14:31:46Z",
       "error_class": null,
       "incomplete_results": false,
       "records_seen": 1,
@@ -277,6 +277,6 @@
       "truncated": false
     }
   ],
-  "window_end": "2026-09-01T14:31:14Z",
-  "window_start": "2026-08-31T14:31:14Z"
+  "window_end": "2026-09-01T14:31:46Z",
+  "window_start": "2026-08-31T14:31:46Z"
 }
