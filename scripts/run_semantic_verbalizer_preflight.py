@@ -65,6 +65,8 @@ def route_schema(arm: str) -> dict:
 
 
 def _encode_pieces(tokenizer, text: str) -> list[str]:
+    if hasattr(tokenizer, "sp"):
+        return list(tokenizer.sp.EncodeAsPieces(text))
     try:
         return list(tokenizer.encode(text, out_type=str))
     except TypeError:
@@ -96,11 +98,12 @@ def _classify_call(response: dict, allowed: set[str]) -> tuple[str, bool]:
 
 def evaluate(cases: list[dict], arm: str, max_new_tokens: int) -> list[dict]:
     import needle
+    from needle.model.tokenizer import get_tokenizer
 
     spec = arm_specs()[arm]
     schema = route_schema(arm)
     schema_json = serialize_schema(schema)
-    tokenizer = needle.get_tokenizer()
+    tokenizer = get_tokenizer()
     label_tokenization = tokenize_labels(tokenizer, spec["labels"])
     agent = needle.Needle(tools=[schema])
     records = []

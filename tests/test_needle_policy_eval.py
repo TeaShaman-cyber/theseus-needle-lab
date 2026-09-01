@@ -512,6 +512,22 @@ class SemanticVerbalizerPreflightContractTest(unittest.TestCase):
         self.assertIn('"framed_query": query', text)
         self.assertIn('"label_tokenization": label_tokenization', text)
 
+    def test_pinned_208_tokenizer_contract_uses_internal_module_and_sentencepiece_handle(self):
+        self.assertTrue(SEMANTIC_PREFLIGHT_RUNNER.is_file())
+        module = load_module("semantic_verbalizer_pinned_tokenizer", SEMANTIC_PREFLIGHT_RUNNER)
+        text = SEMANTIC_PREFLIGHT_RUNNER.read_text()
+        self.assertIn("from needle.model.tokenizer import get_tokenizer", text)
+        self.assertNotIn("needle.get_tokenizer()", text)
+
+        class FakeSentencePiece:
+            def EncodeAsPieces(self, value):
+                return [f"piece:{value}"]
+
+        class FakeTokenizer:
+            sp = FakeSentencePiece()
+
+        self.assertEqual(module._encode_pieces(FakeTokenizer(), "ready"), ["piece:ready"])
+
     def test_workflow_is_base_only_exact_three_arms_and_asserts_predecessor_identity(self):
         self.assertTrue(SEMANTIC_PREFLIGHT_WORKFLOW.is_file())
         text = SEMANTIC_PREFLIGHT_WORKFLOW.read_text()
