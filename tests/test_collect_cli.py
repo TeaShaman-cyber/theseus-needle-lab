@@ -153,6 +153,69 @@ class CollectCliTests(unittest.TestCase):
             self.assertTrue(receipt["candidates"][0]["entity_seen_in_previous_snapshot"])
             self.assertFalse(receipt["candidates"][0]["seen_in_previous_snapshot"])
 
+    def test_fixture_mode_migrates_v01_latest_to_v02_without_crashing(self):
+        project_root = Path(__file__).resolve().parents[1]
+        script = project_root / "scripts" / "collect-needle-watch.py"
+        config = project_root / "config" / "needle-watch.json"
+        with TemporaryDirectory() as tmp:
+            repo_root = Path(tmp)
+            latest = repo_root / "data" / "latest" / "needle-watch.json"
+            latest.parent.mkdir(parents=True, exist_ok=True)
+            latest.write_text(json.dumps({
+                "schema_version": "needle-watch-receipt-v0.1",
+                "run_id": "old-run",
+                "generated_at": "2026-08-31T12:00:00Z",
+                "window_start": "2026-08-30T12:00:00Z",
+                "window_end": "2026-08-31T12:00:00Z",
+                "collector_revision": "a" * 40,
+                "source_health": [{
+                    "source_id": "github-search:tiny-model",
+                    "status": "ok",
+                    "checked_at": "2026-08-31T12:00:00Z",
+                    "records_seen": 1,
+                    "cursor_or_watermark": "2026-08-30",
+                    "error_class": None,
+                }],
+                "candidates": [{
+                    "candidate_id": "b" * 64,
+                    "source_class": "github_repo",
+                    "canonical_url": "https://github.com/example/project",
+                    "source_identity": "example/project@main",
+                }],
+            }), encoding="utf-8")
+            fixture = repo_root / "fixture.json"
+            fixture.write_text(json.dumps({
+                "source_health": [{
+                    "source_id": "fixture:healthy",
+                    "status": "ok",
+                    "checked_at": "2026-09-01T12:00:00Z",
+                    "records_seen": 0,
+                    "total_count": 0,
+                    "returned_count": 0,
+                    "incomplete_results": False,
+                    "truncated": False,
+                    "cursor_or_watermark": "2026-08-31T12:00:00Z",
+                    "error_class": None,
+                }],
+                "candidates": [],
+            }), encoding="utf-8")
+            env = os.environ.copy()
+            env.update({
+                "NEEDLE_WATCH_NOW": "2026-09-01T12:00:00Z",
+                "NEEDLE_WATCH_RUN_ID": "migration-run",
+                "NEEDLE_WATCH_COLLECTOR_REVISION": "c" * 40,
+                "PYTHONDONTWRITEBYTECODE": "1",
+            })
+            result = subprocess.run(
+                [sys.executable, str(script), "--repo-root", str(repo_root),
+                 "--config", str(config), "--fixture-source", str(fixture)],
+                cwd=project_root, env=env, text=True, capture_output=True,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            migrated = json.loads((repo_root / "data" / "latest" / "needle-watch.json").read_text())
+            self.assertEqual(migrated["schema_version"], "needle-watch-receipt-v0.2")
+            self.assertEqual(migrated["run_id"], "migration-run")
+
     def test_fixture_mode_writes_valid_run_daily_and_latest_receipts(self):
         project_root = Path(__file__).resolve().parents[1]
         script = project_root / "scripts" / "collect-needle-watch.py"
