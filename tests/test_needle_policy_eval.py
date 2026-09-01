@@ -280,3 +280,100 @@ class FramingProbeReceiptTest(unittest.TestCase):
         self.assertEqual(receipt["effects"]["call_rate"]["description_without_prefix"], 0.5)
         self.assertEqual(receipt["effects"]["decision_accuracy"]["prefix_with_bare_schema"], 0.0)
         self.assertEqual(receipt["interpretation_boundary"], "descriptive_zero_training_probe_not_statistical_significance")
+
+VERBALIZER_RUNNER = ROOT / "scripts" / "run_verbalizer_factorized_probe.py"
+VERBALIZER_RECEIPT = ROOT / "scripts" / "verbalizer_factorized_receipt.py"
+VERBALIZER_WORKFLOW = ROOT / ".github" / "workflows" / "needle-verbalizer-factorized.yml"
+
+
+class VerbalizerFactorizedProbeContractTest(unittest.TestCase):
+    def test_flat_arm_a_is_exact_accepted_issue12_framing_and_other_arms_change_only_verbalizer(self):
+        self.assertTrue(VERBALIZER_RUNNER.is_file())
+        module = load_module("verbalizer_factorized_runner_flat", VERBALIZER_RUNNER)
+        prior = load_module("verbalizer_factorized_prior", FRAMING_RUNNER)
+
+        self.assertEqual(module.flat_schema("A"), prior.route_schema(True))
+        self.assertEqual(module.frame_query("Evidence statement."), prior.frame_query("Evidence statement.", True))
+        self.assertEqual(module.flat_specs()["A"]["labels"], ["PROBE", "READY", "UNKNOWN"])
+        self.assertEqual(module.flat_specs()["B"]["labels"], ["probe", "ready", "unknown"])
+        self.assertEqual(module.flat_specs()["C"]["labels"], ["A", "B", "C"])
+        self.assertEqual(module.flat_specs()["C"]["to_decision"], {"A": "PROBE", "B": "READY", "C": "UNKNOWN"})
+
+        for arm in "ABC":
+            schema = module.flat_schema(arm)
+            self.assertEqual(list(schema), ["name", "parameters", "description"])
+            self.assertEqual(schema["name"], "route")
+            self.assertEqual(list(schema["parameters"]["properties"]), ["decision"])
+            self.assertIn("PROBE", schema["description"])
+            self.assertIn("READY", schema["description"])
+            self.assertIn("UNKNOWN", schema["description"])
+
+    def test_factorized_truth_table_matches_project_policy(self):
+        self.assertTrue(VERBALIZER_RUNNER.is_file())
+        module = load_module("verbalizer_factorized_runner_truth", VERBALIZER_RUNNER)
+        self.assertEqual(module.factorized_final("verified", None), "READY")
+        self.assertEqual(module.factorized_final("insufficient", "available"), "PROBE")
+        self.assertEqual(module.factorized_final("insufficient", "unavailable"), "UNKNOWN")
+        self.assertEqual(module.expected_factorized("READY"), ("verified", None))
+        self.assertEqual(module.expected_factorized("PROBE"), ("insufficient", "available"))
+        self.assertEqual(module.expected_factorized("UNKNOWN"), ("insufficient", "unavailable"))
+        self.assertEqual(list(module.evidence_schema()), ["name", "parameters", "description"])
+        self.assertEqual(list(module.probe_schema()), ["name", "parameters", "description"])
+
+    def test_records_exact_serialized_schema_and_framed_query_for_every_arm(self):
+        self.assertTrue(VERBALIZER_RUNNER.is_file())
+        text = VERBALIZER_RUNNER.read_text()
+        self.assertIn('"schema_json"', text)
+        self.assertIn('"framed_query"', text)
+        self.assertIn('separators=(",", ":")', text)
+        self.assertIn("ensure_ascii=False", text)
+
+    def test_workflow_is_zero_training_and_runs_exact_four_representations(self):
+        self.assertTrue(VERBALIZER_WORKFLOW.is_file())
+        text = VERBALIZER_WORKFLOW.read_text()
+        self.assertIn("experiment/needle-verbalizer-factorized", text)
+        self.assertIn('cactus-needle==2.0.8', text)
+        self.assertIn("experiments/needle-cpu-smoke/data.jsonl", text)
+        for arm in "ABCD":
+            self.assertIn(f"--arm {arm}", text)
+            self.assertIn(f"results/arm-{arm.lower()}.jsonl", text)
+        self.assertNotIn("needle finetune", text)
+        self.assertNotIn("needle build", text)
+        self.assertNotIn("--weights", text)
+        self.assertNotIn("secrets.", text)
+
+
+class VerbalizerFactorizedReceiptContractTest(unittest.TestCase):
+    def test_receipt_scores_final_mapping_distribution_and_factorized_stages(self):
+        self.assertTrue(VERBALIZER_RECEIPT.is_file())
+        module = load_module("verbalizer_factorized_receipt_contract", VERBALIZER_RECEIPT)
+        flat = [
+            {"id": "x1", "expected": "PROBE", "predicted": "PROBE", "valid_structured_call": True, "correct": True},
+            {"id": "x2", "expected": "READY", "predicted": "UNKNOWN", "valid_structured_call": True, "correct": False},
+            {"id": "x3", "expected": "UNKNOWN", "predicted": "NO_CALL", "valid_structured_call": False, "correct": False},
+        ]
+        factorized = [
+            {"id": "x1", "expected": "PROBE", "predicted": "PROBE", "valid_structured_call": True, "correct": True,
+             "stage1_expected": "insufficient", "stage1_predicted": "insufficient", "stage1_valid": True,
+             "stage2_expected": "available", "stage2_predicted": "available", "stage2_valid": True},
+            {"id": "x2", "expected": "READY", "predicted": "READY", "valid_structured_call": True, "correct": True,
+             "stage1_expected": "verified", "stage1_predicted": "verified", "stage1_valid": True,
+             "stage2_expected": None, "stage2_predicted": None, "stage2_valid": None},
+            {"id": "x3", "expected": "UNKNOWN", "predicted": "READY", "valid_structured_call": True, "correct": False,
+             "stage1_expected": "insufficient", "stage1_predicted": "verified", "stage1_valid": True,
+             "stage2_expected": "unavailable", "stage2_predicted": None, "stage2_valid": None},
+        ]
+        receipt = module.build_receipt(
+            {"A": flat, "B": flat, "C": flat, "D": factorized},
+            commit="c" * 40,
+            run_id="123",
+        )
+        self.assertEqual(receipt["schema"], "theseus.needle.verbalizer_factorized_probe.v1")
+        self.assertEqual(receipt["arms"]["A"]["decision_accuracy"], 1 / 3)
+        self.assertEqual(receipt["arms"]["A"]["valid_call_rate"], 2 / 3)
+        self.assertEqual(receipt["arms"]["A"]["prediction_distribution"], {"NO_CALL": 1, "PROBE": 1, "UNKNOWN": 1})
+        self.assertEqual(receipt["arms"]["D"]["decision_accuracy"], 2 / 3)
+        self.assertEqual(receipt["arms"]["D"]["stage1_accuracy"], 2 / 3)
+        self.assertEqual(receipt["arms"]["D"]["stage2_expected_n"], 2)
+        self.assertEqual(receipt["arms"]["D"]["stage2_attempted_n"], 1)
+        self.assertEqual(receipt["interpretation_boundary"], "descriptive_zero_training_representation_probe_not_statistical_significance")
