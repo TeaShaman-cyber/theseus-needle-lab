@@ -40,6 +40,15 @@ final_adapter="artifacts/final-${ARM_ID}-${REPLICA_ID}.pkl"
     --lora-rank 16 --lora-alpha 32 --max-len 256 --val-split 0.1 \
     --early-out "$early_adapter" --out "$final_adapter" 2>&1 | tee logs/train.log
 
-needle build checkpoints/needle2.pkl --lora "$early_adapter" --out "artifacts/early-${ARM_ID}-${REPLICA_ID}.cact" 2>&1 | tee logs/build-early.log
-needle build checkpoints/needle2.pkl --lora "$final_adapter" --out "artifacts/final-${ARM_ID}-${REPLICA_ID}.cact" 2>&1 | tee logs/build-final.log
+early_cact="artifacts/early-${ARM_ID}-${REPLICA_ID}.cact"
+final_cact="artifacts/final-${ARM_ID}-${REPLICA_ID}.cact"
+needle build checkpoints/needle2.pkl --lora "$early_adapter" --out "$early_cact" 2>&1 | tee logs/build-early.log
+needle build checkpoints/needle2.pkl --lora "$final_adapter" --out "$final_cact" 2>&1 | tee logs/build-final.log
+python3 scripts/stage_c_train_receipt.py \
+  --arm-id "$ARM_ID" --replica-id "$REPLICA_ID" --experiment-commit "$EXPERIMENT_SHA" \
+  --launcher-commit "$LAUNCHER_SHA" --run-id "${GITHUB_RUN_ID:-LOCAL}" \
+  --early-adapter "$early_adapter" --early-cact "$early_cact" \
+  --final-adapter "$final_adapter" --final-cact "$final_cact" \
+  --curriculum-manifest experiments/needle-stage-c-applicability/manifests/stage-c-curriculum-manifest.json \
+  --output "results/train-receipt-${ARM_ID}-${REPLICA_ID}.json"
 sha256sum artifacts/* > results/artifact-sha256.txt

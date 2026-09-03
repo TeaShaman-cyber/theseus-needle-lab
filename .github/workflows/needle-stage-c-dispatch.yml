@@ -178,9 +178,11 @@ jobs:
         run: |
           mkdir -p results
           python3 scripts/stage_c_quality_receipt.py replica \
-            --arm-a-final "eval-artifacts/A/results/A-final-heldout-${{ matrix.replica }}.jsonl" \
-            --arm-b-early "eval-artifacts/B/results/B-early-heldout-${{ matrix.replica }}.jsonl" \
-            --arm-b-final "eval-artifacts/B/results/B-final-heldout-${{ matrix.replica }}.jsonl" \
+            --arm-a-final "eval-artifacts/A/A-final-heldout-${{ matrix.replica }}.jsonl" \
+            --arm-b-early "eval-artifacts/B/B-early-heldout-${{ matrix.replica }}.jsonl" \
+            --arm-b-final "eval-artifacts/B/B-final-heldout-${{ matrix.replica }}.jsonl" \
+            --arm-a-train-receipt "eval-artifacts/A/train-receipt-A-${{ matrix.replica }}.json" \
+            --arm-b-train-receipt "eval-artifacts/B/train-receipt-B-${{ matrix.replica }}.json" \
             --replica-id "${{ matrix.replica }}" --experiment-commit "${{ inputs.experiment_sha }}" \
             --launcher-commit "${{ github.sha }}" --run-id "${{ github.run_id }}" \
             --output "results/stage-c-pair-${{ matrix.replica }}.json"
