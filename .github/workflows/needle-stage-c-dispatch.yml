@@ -61,7 +61,7 @@ jobs:
           python3 scripts/build_stage_c_dataset.py --write
           for phase in early reduced; do
             for arm in a b; do
-              python3 scripts/audit_stage_c_token_lengths.py --projection "experiments/needle-stage-c-applicability/data/${phase}.arm-${arm}.train.needle.jsonl" --canonical "experiments/needle-stage-c-applicability/state/${phase}.arm-${arm}.canonical.jsonl" --max-len 256 --output "results/audit-${phase}-${arm}.json"
+              python3 scripts/audit_stage_c_token_lengths.py --projection "experiments/needle-stage-c-applicability/data/${phase}.arm-${arm}.train.needle.jsonl" --canonical "experiments/needle-stage-c-applicability/state/${phase}.arm-${arm}.canonical.jsonl" --max-len 512 --output "results/audit-${phase}-${arm}.json"
             done
           done
           python3 scripts/run_stage_c_curriculum_finetune.py --help >/dev/null

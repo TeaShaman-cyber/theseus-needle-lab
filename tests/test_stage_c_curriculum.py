@@ -48,3 +48,14 @@ class StageCCurriculumRunnerContractTest(unittest.TestCase):
 
 if __name__=='__main__':
     unittest.main()
+
+class StageCMeasuredMaxLenContractTest(unittest.TestCase):
+    def test_factorized_stage_c_uses_512_everywhere(self):
+        p=json.loads(POLICY.read_text(encoding='utf-8'))
+        self.assertEqual(p['max_len'],512)
+        runner=RUNNER.read_text(encoding='utf-8')
+        train=(ROOT/'scripts/run_stage_c_full_train.sh').read_text(encoding='utf-8')
+        workflow=(ROOT/'.github/workflows/needle-stage-c-dispatch.yml').read_text(encoding='utf-8')
+        self.assertIn('default=512',runner)
+        self.assertIn('--max-len 512',train)
+        self.assertIn('--max-len 512',workflow)

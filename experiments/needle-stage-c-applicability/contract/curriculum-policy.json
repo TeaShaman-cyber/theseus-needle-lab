@@ -16,5 +16,6 @@
       "additional_negative_presentations": 30,
       "recovery_weight_scale": 0.5
     }
-  ]
+  ],
+  "max_len": 512
 }

@@ -24,7 +24,7 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--lr", type=float, default=1e-4)
     p.add_argument("--lora-rank", type=int, default=16)
     p.add_argument("--lora-alpha", type=float, default=32.0)
-    p.add_argument("--max-len", type=int, default=256)
+    p.add_argument("--max-len", type=int, default=512)
     p.add_argument("--val-split", type=float, default=0.1)
     p.add_argument("--early-out", required=True)
     p.add_argument("--out", required=True)

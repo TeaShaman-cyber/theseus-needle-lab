@@ -274,3 +274,7 @@ Any subsequent Stage C run must pass byte-level preflight proving:
 - `early Arm B != reduced Arm B`;
 - Arm B negative targets contain `policy_state(applicability=NONE)` and no `route` call;
 - Arm B positive targets contain `policy_state(applicability=ROUTE)` plus exactly one `route` call.
+
+### Measured Stage C token-cap correction
+
+The first post-review resource preflight (`33780216249`) measured Arm B factorized examples at a maximum of **479 tokens** and correctly failed the inherited Stage B `max_len=256` contract with `FAIL_TARGET_TRUNCATION`. Stage C therefore uses `max_len=512` for **both Arm A and Arm B**. 512 is the smallest standard power-of-two cap above the measured maximum. This is a symmetric runtime correction required to preserve the approved factorized target; it does not change acceptance thresholds or give Arm B a larger context budget than Arm A.

@@ -18,7 +18,7 @@ for phase in early reduced; do
   python3 scripts/audit_stage_c_token_lengths.py \
     --projection "experiments/needle-stage-c-applicability/data/${phase}.arm-${arm}.train.needle.jsonl" \
     --canonical "experiments/needle-stage-c-applicability/state/${phase}.arm-${arm}.canonical.jsonl" \
-    --max-len 256 --output "results/token-audit-${phase}-${ARM_ID}-${REPLICA_ID}.json"
+    --max-len 512 --output "results/token-audit-${phase}-${ARM_ID}-${REPLICA_ID}.json"
 done
 
 python - <<'PY' 2>&1 | tee logs/checkpoint-download.log
@@ -37,7 +37,7 @@ final_adapter="artifacts/final-${ARM_ID}-${REPLICA_ID}.pkl"
     --reduced-jsonl "experiments/needle-stage-c-applicability/data/reduced.arm-${arm}.train.needle.jsonl" \
     --policy experiments/needle-stage-c-applicability/contract/curriculum-policy.json \
     --checkpoint checkpoints/needle2.pkl --seed 0 --epochs 15 --batch-size 16 --lr 1e-4 \
-    --lora-rank 16 --lora-alpha 32 --max-len 256 --val-split 0.1 \
+    --lora-rank 16 --lora-alpha 32 --max-len 512 --val-split 0.1 \
     --early-out "$early_adapter" --out "$final_adapter" 2>&1 | tee logs/train.log
 
 early_cact="artifacts/early-${ARM_ID}-${REPLICA_ID}.cact"
