@@ -127,3 +127,55 @@ def build_outputs(semantic_rows: list[dict], recovery_state: list[dict], additio
     }
     files["manifests/stage-c-dataset-manifest.json"]=_stable_json_bytes(manifest)
     return {"arms":arms,"files":files}
+
+
+def _recovery_state_from_seed(seed: dict, scale: float) -> list[dict]:
+    return [
+        {"case_id": case_id, "recovery_priority": float(scale)}
+        for case_id in sorted(seed.get("false_call_case_ids", []))
+    ]
+
+
+def build_curriculum_outputs(semantic_rows: list[dict], seed: dict, policy: dict, schema: dict, prefix: str) -> dict:
+    train_rows=[row for row in semantic_rows if row.get("split")=="train"]
+    heldout_ids={row["case_id"] for row in semantic_rows if row.get("split")=="heldout"}
+    if set(seed.get("false_call_case_ids", [])) & heldout_ids:
+        raise ValueError("heldout leakage in recovery seed")
+    phases={}
+    files={}
+    phase_rows={}
+    phase_meta=[]
+    for phase in policy.get("phases", []):
+        name=phase["name"]
+        scale=float(phase["recovery_weight_scale"])
+        additional=int(phase["additional_negative_presentations"])
+        recovery=_recovery_state_from_seed(seed,scale)
+        arms=build_stage_c_arms(train_rows,recovery,additional)
+        phases[name]=arms
+        phase_rows[name]={arm:len(arms[arm]) for arm in ("A","B")}
+        phase_meta.append({
+            "name":name,
+            "epochs":int(phase["epochs"]),
+            "additional_negative_presentations":additional,
+            "recovery_weight_scale":scale,
+        })
+        for arm in ("A","B"):
+            slug=arm.lower()
+            files[f"state/{name}.arm-{slug}.canonical.jsonl"]=_jsonl_bytes(arms[arm])
+            files[f"data/{name}.arm-{slug}.train.needle.jsonl"]=_jsonl_bytes([
+                _behavioral_projection(row,schema,prefix) for row in arms[arm]
+            ])
+    bindings=[]
+    for path in sorted(files):
+        payload=files[path]
+        bindings.append({"path":path,"sha256":hashlib.sha256(payload).hexdigest(),"bytes":len(payload)})
+    manifest={
+        "schema_version":"needle-stage-c-curriculum-manifest-v1",
+        "source_stage_b_run_id":seed.get("stage_b_workflow_run_id"),
+        "source_stage_b_experiment_commit":seed.get("source_experiment_commit"),
+        "phase_rows":phase_rows,
+        "phases":phase_meta,
+        "bindings":bindings,
+    }
+    files["manifests/stage-c-curriculum-manifest.json"]=_stable_json_bytes(manifest)
+    return {"arms":phases,"files":files}

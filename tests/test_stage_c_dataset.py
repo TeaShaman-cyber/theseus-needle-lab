@@ -108,3 +108,34 @@ class StageCRecoverySeedProvenanceTest(unittest.TestCase):
         heldout={r['case_id'] for r in semantic if r['split']=='heldout'}
         self.assertTrue(set(seed['false_call_case_ids']) <= train_negative)
         self.assertTrue(set(seed['false_call_case_ids']).isdisjoint(heldout))
+
+class StageCRealCurriculumProjectionTest(unittest.TestCase):
+    def test_real_stage_b_source_materializes_exact_stage_c_phase_geometry_without_heldout_leakage(self):
+        import json, pathlib, collections
+        from scripts.build_stage_c_dataset import build_curriculum_outputs
+        root=pathlib.Path(__file__).resolve().parents[1]
+        semantic=[json.loads(x) for x in (root/'experiments/needle-realistic-sft/source/semantic-cases.jsonl').read_text().splitlines() if x.strip()]
+        seed=json.loads((root/'experiments/needle-stage-c-applicability/source/stage-b-recovery-seed.json').read_text())
+        policy=json.loads((root/'experiments/needle-stage-c-applicability/contract/curriculum-policy.json').read_text())
+        schema=json.loads((root/'experiments/needle-realistic-sft/contract/route-schema.json').read_text())
+        prefix=(root/'experiments/needle-realistic-sft/contract/route-positive-prefix.txt').read_text()
+        out=build_curriculum_outputs(semantic,seed,policy,schema,prefix)
+        self.assertEqual({k:len(v) for k,v in out['arms']['early'].items()},{'A':420,'B':420})
+        self.assertEqual({k:len(v) for k,v in out['arms']['reduced'].items()},{'A':390,'B':390})
+        heldout={r['case_id'] for r in semantic if r['split']=='heldout'}
+        all_train_neg={r['case_id'] for r in semantic if r['split']=='train' and r['applicability']=='none'}
+        failures=set(seed['false_call_case_ids'])
+        successes=all_train_neg-failures
+        self.assertEqual(len(failures),55)
+        self.assertEqual(len(successes),5)
+        for phase in ('early','reduced'):
+            for arm in ('A','B'):
+                ids=[r['case_id'] for r in out['arms'][phase][arm]]
+                self.assertTrue(set(ids).isdisjoint(heldout))
+                neg_counts=collections.Counter(x for x in ids if x in all_train_neg)
+                self.assertEqual(set(neg_counts),all_train_neg)
+                self.assertTrue(all(neg_counts[x]>=1 for x in all_train_neg))
+            b_counts=collections.Counter(r['case_id'] for r in out['arms'][phase]['B'] if r['case_id'] in all_train_neg)
+            self.assertGreater(sum(b_counts[x] for x in failures)/len(failures), sum(b_counts[x] for x in successes)/len(successes))
+        manifest=json.loads(out['files']['manifests/stage-c-curriculum-manifest.json'])
+        self.assertEqual(manifest['phase_rows'],{'early':{'A':420,'B':420},'reduced':{'A':390,'B':390}})
