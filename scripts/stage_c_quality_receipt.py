@@ -140,6 +140,8 @@ def main() -> int:
     r.add_argument('--arm-a-final',type=pathlib.Path,required=True)
     r.add_argument('--arm-b-early',type=pathlib.Path,required=True)
     r.add_argument('--arm-b-final',type=pathlib.Path,required=True)
+    r.add_argument('--arm-a-train-receipt',type=pathlib.Path,required=True)
+    r.add_argument('--arm-b-train-receipt',type=pathlib.Path,required=True)
     r.add_argument('--replica-id',choices=['R1','R2'],required=True)
     r.add_argument('--experiment-commit',required=True)
     r.add_argument('--launcher-commit',required=True)
@@ -156,6 +158,15 @@ def main() -> int:
             _load_jsonl_path(args.arm_b_early),
             _load_jsonl_path(args.arm_b_final),
         )
+        train_a=json.loads(args.arm_a_train_receipt.read_text(encoding='utf-8'))
+        train_b=json.loads(args.arm_b_train_receipt.read_text(encoding='utf-8'))
+        for expected_arm, train in [('A',train_a),('B',train_b)]:
+            if train.get('schema') != 'theseus.needle.stage_c_train.v1':
+                raise ValueError('invalid Stage C train receipt schema')
+            if train.get('arm_id') != expected_arm or train.get('replica_id') != args.replica_id:
+                raise ValueError('Stage C train receipt arm/replica mismatch')
+            if train.get('source',{}).get('experiment_commit') != args.experiment_commit:
+                raise ValueError('Stage C train receipt experiment mismatch')
         receipt={
             'schema':'theseus.needle.stage_c_replica_eval.v1',
             'replica_id':args.replica_id,
@@ -166,6 +177,11 @@ def main() -> int:
                 'parent_issues':[35,36],
             },
             'evaluation':evaluation,
+            'model_artifacts':{
+                'arm_a_final_cact_sha256':train_a['artifacts']['final_cact_sha256'],
+                'arm_b_early_cact_sha256':train_b['artifacts']['early_cact_sha256'],
+                'arm_b_final_cact_sha256':train_b['artifacts']['final_cact_sha256'],
+            },
             'interpretation_boundary':'paired_stage_c_applicability_recovery_with_early_and_final_b_checkpoints',
         }
         args.output.parent.mkdir(parents=True,exist_ok=True)

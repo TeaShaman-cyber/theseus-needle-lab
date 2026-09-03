@@ -122,13 +122,19 @@ class StageCQualityCliTest(unittest.TestCase):
         a=write('a.jsonl',make_rows('a',34,16,24))
         be=write('be.jsonl',make_rows('be',36,22,24))
         bf=write('bf.jsonl',make_rows('bf',35,21,24))
+        train_a=td/'train-a.json'; train_b=td/'train-b.json'
+        train_a.write_text(json.dumps({'schema':'theseus.needle.stage_c_train.v1','arm_id':'A','replica_id':'R1','source':{'experiment_commit':'a'*40},'artifacts':{'early_cact_sha256':'1'*64,'final_cact_sha256':'2'*64}}))
+        train_b.write_text(json.dumps({'schema':'theseus.needle.stage_c_train.v1','arm_id':'B','replica_id':'R1','source':{'experiment_commit':'a'*40},'artifacts':{'early_cact_sha256':'3'*64,'final_cact_sha256':'4'*64}}))
         r1=td/'r1.json'
-        cmd=['python3',str(root/'scripts/stage_c_quality_receipt.py'),'replica','--arm-a-final',str(a),'--arm-b-early',str(be),'--arm-b-final',str(bf),'--replica-id','R1','--experiment-commit','a'*40,'--launcher-commit','b'*40,'--run-id','123','--output',str(r1)]
+        cmd=['python3',str(root/'scripts/stage_c_quality_receipt.py'),'replica','--arm-a-final',str(a),'--arm-b-early',str(be),'--arm-b-final',str(bf),'--arm-a-train-receipt',str(train_a),'--arm-b-train-receipt',str(train_b),'--replica-id','R1','--experiment-commit','a'*40,'--launcher-commit','b'*40,'--run-id','123','--output',str(r1)]
         x=subprocess.run(cmd,text=True,capture_output=True)
         self.assertEqual(x.returncode,0,x.stderr)
         receipt=json.loads(r1.read_text())
         self.assertEqual(receipt['schema'],'theseus.needle.stage_c_replica_eval.v1')
         self.assertTrue(receipt['evaluation']['accepted'])
+        self.assertEqual(receipt['model_artifacts']['arm_a_final_cact_sha256'],'2'*64)
+        self.assertEqual(receipt['model_artifacts']['arm_b_early_cact_sha256'],'3'*64)
+        self.assertEqual(receipt['model_artifacts']['arm_b_final_cact_sha256'],'4'*64)
         r2=td/'r2.json'; r2.write_text(json.dumps({**receipt,'replica_id':'R2'}))
         final=td/'final.json'
         x=subprocess.run(['python3',str(root/'scripts/stage_c_quality_receipt.py'),'final','--r1',str(r1),'--r2',str(r2),'--output',str(final)],text=True,capture_output=True)
