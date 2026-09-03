@@ -62,6 +62,32 @@ def scope_metrics(rows: list[dict]) -> dict:
     }
 
 
+def expected_scope_from_semantic(semantic_rows: list[dict], split: str) -> dict[str, tuple[str, str]]:
+    expected = {}
+    for row in semantic_rows:
+        if row.get("split") != split:
+            continue
+        case_id = row.get("case_id")
+        if not isinstance(case_id, str) or not case_id or case_id in expected:
+            raise ValueError(f"invalid registered {split} case ids")
+        category = f"{split}_{'positive' if row.get('applicability') == 'route' else 'negative'}"
+        decision = row.get("expected_decision") if row.get("applicability") == "route" else "NO_CALL"
+        expected[case_id] = (category, decision)
+    return expected
+
+
+def validate_scope_rows(rows: list[dict], expected: dict[str, tuple[str, str]], label: str) -> None:
+    ids = [row.get("id") for row in rows]
+    if len(ids) != len(set(ids)) or set(ids) != set(expected):
+        raise ValueError(f"{label} evaluation does not contain exact case ids")
+    for row in rows:
+        category, decision = expected[row["id"]]
+        if row.get("category") != category:
+            raise ValueError(f"{label} category mismatch for {row['id']}")
+        if row.get("expected") != decision:
+            raise ValueError(f"{label} expected decision mismatch for {row['id']}")
+
+
 def evaluate_replica_pair(arm_a_final_heldout: list[dict], arm_b_early_heldout: list[dict], arm_b_final_heldout: list[dict]) -> dict:
     a = scope_metrics(arm_a_final_heldout)
     early = scope_metrics(arm_b_early_heldout)
@@ -142,9 +168,13 @@ def main() -> int:
     p=argparse.ArgumentParser()
     sub=p.add_subparsers(dest='command',required=True)
     r=sub.add_parser('replica')
+    r.add_argument('--semantic',type=pathlib.Path,required=True)
     r.add_argument('--arm-a-final',type=pathlib.Path,required=True)
+    r.add_argument('--arm-a-final-train',type=pathlib.Path,required=True)
     r.add_argument('--arm-b-early',type=pathlib.Path,required=True)
+    r.add_argument('--arm-b-early-train',type=pathlib.Path,required=True)
     r.add_argument('--arm-b-final',type=pathlib.Path,required=True)
+    r.add_argument('--arm-b-final-train',type=pathlib.Path,required=True)
     r.add_argument('--arm-a-train-receipt',type=pathlib.Path,required=True)
     r.add_argument('--arm-b-train-receipt',type=pathlib.Path,required=True)
     r.add_argument('--replica-id',choices=['R1','R2'],required=True)
@@ -158,11 +188,25 @@ def main() -> int:
     f.add_argument('--output',type=pathlib.Path,required=True)
     args=p.parse_args()
     if args.command=='replica':
-        evaluation=evaluate_replica_pair(
-            _load_jsonl_path(args.arm_a_final),
-            _load_jsonl_path(args.arm_b_early),
-            _load_jsonl_path(args.arm_b_final),
-        )
+        semantic_rows=_load_jsonl_path(args.semantic)
+        expected_heldout=expected_scope_from_semantic(semantic_rows,'heldout')
+        expected_train=expected_scope_from_semantic(semantic_rows,'train')
+        arm_a_final=_load_jsonl_path(args.arm_a_final)
+        arm_b_early=_load_jsonl_path(args.arm_b_early)
+        arm_b_final=_load_jsonl_path(args.arm_b_final)
+        arm_a_final_train=_load_jsonl_path(args.arm_a_final_train)
+        arm_b_early_train=_load_jsonl_path(args.arm_b_early_train)
+        arm_b_final_train=_load_jsonl_path(args.arm_b_final_train)
+        for label, rows in [('arm_a_final_heldout',arm_a_final),('arm_b_early_heldout',arm_b_early),('arm_b_final_heldout',arm_b_final)]:
+            validate_scope_rows(rows,expected_heldout,label)
+        for label, rows in [('arm_a_final_train',arm_a_final_train),('arm_b_early_train',arm_b_early_train),('arm_b_final_train',arm_b_final_train)]:
+            validate_scope_rows(rows,expected_train,label)
+        evaluation=evaluate_replica_pair(arm_a_final,arm_b_early,arm_b_final)
+        evaluation['train_scopes']={
+            'arm_a_final':scope_metrics(arm_a_final_train),
+            'arm_b_early':scope_metrics(arm_b_early_train),
+            'arm_b_final':scope_metrics(arm_b_final_train),
+        }
         train_a=json.loads(args.arm_a_train_receipt.read_text(encoding='utf-8'))
         train_b=json.loads(args.arm_b_train_receipt.read_text(encoding='utf-8'))
         for expected_arm, train in [('A',train_a),('B',train_b)]:

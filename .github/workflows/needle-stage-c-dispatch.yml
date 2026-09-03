@@ -178,9 +178,13 @@ jobs:
         run: |
           mkdir -p results
           python3 scripts/stage_c_quality_receipt.py replica \
+            --semantic "experiments/needle-realistic-sft/source/semantic-cases.jsonl" \
             --arm-a-final "eval-artifacts/A/A-final-heldout-${{ matrix.replica }}.jsonl" \
+            --arm-a-final-train "eval-artifacts/A/A-final-train-${{ matrix.replica }}.jsonl" \
             --arm-b-early "eval-artifacts/B/B-early-heldout-${{ matrix.replica }}.jsonl" \
+            --arm-b-early-train "eval-artifacts/B/B-early-train-${{ matrix.replica }}.jsonl" \
             --arm-b-final "eval-artifacts/B/B-final-heldout-${{ matrix.replica }}.jsonl" \
+            --arm-b-final-train "eval-artifacts/B/B-final-train-${{ matrix.replica }}.jsonl" \
             --arm-a-train-receipt "eval-artifacts/A/train-receipt-A-${{ matrix.replica }}.json" \
             --arm-b-train-receipt "eval-artifacts/B/train-receipt-B-${{ matrix.replica }}.json" \
             --replica-id "${{ matrix.replica }}" --experiment-commit "${{ inputs.experiment_sha }}" \

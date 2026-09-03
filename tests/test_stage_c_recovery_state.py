@@ -72,6 +72,19 @@ class StageCRecoveryStateTest(unittest.TestCase):
         self.assertEqual(updated["success_streak"], 0)
         self.assertEqual(updated["last_outcome"], "OTHER")
 
+    def test_other_resets_success_streak_without_changing_priority(self):
+        entry = {
+            "case_id": "train-negative-x", "class": "negative_boundary",
+            "failure_count": 2, "success_streak": 1, "recovery_priority": 2.0,
+            "last_outcome": "CORRECT_NO_CALL", "retention_zone": "active", "evictable": False,
+        }
+        other = update_recovery_entry(entry, "OTHER", POLICY)
+        self.assertEqual(other["success_streak"], 0)
+        self.assertEqual(other["recovery_priority"], 2.0)
+        again = update_recovery_entry(other, "CORRECT_NO_CALL", POLICY)
+        self.assertEqual(again["success_streak"], 1)
+        self.assertEqual(again["recovery_priority"], 2.0)
+
 
 if __name__ == "__main__":
     unittest.main()

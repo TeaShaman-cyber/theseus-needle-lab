@@ -31,6 +31,8 @@ def update_recovery_entry(entry: dict, outcome: str, policy: dict) -> dict:
                 float(policy["min_active_priority"]),
                 float(out["recovery_priority"]) * float(policy["success_decay_factor"]),
             )
+    else:
+        out["success_streak"] = 0
     out["last_outcome"] = outcome
     out["retention_zone"], out["evictable"] = _zone(float(out["recovery_priority"]), outcome)
     return out

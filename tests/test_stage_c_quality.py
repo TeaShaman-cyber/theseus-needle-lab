@@ -48,6 +48,24 @@ class StageCQualityMetricsTest(unittest.TestCase):
         self.assertNotIn("ROUTE->NONE", {"runtime":1})
         self.assertEqual(m["applicability_confusion"].get("ROUTE->INVALID"),1)
 
+    def test_exact_scope_validation_rejects_duplicate_or_missing_case_ids(self):
+        from scripts.stage_c_quality_receipt import validate_scope_rows
+        rows=make_rows("heldout")
+        expected={r["id"]:(r["category"],r["expected"]) for r in rows}
+        corrupted=list(rows)
+        corrupted[-1]=dict(corrupted[0])
+        with self.assertRaisesRegex(ValueError,"exact case ids"):
+            validate_scope_rows(corrupted,expected,"heldout")
+
+    def test_exact_scope_validation_rejects_wrong_registered_category(self):
+        from scripts.stage_c_quality_receipt import validate_scope_rows
+        rows=make_rows("heldout")
+        expected={r["id"]:(r["category"],r["expected"]) for r in rows}
+        bad=[dict(r) for r in rows]
+        bad[0]["category"]="heldout_negative"
+        with self.assertRaisesRegex(ValueError,"category"):
+            validate_scope_rows(bad,expected,"heldout")
+
 
 class StageCReplicaAcceptanceTest(unittest.TestCase):
     def good_pair(self):
@@ -119,14 +137,42 @@ class StageCQualityCliTest(unittest.TestCase):
             p=td/name
             p.write_text(''.join(json.dumps(r)+'\n' for r in rows))
             return p
-        a=write('a.jsonl',make_rows('a',34,16,24))
-        be=write('be.jsonl',make_rows('be',36,22,24))
-        bf=write('bf.jsonl',make_rows('bf',35,21,24))
+        a_rows=make_rows('heldout',34,16,24)
+        def with_registered_truth(candidate):
+            out=[]
+            for truth,row in zip(a_rows,candidate):
+                x=dict(row)
+                x['id']=truth['id']; x['category']=truth['category']; x['expected']=truth['expected']
+                x['correct']=x['predicted']==x['expected']
+                out.append(x)
+            return out
+        be_rows=with_registered_truth(make_rows('heldout',36,22,24))
+        bf_rows=with_registered_truth(make_rows('heldout',35,21,24))
+        a=write('a.jsonl',a_rows)
+        be=write('be.jsonl',be_rows)
+        bf=write('bf.jsonl',bf_rows)
+        def train_rows(source_rows):
+            out=[]
+            for row in source_rows:
+                x=dict(row)
+                x['id']=x['id'].replace('heldout-','train-',1)
+                x['category']=x['category'].replace('heldout_','train_',1)
+                out.append(x)
+            return out
+        at_rows=train_rows(a_rows); bet_rows=train_rows(be_rows); bft_rows=train_rows(bf_rows)
+        at=write('at.jsonl',at_rows); bet=write('bet.jsonl',bet_rows); bft=write('bft.jsonl',bft_rows)
+        semantic=td/'semantic.jsonl'
+        semantic_rows=[]
+        for row in a_rows:
+            semantic_rows.append({'case_id':row['id'],'split':'heldout','applicability':'none' if row['expected']=='NO_CALL' else 'route','expected_decision':None if row['expected']=='NO_CALL' else row['expected']})
+        for row in at_rows:
+            semantic_rows.append({'case_id':row['id'],'split':'train','applicability':'none' if row['expected']=='NO_CALL' else 'route','expected_decision':None if row['expected']=='NO_CALL' else row['expected']})
+        semantic.write_text(''.join(json.dumps(r)+'\n' for r in semantic_rows))
         train_a=td/'train-a.json'; train_b=td/'train-b.json'
         train_a.write_text(json.dumps({'schema':'theseus.needle.stage_c_train.v1','arm_id':'A','replica_id':'R1','source':{'experiment_commit':'a'*40},'artifacts':{'early_cact_sha256':'1'*64,'final_cact_sha256':'2'*64}}))
         train_b.write_text(json.dumps({'schema':'theseus.needle.stage_c_train.v1','arm_id':'B','replica_id':'R1','source':{'experiment_commit':'a'*40},'artifacts':{'early_cact_sha256':'3'*64,'final_cact_sha256':'4'*64}}))
         r1=td/'r1.json'
-        cmd=['python3',str(root/'scripts/stage_c_quality_receipt.py'),'replica','--arm-a-final',str(a),'--arm-b-early',str(be),'--arm-b-final',str(bf),'--arm-a-train-receipt',str(train_a),'--arm-b-train-receipt',str(train_b),'--replica-id','R1','--experiment-commit','a'*40,'--launcher-commit','b'*40,'--run-id','123','--output',str(r1)]
+        cmd=['python3',str(root/'scripts/stage_c_quality_receipt.py'),'replica','--semantic',str(semantic),'--arm-a-final',str(a),'--arm-a-final-train',str(at),'--arm-b-early',str(be),'--arm-b-early-train',str(bet),'--arm-b-final',str(bf),'--arm-b-final-train',str(bft),'--arm-a-train-receipt',str(train_a),'--arm-b-train-receipt',str(train_b),'--replica-id','R1','--experiment-commit','a'*40,'--launcher-commit','b'*40,'--run-id','123','--output',str(r1)]
         x=subprocess.run(cmd,text=True,capture_output=True)
         self.assertEqual(x.returncode,0,x.stderr)
         receipt=json.loads(r1.read_text())

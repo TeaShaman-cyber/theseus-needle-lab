@@ -29,5 +29,7 @@ if [[ "$actual_early" != "$expected_early" || "$actual_final" != "$expected_fina
   exit 3
 fi
 cp "$train_receipt" "results/train-receipt-${ARM_ID}-${REPLICA_ID}.json"
+python3 scripts/run_stage_c_eval.py --semantic "$semantic" --route-schema "$route_schema" --prefix "$prefix" --split train --arm-id "$ARM_ID" --model-id "stage-c-${ARM_ID}-${REPLICA_ID}-early" --weights "$early" --output "results/${ARM_ID}-early-train-${REPLICA_ID}.jsonl"
 python3 scripts/run_stage_c_eval.py --semantic "$semantic" --route-schema "$route_schema" --prefix "$prefix" --split heldout --arm-id "$ARM_ID" --model-id "stage-c-${ARM_ID}-${REPLICA_ID}-early" --weights "$early" --output "results/${ARM_ID}-early-heldout-${REPLICA_ID}.jsonl"
+python3 scripts/run_stage_c_eval.py --semantic "$semantic" --route-schema "$route_schema" --prefix "$prefix" --split train --arm-id "$ARM_ID" --model-id "stage-c-${ARM_ID}-${REPLICA_ID}-final" --weights "$final" --output "results/${ARM_ID}-final-train-${REPLICA_ID}.jsonl"
 python3 scripts/run_stage_c_eval.py --semantic "$semantic" --route-schema "$route_schema" --prefix "$prefix" --split heldout --arm-id "$ARM_ID" --model-id "stage-c-${ARM_ID}-${REPLICA_ID}-final" --weights "$final" --output "results/${ARM_ID}-final-heldout-${REPLICA_ID}.jsonl"
