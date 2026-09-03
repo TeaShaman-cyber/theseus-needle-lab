@@ -32,9 +32,9 @@ class StageCDatasetTest(unittest.TestCase):
             {"case_id":"train-neg-1","recovery_priority":1.0},
             {"case_id":"train-neg-2","recovery_priority":0.25},
         ]
-        arms=build_stage_c_arms(self._semantic(), recovery, negative_budget=3)
-        self.assertEqual(len(arms["A"]),6)
-        self.assertEqual(len(arms["B"]),6)
+        arms=build_stage_c_arms(self._semantic(), recovery, additional_negative_budget=3)
+        self.assertEqual(len(arms["A"]),9)
+        self.assertEqual(len(arms["B"]),9)
         pos_a=collections.Counter(r["case_id"] for r in arms["A"] if r["canonical_state"]["applicability"]=="ROUTE")
         pos_b=collections.Counter(r["case_id"] for r in arms["B"] if r["canonical_state"]["applicability"]=="ROUTE")
         self.assertEqual(pos_a,pos_b)
@@ -45,17 +45,18 @@ class StageCDatasetTest(unittest.TestCase):
             {"case_id":"train-neg-1","recovery_priority":1.0},
             {"case_id":"train-neg-2","recovery_priority":0.25},
         ]
-        arms=build_stage_c_arms(self._semantic(), recovery, negative_budget=3)
+        arms=build_stage_c_arms(self._semantic(), recovery, additional_negative_budget=3)
         a=collections.Counter(r["case_id"] for r in arms["A"] if r["canonical_state"]["applicability"]=="NONE")
         b=collections.Counter(r["case_id"] for r in arms["B"] if r["canonical_state"]["applicability"]=="NONE")
-        self.assertEqual(a, collections.Counter({"train-neg-0":1,"train-neg-1":1,"train-neg-2":1}))
+        self.assertEqual(a, collections.Counter({"train-neg-0":2,"train-neg-1":2,"train-neg-2":2}))
         self.assertGreater(b["train-neg-0"], b["train-neg-2"])
-        self.assertEqual(sum(b.values()),3)
+        self.assertGreaterEqual(b["train-neg-2"],1)
+        self.assertEqual(sum(b.values()),6)
 
     def test_heldout_rows_are_forbidden(self):
         rows=self._semantic()+[{"case_id":"heldout-neg","split":"heldout","applicability":"none","expected_decision":None,"query":"heldout"}]
         with self.assertRaisesRegex(ValueError,"heldout"):
-            build_stage_c_arms(rows, [], negative_budget=3)
+            build_stage_c_arms(rows, [], additional_negative_budget=3)
 
     def test_output_is_deterministic(self):
         recovery=[{"case_id":f"train-neg-{i}","recovery_priority":p} for i,p in enumerate([4.0,1.0,0.25])]
@@ -78,12 +79,12 @@ class StageCArtifactTest(unittest.TestCase):
         self.assertEqual(first,second)
         for arm in ("A","B"):
             train=first["files"][f"data/arm-{arm.lower()}.train.needle.jsonl"]
-            self.assertEqual(len(train.decode().splitlines()),6)
+            self.assertEqual(len(train.decode().splitlines()),9)
             canonical=first["files"][f"state/arm-{arm.lower()}.canonical.jsonl"]
-            self.assertEqual(len(canonical.decode().splitlines()),6)
+            self.assertEqual(len(canonical.decode().splitlines()),9)
         manifest=json.loads(first["files"]["manifests/stage-c-dataset-manifest.json"])
-        self.assertEqual(manifest["negative_budget_per_arm"],3)
-        self.assertEqual(manifest["arm_rows"],{"A":6,"B":6})
+        self.assertEqual(manifest["additional_negative_budget_per_arm"],3)
+        self.assertEqual(manifest["arm_rows"],{"A":9,"B":9})
         for binding in manifest["bindings"]:
             payload=first["files"][binding["path"]]
             self.assertEqual(hashlib.sha256(payload).hexdigest(),binding["sha256"])

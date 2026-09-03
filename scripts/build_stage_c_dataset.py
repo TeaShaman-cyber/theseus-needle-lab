@@ -57,7 +57,7 @@ def _materialize(rows_by_id: dict[str, dict], positives: list[str], negative_cou
     return out
 
 
-def build_stage_c_arms(semantic_rows: list[dict], recovery_state: list[dict], negative_budget: int) -> dict[str, list[dict]]:
+def build_stage_c_arms(semantic_rows: list[dict], recovery_state: list[dict], additional_negative_budget: int) -> dict[str, list[dict]]:
     if any(row.get("split") != "train" for row in semantic_rows):
         raise ValueError("heldout rows are forbidden from Stage C training projection")
     rows_by_id={row["case_id"]:row for row in semantic_rows}
@@ -71,8 +71,10 @@ def build_stage_c_arms(semantic_rows: list[dict], recovery_state: list[dict], ne
     adaptive={case_id:max(0.0,recovery_by_id.get(case_id,0.0)) for case_id in negatives}
     if sum(adaptive.values()) <= 0:
         adaptive=uniform
-    a_counts=_allocate(negatives,uniform,negative_budget)
-    b_counts=_allocate(negatives,adaptive,negative_budget)
+    a_extra=_allocate(negatives,uniform,additional_negative_budget)
+    b_extra=_allocate(negatives,adaptive,additional_negative_budget)
+    a_counts={case_id:1+a_extra.get(case_id,0) for case_id in negatives}
+    b_counts={case_id:1+b_extra.get(case_id,0) for case_id in negatives}
     return {
         "A":_materialize(rows_by_id,positives,a_counts),
         "B":_materialize(rows_by_id,positives,b_counts),
@@ -104,8 +106,8 @@ def _behavioral_projection(row: dict, schema: dict, prefix: str) -> dict:
     }
 
 
-def build_outputs(semantic_rows: list[dict], recovery_state: list[dict], negative_budget: int, schema: dict, prefix: str) -> dict:
-    arms=build_stage_c_arms(semantic_rows,recovery_state,negative_budget)
+def build_outputs(semantic_rows: list[dict], recovery_state: list[dict], additional_negative_budget: int, schema: dict, prefix: str) -> dict:
+    arms=build_stage_c_arms(semantic_rows,recovery_state,additional_negative_budget)
     files={}
     for arm in ("A","B"):
         slug=arm.lower()
@@ -119,7 +121,7 @@ def build_outputs(semantic_rows: list[dict], recovery_state: list[dict], negativ
         bindings.append({"path":path,"sha256":hashlib.sha256(payload).hexdigest(),"bytes":len(payload)})
     manifest={
         "schema_version":"needle-stage-c-dataset-manifest-v1",
-        "negative_budget_per_arm":negative_budget,
+        "additional_negative_budget_per_arm":additional_negative_budget,
         "arm_rows":{arm:len(arms[arm]) for arm in ("A","B")},
         "bindings":bindings,
     }

@@ -82,6 +82,7 @@
 ### Task 4: Bounded training/eval entrypoints and manual launcher
 
 **Files:**
+- Create: `scripts/run_stage_c_curriculum_finetune.py`
 - Create: `scripts/run_stage_c_full_train.sh`
 - Create: `scripts/run_stage_c_full_eval.sh`
 - Create: `.github/workflows/needle-stage-c-dispatch.yml`
@@ -93,7 +94,8 @@
 
 - [ ] Write failing contract tests proving manual-only dispatch, exact-head gate, read-only GitHub permission, fixed entrypoints, arms `[A,B]`, replicas `[R1,R2]`, pinned cactus-needle `2.0.8`, same training hyperparameters, and no arbitrary command input.
 - [ ] Run targeted tests; expected RED.
-- [ ] Implement minimal scripts by parameterizing the frozen Stage B train/eval pattern without modifying Stage B entrypoints.
+- [ ] Implement `run_stage_c_curriculum_finetune.py` against pinned Needle internals so LoRA and optimizer are initialized once, then early and reduced datasets run sequentially in one training process; do not emulate phases with independent finetune runs.
+- [ ] Implement shell entrypoints by parameterizing the frozen Stage B train/eval pattern without modifying Stage B entrypoints.
 - [ ] Re-run targeted tests; expected PASS.
 - [ ] Run all unit tests and dataset validators.
 - [ ] Run resource dry-run only; do not launch expensive full training until exact dataset/manifests and acceptance receipt code are reviewed.
