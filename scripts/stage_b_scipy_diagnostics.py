@@ -4,7 +4,9 @@ from __future__ import annotations
 import argparse
 import json
 import pathlib
+import sys
 
+import scipy
 from scipy.stats import fisher_exact
 
 
@@ -20,6 +22,8 @@ def diagnostic(inputs: dict) -> dict:
     return {
         "authority": "DIAGNOSTIC_ONLY",
         "method": "scipy.stats.fisher_exact",
+        "scipy_version": scipy.__version__,
+        "python_version": sys.version.split()[0],
         "alternative": "greater",
         "table": table,
         "odds_ratio": float(result.statistic),

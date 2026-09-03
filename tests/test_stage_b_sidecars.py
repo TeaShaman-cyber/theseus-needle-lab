@@ -41,6 +41,8 @@ class StageBAcceptanceSidecarTest(unittest.TestCase):
     def test_scipy_sidecar_is_diagnostic_not_acceptance_authority(self):
         text = (ROOT / "scripts/stage_b_scipy_diagnostics.py").read_text()
         self.assertIn("from scipy.stats import fisher_exact", text)
+        self.assertIn("scipy.__version__", text)
+        self.assertIn("sys.version.split()[0]", text)
         self.assertIn('"authority": "DIAGNOSTIC_ONLY"', text)
         self.assertNotIn("ACCEPTED_LEARNED_AND_GENERALIZES", text)
 
