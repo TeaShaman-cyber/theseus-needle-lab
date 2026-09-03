@@ -75,7 +75,9 @@ python3 scripts/realistic_sft_resource_receipt.py \
 python3 - <<'PY'
 import json
 r=json.load(open('results/resource-receipt.json'))
-assert r['disposition'] == 'PASS_RESOURCE_GATE', r
+assert r['scientific_validity']['disposition'] == 'PASS_SCIENTIFIC_RESOURCE_GATE', r
+assert r['operational_capacity']['disposition'] == 'FITS_PLANNED_JOB_BUDGET', r
+assert r['disposition'] == 'PASS_RESOURCE_AND_CAPACITY_GATES', r
 assert r['interpretation_boundary'] == 'resource_measurement_only_not_model_quality_evidence'
 PY
 

@@ -247,22 +247,35 @@ class RealisticSftRuntimePreflightWorkflowTest(unittest.TestCase):
         self.assertNotIn('run_seeded_finetune.py', text)
 
 class RealisticSftResourceDryRunReceiptTest(unittest.TestCase):
-    def test_resource_receipt_enforces_predeclared_wall_and_rss_limits(self):
+    def test_resource_receipt_separates_scientific_validity_from_hosted_runner_capacity(self):
         from scripts.realistic_sft_resource_receipt import build_receipt
         base = {
-            "elapsed_seconds": 240.0,
-            "max_rss_kb": 8 * 1024 * 1024,
+            "elapsed_seconds": 594.93,
+            "max_rss_kb": 4 * 1024 * 1024,
             "exit_code": 0,
             "disk_free_bytes_after": 10_000_000,
         }
-        ok = build_receipt(base, token_audit_status="VERIFIED_ZERO_TRUNCATION")
-        self.assertEqual(ok["disposition"], "PASS_RESOURCE_GATE")
-        too_slow = build_receipt({**base, "elapsed_seconds": 481.0}, token_audit_status="VERIFIED_ZERO_TRUNCATION")
-        self.assertEqual(too_slow["disposition"], "BLOCKED_RESOURCE_ENVELOPE")
+        receipt = build_receipt(base, token_audit_status="VERIFIED_ZERO_TRUNCATION")
+        self.assertEqual(receipt["schema"], "theseus.needle.realistic_sft_resource_dry_run.v3")
+        self.assertEqual(receipt["scientific_validity"]["disposition"], "PASS_SCIENTIFIC_RESOURCE_GATE")
+        self.assertEqual(receipt["historical_preregistered_wall_gate"]["limit_seconds"], 480)
+        self.assertEqual(receipt["historical_preregistered_wall_gate"]["result"], "FAILED_AS_PREREGISTERED")
+        self.assertEqual(receipt["operational_capacity"]["planned_quality_job_timeout_minutes"], 210)
+        self.assertEqual(receipt["operational_capacity"]["replica_epochs"], 15)
+        self.assertEqual(receipt["operational_capacity"]["safety_margin_factor"], 1.2)
+        self.assertEqual(receipt["operational_capacity"]["disposition"], "FITS_PLANNED_JOB_BUDGET")
+        self.assertGreater(receipt["operational_capacity"]["projected_replica_seconds_with_margin"], 594.93 * 15)
+        self.assertTrue(receipt["operational_capacity"]["wall_clock_is_diagnostic_not_scientific_invariant"])
+
         too_big = build_receipt({**base, "max_rss_kb": 12 * 1024 * 1024 + 1}, token_audit_status="VERIFIED_ZERO_TRUNCATION")
-        self.assertEqual(too_big["disposition"], "BLOCKED_RESOURCE_ENVELOPE")
+        self.assertEqual(too_big["scientific_validity"]["disposition"], "BLOCKED_SCIENTIFIC_RESOURCE_GATE")
         truncated = build_receipt(base, token_audit_status="FAIL_TARGET_TRUNCATION")
-        self.assertEqual(truncated["disposition"], "BLOCKED_PRECONDITION")
+        self.assertEqual(truncated["scientific_validity"]["disposition"], "BLOCKED_PRECONDITION")
+        too_slow_for_capacity = build_receipt({**base, "elapsed_seconds": 650.0}, token_audit_status="VERIFIED_ZERO_TRUNCATION")
+        self.assertEqual(too_slow_for_capacity["scientific_validity"]["disposition"], "PASS_SCIENTIFIC_RESOURCE_GATE")
+        self.assertEqual(too_slow_for_capacity["operational_capacity"]["disposition"], "FITS_PLANNED_JOB_BUDGET")
+        beyond_budget = build_receipt({**base, "elapsed_seconds": 800.0}, token_audit_status="VERIFIED_ZERO_TRUNCATION")
+        self.assertEqual(beyond_budget["operational_capacity"]["disposition"], "EXCEEDS_PLANNED_JOB_BUDGET")
 
     def test_resource_workflow_is_manual_read_only_and_calls_fixed_entrypoint(self):
         workflow = ROOT / ".github" / "workflows" / "needle-realistic-sft-resource-dry-run.yml"
@@ -304,7 +317,7 @@ class RealisticSftResourceIdentityContractTest(unittest.TestCase):
             "exit_code": 0, "disk_free_bytes_after": 1,
         }
         receipt = build_receipt(base, token_audit_status="VERIFIED_ZERO_TRUNCATION")
-        self.assertEqual(receipt["schema"], "theseus.needle.realistic_sft_resource_dry_run.v2")
+        self.assertEqual(receipt["schema"], "theseus.needle.realistic_sft_resource_dry_run.v3")
 
     def test_resource_entrypoint_requires_explicit_experiment_and_launcher_identity(self):
         text = (ROOT / "scripts" / "run_realistic_sft_resource_dry_run.sh").read_text(encoding="utf-8")

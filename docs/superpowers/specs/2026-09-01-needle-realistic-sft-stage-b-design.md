@@ -440,6 +440,46 @@ no runtime/API drift
 
 If the resource gate fails, stop with `BLOCKED_RESOURCE_ENVELOPE` and revise the reviewed design/config before another quality run.
 
+### 10.1 Post-result revision — hosted-runner wall-clock is capacity evidence, not a scientific invariant
+
+The preregistered `wall time <= 8 minutes` criterion above was actually tested and must remain in the historical record. It produced both a passing observation (`326.81 s`) and, after provenance correction on a different GitHub-hosted runner allocation, a failing observation (`594.93 s`) under the same Stage B dataset/training regime and materially identical pinned software stack. The later run used a different hosted-runner region/image allocation while peak RSS remained approximately stable.
+
+Therefore this design is revised **after observing that failure** as follows; the original 480-second result is not erased or relabeled:
+
+```text
+scientific validity hard gates
+  - zero target truncation
+  - training process exits successfully
+  - peak RSS <= 12 GiB
+  - no disk exhaustion
+  - pinned dataset/checkpoint/runtime identities remain verified
+
+operational capacity diagnostics
+  - measured one-epoch wall time
+  - projected 15-epoch duration
+  - 1.20 planning safety margin
+  - planned quality-job timeout = 210 minutes
+```
+
+Absolute wall-clock on heterogeneous GitHub-hosted CPU runners is no longer treated as a scientific-validity invariant unless a runner class is independently pinned. It remains first-class recorded capacity evidence.
+
+The resource receipt schema is revised to `theseus.needle.realistic_sft_resource_dry_run.v3` and must expose separately:
+
+```text
+scientific_validity.disposition
+historical_preregistered_wall_gate.result
+operational_capacity.disposition
+```
+
+For Stage B quality execution, resource authorization requires both:
+
+```text
+scientific_validity.disposition == PASS_SCIENTIFIC_RESOURCE_GATE
+operational_capacity.disposition == FITS_PLANNED_JOB_BUDGET
+```
+
+The capacity projection is planning evidence only. It is not a model-quality result and is not a reproducibility claim about future wall-clock duration. A future run exceeding the 210-minute operational timeout is an operational-capacity failure, not evidence that the routing-learning hypothesis failed.
+
 ## 11. Execution topology
 
 ### 11.1 Contract workflow
@@ -458,17 +498,17 @@ It must:
 
 ### 11.2 Training workflow
 
-`needle-realistic-sft.yml` is `workflow_dispatch` only. A push must never start a quality training run automatically.
+`needle-stage-b-dispatch.yml` on the default branch is the stable `workflow_dispatch` authority boundary. It checks out an explicitly approved exact experiment SHA and invokes versioned entrypoints from that SHA. A push must never start a quality training run automatically.
 
-It exposes an explicit mode:
+The Stage B dispatch contract exposes an explicit mode:
 
 ```text
 mode = resource_dry_run | full
 ```
 
-`resource_dry_run` runs one one-epoch resource probe.
+`resource_dry_run` runs one one-epoch resource probe. Its evidence bundle is uploaded even on failure.
 
-`full` runs two independent replicas, `R1` and `R2`, with identical dataset/config/seed on independent GitHub-hosted jobs. The replicas are replication evidence, not different hyperparameters.
+`full` uses a planned per-replica job timeout of 210 minutes and runs two independent replicas, `R1` and `R2`, with identical dataset/config/seed on independent GitHub-hosted jobs. The replicas are replication evidence, not different hyperparameters.
 
 Permissions remain least privilege and secret-free:
 
