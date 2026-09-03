@@ -7,6 +7,14 @@ on:
         description: Exact current head SHA of experiment/needle-realistic-sft-spec
         required: true
         type: string
+      mode:
+        description: Bounded Stage B execution mode
+        required: true
+        default: resource_dry_run
+        type: choice
+        options:
+          - resource_dry_run
+          - full
 
 permissions:
   contents: read
@@ -15,9 +23,9 @@ env:
   NEEDLE_STAGE_B_ALLOWED_REF: experiment/needle-realistic-sft-spec
 
 jobs:
-  dispatch:
+  gate:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 5
     steps:
       - name: Verify requested SHA is exact allowed remote head
         shell: bash
@@ -34,19 +42,26 @@ jobs:
           test "$REMOTE_SHA" = "$REQUESTED_SHA"
           echo "EXACT_ALLOWED_HEAD=PASS"
 
+  resource:
+    if: inputs.mode == 'resource_dry_run'
+    needs: gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
       - name: Check out exact approved experiment SHA
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           ref: ${{ inputs.experiment_sha }}
           fetch-depth: 1
-
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
       - name: Run fixed Stage B resource entrypoint
         shell: bash
         env:
           EXPERIMENT_SHA: ${{ inputs.experiment_sha }}
           LAUNCHER_SHA: ${{ github.sha }}
         run: bash scripts/run_realistic_sft_resource_dry_run.sh
-
       - name: Upload Stage B resource evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -59,3 +74,123 @@ jobs:
             metrics/
           if-no-files-found: error
           retention-days: 14
+
+  train:
+    if: inputs.mode == 'full'
+    needs: gate
+    strategy:
+      fail-fast: false
+      matrix:
+        replica: [R1, R2]
+    runs-on: ubuntu-latest
+    timeout-minutes: 210
+    steps:
+      - name: Check out exact approved experiment SHA
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ inputs.experiment_sha }}
+          fetch-depth: 1
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+      - name: Run fixed Stage B full training entrypoint
+        shell: bash
+        env:
+          EXPERIMENT_SHA: ${{ inputs.experiment_sha }}
+          LAUNCHER_SHA: ${{ github.sha }}
+          REPLICA_ID: ${{ matrix.replica }}
+        run: bash scripts/run_realistic_sft_full_train.sh
+      - name: Upload replica training evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: needle-stage-b-train-${{ matrix.replica }}-${{ github.run_id }}
+          path: |
+            artifacts/
+            results/
+            logs/
+            metrics/
+          if-no-files-found: error
+          retention-days: 30
+
+  eval:
+    if: inputs.mode == 'full'
+    needs: train
+    strategy:
+      fail-fast: false
+      matrix:
+        replica: [R1, R2]
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: Check out exact approved experiment SHA
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ inputs.experiment_sha }}
+          fetch-depth: 1
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+      - name: Download matching replica training evidence
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: needle-stage-b-train-${{ matrix.replica }}-${{ github.run_id }}
+          path: train-artifact
+      - name: Run paired base vs tuned evaluation
+        shell: bash
+        env:
+          EXPERIMENT_SHA: ${{ inputs.experiment_sha }}
+          LAUNCHER_SHA: ${{ github.sha }}
+          REPLICA_ID: ${{ matrix.replica }}
+          TRAIN_ARTIFACT_DIR: train-artifact
+        run: bash scripts/run_realistic_sft_full_eval.sh
+      - name: Upload replica evaluation evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: needle-stage-b-eval-${{ matrix.replica }}-${{ github.run_id }}
+          path: |
+            results/
+            logs/
+          if-no-files-found: error
+          retention-days: 30
+
+  aggregate:
+    if: inputs.mode == 'full'
+    needs: eval
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out exact approved experiment SHA
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ inputs.experiment_sha }}
+          fetch-depth: 1
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+      - name: Download R1 evaluation evidence
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: needle-stage-b-eval-R1-${{ github.run_id }}
+          path: eval-artifacts/R1
+      - name: Download R2 evaluation evidence
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: needle-stage-b-eval-R2-${{ github.run_id }}
+          path: eval-artifacts/R2
+      - name: Aggregate preregistered two-replica disposition
+        run: |
+          mkdir -p results
+          python3 scripts/realistic_sft_quality_receipt.py final \
+            --r1 eval-artifacts/R1/results/eval-receipt-R1.json \
+            --r2 eval-artifacts/R2/results/eval-receipt-R2.json \
+            --output results/final-stage-b-receipt.json
+      - name: Upload final Stage B receipt
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: needle-stage-b-final-${{ github.run_id }}
+          path: results/final-stage-b-receipt.json
+          if-no-files-found: error
+          retention-days: 30
