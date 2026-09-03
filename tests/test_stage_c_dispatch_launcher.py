@@ -40,3 +40,9 @@ class StageCWorkflowContractTest(unittest.TestCase):
 if __name__=='__main__':
     unittest.main()
 
+
+class StageCLauncherMeasuredMaxLenTest(unittest.TestCase):
+    def test_resource_preflight_uses_measured_512_token_cap(self):
+        text=WORKFLOW.read_text(encoding='utf-8')
+        self.assertIn('--max-len 512',text)
+        self.assertNotIn('--max-len 256',text)
