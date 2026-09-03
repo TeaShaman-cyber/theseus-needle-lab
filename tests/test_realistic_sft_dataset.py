@@ -245,3 +245,36 @@ class RealisticSftRuntimePreflightWorkflowTest(unittest.TestCase):
         self.assertIn('actions/checkout@11d5960a326750d5838078e36cf38b85af677262', text)
         self.assertNotIn('needle finetune', text)
         self.assertNotIn('run_seeded_finetune.py', text)
+
+class RealisticSftResourceDryRunReceiptTest(unittest.TestCase):
+    def test_resource_receipt_enforces_predeclared_wall_and_rss_limits(self):
+        from scripts.realistic_sft_resource_receipt import build_receipt
+        base = {
+            "elapsed_seconds": 240.0,
+            "max_rss_kb": 8 * 1024 * 1024,
+            "exit_code": 0,
+            "disk_free_bytes_after": 10_000_000,
+        }
+        ok = build_receipt(base, token_audit_status="VERIFIED_ZERO_TRUNCATION")
+        self.assertEqual(ok["disposition"], "PASS_RESOURCE_GATE")
+        too_slow = build_receipt({**base, "elapsed_seconds": 481.0}, token_audit_status="VERIFIED_ZERO_TRUNCATION")
+        self.assertEqual(too_slow["disposition"], "BLOCKED_RESOURCE_ENVELOPE")
+        too_big = build_receipt({**base, "max_rss_kb": 12 * 1024 * 1024 + 1}, token_audit_status="VERIFIED_ZERO_TRUNCATION")
+        self.assertEqual(too_big["disposition"], "BLOCKED_RESOURCE_ENVELOPE")
+        truncated = build_receipt(base, token_audit_status="FAIL_TARGET_TRUNCATION")
+        self.assertEqual(truncated["disposition"], "BLOCKED_PRECONDITION")
+
+    def test_resource_workflow_uses_exact_stage_b_config_and_never_runs_quality_eval(self):
+        workflow = ROOT / ".github" / "workflows" / "needle-realistic-sft-resource-dry-run.yml"
+        text = workflow.read_text(encoding="utf-8")
+        self.assertIn("workflow_dispatch", text)
+        self.assertIn('cactus-needle[train]==2.0.8', text)
+        self.assertIn("run_seeded_finetune.py", text)
+        for expected in ["--seed 0", "--epochs 1", "--batch-size 16", "--lr 1e-4", "--lora-rank 16", "--lora-alpha 32", "--max-len 256", "--val-split 0.1"]:
+            self.assertIn(expected, text)
+        self.assertIn("4b0a972d163ffc7678fb3c36bace508114872e9d2ce9e10f225825752d3795bc", text)
+        self.assertIn("realistic_sft_resource_receipt.py", text)
+        self.assertIn("contents: read", text)
+        self.assertNotIn("run_realistic_sft_eval.py", text)
+        self.assertNotIn("--epochs 15", text)
+        self.assertNotIn("needle build", text)
