@@ -34,3 +34,14 @@ class StageCTokenAuditBindingTest(unittest.TestCase):
 
 if __name__=='__main__':
     unittest.main()
+
+class StageCTokenAuditCliTest(unittest.TestCase):
+    def test_cli_help_runs_from_repository_root(self):
+        import pathlib, subprocess
+        root=pathlib.Path(__file__).resolve().parents[1]
+        result=subprocess.run(
+            ['python3','scripts/audit_stage_c_token_lengths.py','--help'],
+            cwd=root,text=True,capture_output=True,
+        )
+        self.assertEqual(result.returncode,0,result.stderr)
+        self.assertIn('--projection',result.stdout)

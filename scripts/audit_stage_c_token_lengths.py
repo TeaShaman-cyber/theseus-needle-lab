@@ -6,7 +6,10 @@ import importlib.metadata
 import json
 import pathlib
 
-from scripts.audit_realistic_sft_token_lengths import audit_examples
+try:
+    from scripts.audit_realistic_sft_token_lengths import audit_examples
+except ModuleNotFoundError:
+    from audit_realistic_sft_token_lengths import audit_examples
 
 EXPECTED_NEEDLE_VERSION = "2.0.8"
 
