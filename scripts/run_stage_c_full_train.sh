@@ -6,7 +6,11 @@ set -euo pipefail
 : "${ARM_ID:?ARM_ID is required}"
 : "${REPLICA_ID:?REPLICA_ID is required}"
 case "$ARM_ID" in A|B) ;; *) echo BLOCKED_INVALID_ARM_ID; exit 2;; esac
-case "$REPLICA_ID" in R1|R2) ;; *) echo BLOCKED_INVALID_REPLICA_ID; exit 2;; esac
+case "$REPLICA_ID" in
+  R1) train_seed=101 ;;
+  R2) train_seed=202 ;;
+  *) echo BLOCKED_INVALID_REPLICA_ID; exit 2 ;;
+esac
 
 mkdir -p checkpoints artifacts results logs metrics
 python -m pip install "cactus-needle[train]==2.0.8" 2>&1 | tee logs/install.log
@@ -36,8 +40,8 @@ final_adapter="artifacts/final-${ARM_ID}-${REPLICA_ID}.pkl"
     --early-jsonl "experiments/needle-stage-c-applicability/data/early.arm-${arm}.train.needle.jsonl" \
     --reduced-jsonl "experiments/needle-stage-c-applicability/data/reduced.arm-${arm}.train.needle.jsonl" \
     --policy experiments/needle-stage-c-applicability/contract/curriculum-policy.json \
-    --checkpoint checkpoints/needle2.pkl --seed 0 --epochs 15 --batch-size 16 --lr 1e-4 \
-    --lora-rank 16 --lora-alpha 32 --max-len 512 --val-split 0.1 \
+    --checkpoint checkpoints/needle2.pkl --seed "$train_seed" --epochs 15 --batch-size 16 --lr 1e-4 \
+    --lora-rank 16 --lora-alpha 32 --max-len 512 --val-split 0.0 \
     --early-out "$early_adapter" --out "$final_adapter" 2>&1 | tee logs/train.log
 
 early_cact="artifacts/early-${ARM_ID}-${REPLICA_ID}.cact"

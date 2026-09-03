@@ -15,7 +15,8 @@ class StageCFullTrainContractTest(unittest.TestCase):
         self.assertIn('${ARM_ID:?ARM_ID is required}',text)
         self.assertIn('${REPLICA_ID:?REPLICA_ID is required}',text)
         self.assertIn('A|B',text)
-        self.assertIn('R1|R2',text)
+        self.assertIn('R1) train_seed=101',text)
+        self.assertIn('R2) train_seed=202',text)
         self.assertIn('cactus-needle[train]==2.0.8',text)
         self.assertIn('python3 scripts/build_stage_c_dataset.py --write',text)
         self.assertIn('scripts/audit_stage_c_token_lengths.py',text)
@@ -27,6 +28,15 @@ class StageCFullTrainContractTest(unittest.TestCase):
         self.assertIn('early-${ARM_ID}-${REPLICA_ID}.cact',text)
         self.assertIn('final-${ARM_ID}-${REPLICA_ID}.cact',text)
         self.assertNotIn('run_seeded_finetune.py',text)
+        self.assertIn('--seed "$train_seed"',text)
+        self.assertIn('--val-split 0.0',text)
+        self.assertNotIn('--seed 0',text)
+        self.assertNotIn('--val-split 0.1',text)
+
+    def test_curriculum_runner_uses_replica_seed_for_lora_initialization(self):
+        runner=(ROOT/'scripts/run_stage_c_curriculum_finetune.py').read_text(encoding='utf-8')
+        self.assertIn('jax.random.PRNGKey(args.seed)',runner)
+        self.assertNotIn('jax.random.PRNGKey(0)',runner)
 
 
 class StageCFullEvalContractTest(unittest.TestCase):

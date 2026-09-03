@@ -106,7 +106,7 @@ def main() -> None:
         n_val = min(int(len(seqs) * args.val_split), len(seqs) - 1)
         val_seqs = val_masks = None
         if n_val > 0:
-            order = np.random.default_rng(0).permutation(len(seqs))
+            order = np.random.default_rng(args.seed).permutation(len(seqs))
             seqs, masks = seqs[order], masks[order]
             val_seqs, val_masks = seqs[:n_val], masks[:n_val]
             seqs, masks = seqs[n_val:], masks[n_val:]
@@ -115,7 +115,7 @@ def main() -> None:
     model = SimpleAttentionNetwork(config)
     paths = lora_target_paths(params)
     scale = args.lora_alpha / args.lora_rank
-    lora = init_lora(params, paths, args.lora_rank, jax.random.PRNGKey(0))
+    lora = init_lora(params, paths, args.lora_rank, jax.random.PRNGKey(args.seed))
 
     total_steps = 0
     for phase in prepared:
