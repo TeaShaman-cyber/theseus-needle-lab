@@ -1,0 +1,8 @@
+{
+  "name": "theseus-needle-stage-c-compute-sidecar",
+  "private": true,
+  "version": "0.1.0",
+  "dependencies": {
+    "mcporter": "0.9.0"
+  }
+}

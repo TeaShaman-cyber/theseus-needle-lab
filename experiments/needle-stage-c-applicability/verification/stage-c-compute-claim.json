@@ -1,0 +1,39 @@
+{
+  "authority": "DIAGNOSTIC_ONLY",
+  "bindings": {
+    "curriculum_manifest_sha256": "a587c9a3064d347d63008a9af26980561367450f447ddef1628fc097846d450d"
+  },
+  "claim_id": "stage-c-treatment-geometry-v2",
+  "does_not_establish": "Diagnostic verifier only; scientific acceptance remains governed by Stage C paired evaluation receipts.",
+  "expected_checks": {
+    "early_budget_equal": true,
+    "early_recovery_contrast": "3",
+    "reduced_budget_equal": true,
+    "reduced_contrast_is_weaker": true,
+    "reduced_recovery_contrast": "1",
+    "reduced_recovery_share_is_lower": true,
+    "reduced_total_training_exposure_is_lower": true
+  },
+  "inputs": {
+    "base_train_rows": 360,
+    "early_additional_negative_presentations": 57,
+    "early_arm_a_ordinary_extras": 5,
+    "early_arm_a_recovery_extras": 52,
+    "early_arm_b_ordinary_extras": 2,
+    "early_arm_b_recovery_extras": 55,
+    "early_epochs": 10,
+    "early_ordinary_weight": "1",
+    "early_recovery_weight": "2",
+    "ordinary_negative_cases": 5,
+    "recovery_cases": 55,
+    "reduced_additional_negative_presentations": 59,
+    "reduced_arm_a_ordinary_extras": 5,
+    "reduced_arm_a_recovery_extras": 54,
+    "reduced_arm_b_ordinary_extras": 4,
+    "reduced_arm_b_recovery_extras": 55,
+    "reduced_epochs": 5,
+    "reduced_ordinary_weight": "1",
+    "reduced_recovery_weight": "3/2"
+  },
+  "schema_version": "theseus.needle.stage_c_compute_claim.v1"
+}
