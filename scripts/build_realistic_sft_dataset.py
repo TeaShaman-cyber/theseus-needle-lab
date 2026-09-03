@@ -111,6 +111,16 @@ def _jsonl_bytes(rows: Iterable[dict]) -> bytes:
     return b"".join(_stable_json_bytes(row) for row in rows)
 
 
+def _behavioral_jsonl_bytes(rows: Iterable[dict]) -> bytes:
+    # Needle render_example() serializes embedded tool schemas using dict insertion
+    # order. Preserve that behavioral order here; recursive key sorting changes the
+    # exact prompt bytes even when the parsed JSON object is semantically equal.
+    return b"".join(
+        json.dumps(row, ensure_ascii=False, separators=(",", ":")).encode("utf-8") + b"\n"
+        for row in rows
+    )
+
+
 def _sha256(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
@@ -148,8 +158,8 @@ def build_outputs(spec: dict, schema: dict = ROUTE_SCHEMA, prefix: str = ROUTE_P
         "contract/route-positive-prefix.txt": prefix.encode("utf-8"),
         "contract/training-config.json": _stable_json_bytes(TRAINING_CONFIG),
         "source/semantic-cases.jsonl": _jsonl_bytes(semantic_rows),
-        "data/train.needle.jsonl": _jsonl_bytes(train_projection),
-        "data/heldout.eval.jsonl": _jsonl_bytes(heldout_projection),
+        "data/train.needle.jsonl": _behavioral_jsonl_bytes(train_projection),
+        "data/heldout.eval.jsonl": _behavioral_jsonl_bytes(heldout_projection),
     }
 
     dataset_manifest = {

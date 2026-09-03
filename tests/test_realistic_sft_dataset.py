@@ -106,6 +106,15 @@ class RealisticSftProjectionContractTest(unittest.TestCase):
             self.assertNotIn("reasoning", projected)
             self.assertNotIn("system", projected)
 
+    def test_every_behavioral_projection_preserves_exact_route_schema_serialization(self):
+        outputs = build_outputs(json.loads((ROOT / "experiments" / "needle-realistic-sft" / "source" / "families.json").read_text(encoding="utf-8")))
+        contract = outputs["files"]["contract/route-schema.json"]
+        for relative in ["data/train.needle.jsonl", "data/heldout.eval.jsonl"]:
+            for line in outputs["files"][relative].decode("utf-8").splitlines():
+                row = json.loads(line)
+                embedded = json.dumps(row["tools"][0], ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+                self.assertEqual(embedded, contract, relative)
+
     def test_frozen_route_contract_bytes_match_accepted_stage_a_digests(self):
         import hashlib
         outputs = build_outputs(self.family_spec, self.schema, self.prefix)
