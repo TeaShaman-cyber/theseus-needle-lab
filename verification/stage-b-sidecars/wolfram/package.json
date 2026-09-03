@@ -1,0 +1,8 @@
+{
+  "name": "theseus-needle-stage-b-wolfram-sidecar",
+  "private": true,
+  "version": "0.1.0",
+  "dependencies": {
+    "mcporter": "0.9.0"
+  }
+}
