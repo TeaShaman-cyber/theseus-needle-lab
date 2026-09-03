@@ -203,3 +203,45 @@ class RealisticSftValidatorContractTest(unittest.TestCase):
         self.assertNotIn("needle finetune", text)
         self.assertNotIn("workflow_dispatch", text)
         self.assertNotIn("secrets.", text)
+
+class RealisticSftTokenizerAuditContractTest(unittest.TestCase):
+    def test_audit_rejects_sequence_that_would_drop_target_or_eos(self):
+        from scripts.audit_realistic_sft_token_lengths import audit_examples
+
+        class FakeTokenizer:
+            def encode(self, text):
+                return list(range(len(text)))
+
+        def render(example):
+            return example["prompt"], example["target"]
+
+        rows = [{"case_id": "ok", "prompt": "abc", "target": "de"},
+                {"case_id": "too-long", "prompt": "abcdef", "target": "ghijk"}]
+        result = audit_examples(rows, FakeTokenizer(), render, max_len=10)
+        self.assertEqual(result["rows"][0]["total_tokens"], 7)
+        self.assertTrue(result["rows"][0]["eos_retained"])
+        self.assertEqual(result["rows"][1]["total_tokens"], 13)
+        self.assertFalse(result["rows"][1]["eos_retained"])
+        self.assertEqual(result["truncated_case_ids"], ["too-long"])
+
+    def test_runtime_audit_script_binds_exact_needle_208_formatter(self):
+        path = ROOT / "scripts" / "audit_realistic_sft_token_lengths.py"
+        text = path.read_text(encoding="utf-8")
+        self.assertIn("from needle.model.finetune import render_example", text)
+        self.assertIn("from needle.model.tokenizer import get_tokenizer", text)
+        self.assertIn("cactus-needle", text)
+        self.assertIn("2.0.8", text)
+        self.assertIn("FAIL_TARGET_TRUNCATION", text)
+
+class RealisticSftRuntimePreflightWorkflowTest(unittest.TestCase):
+    def test_runtime_preflight_installs_pinned_needle_and_runs_zero_truncation_audit(self):
+        workflow = ROOT / ".github" / "workflows" / "needle-realistic-sft-runtime-preflight.yml"
+        text = workflow.read_text(encoding="utf-8")
+        self.assertIn('cactus-needle[train]==2.0.8', text)
+        self.assertIn('audit_realistic_sft_token_lengths.py', text)
+        self.assertIn('--max-len 256', text)
+        self.assertIn('token-length-audit.json', text)
+        self.assertIn('contents: read', text)
+        self.assertIn('actions/checkout@11d5960a326750d5838078e36cf38b85af677262', text)
+        self.assertNotIn('needle finetune', text)
+        self.assertNotIn('run_seeded_finetune.py', text)
