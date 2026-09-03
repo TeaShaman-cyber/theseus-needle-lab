@@ -8,7 +8,7 @@ import re
 
 WALL_LIMIT_SECONDS = 8 * 60
 RSS_LIMIT_KB = 12 * 1024 * 1024
-SCHEMA = "theseus.needle.realistic_sft_resource_dry_run.v1"
+SCHEMA = "theseus.needle.realistic_sft_resource_dry_run.v2"
 
 
 def _sha256(path: pathlib.Path) -> str | None:
@@ -73,7 +73,8 @@ def main() -> int:
     p.add_argument("--train", type=pathlib.Path, required=True)
     p.add_argument("--checkpoint", type=pathlib.Path, required=True)
     p.add_argument("--adapter", type=pathlib.Path, required=True)
-    p.add_argument("--commit", required=True)
+    p.add_argument("--experiment-commit", required=True)
+    p.add_argument("--launcher-commit", required=True)
     p.add_argument("--run-id", required=True)
     p.add_argument("--output", type=pathlib.Path, required=True)
     args = p.parse_args()
@@ -84,7 +85,12 @@ def main() -> int:
     metrics.update(disk)
     audit = json.loads(args.token_audit.read_text())
     receipt = build_receipt(metrics, token_audit_status=audit["status"])
-    receipt["source"] = {"commit": args.commit, "run_id": args.run_id, "parent_issue": 26}
+    receipt["source"] = {
+        "experiment_commit": args.experiment_commit,
+        "launcher_commit": args.launcher_commit,
+        "workflow_run_id": args.run_id,
+        "parent_issue": 26,
+    }
     receipt["config"] = {
         "cactus_needle": "2.0.8", "seed": 0, "epochs": 1, "batch_size": 16,
         "lr": 1e-4, "lora_rank": 16, "lora_alpha": 32, "max_len": 256,

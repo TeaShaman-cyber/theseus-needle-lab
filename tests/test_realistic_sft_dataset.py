@@ -295,3 +295,21 @@ class RealisticSftResourceEntrypointContractTest(unittest.TestCase):
         self.assertNotIn('--epochs 15', text)
         self.assertNotIn('run_realistic_sft_eval.py', text)
         self.assertNotIn('needle build', text)
+
+class RealisticSftResourceIdentityContractTest(unittest.TestCase):
+    def test_resource_receipt_binds_experiment_and_launcher_commits_separately(self):
+        from scripts.realistic_sft_resource_receipt import build_receipt
+        base = {
+            "elapsed_seconds": 120.0, "max_rss_kb": 1024,
+            "exit_code": 0, "disk_free_bytes_after": 1,
+        }
+        receipt = build_receipt(base, token_audit_status="VERIFIED_ZERO_TRUNCATION")
+        self.assertEqual(receipt["schema"], "theseus.needle.realistic_sft_resource_dry_run.v2")
+
+    def test_resource_entrypoint_requires_explicit_experiment_and_launcher_identity(self):
+        text = (ROOT / "scripts" / "run_realistic_sft_resource_dry_run.sh").read_text(encoding="utf-8")
+        self.assertIn(': "${EXPERIMENT_SHA:?EXPERIMENT_SHA is required}"', text)
+        self.assertIn(': "${LAUNCHER_SHA:?LAUNCHER_SHA is required}"', text)
+        self.assertIn('--experiment-commit "$EXPERIMENT_SHA"', text)
+        self.assertIn('--launcher-commit "$LAUNCHER_SHA"', text)
+        self.assertNotIn('--commit "${GITHUB_SHA:-LOCAL}"', text)

@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+: "${EXPERIMENT_SHA:?EXPERIMENT_SHA is required}"
+: "${LAUNCHER_SHA:?LAUNCHER_SHA is required}"
+: "${GITHUB_RUN_ID:?GITHUB_RUN_ID is required}"
+
 mkdir -p checkpoints artifacts results logs metrics
 
 python -m pip install "cactus-needle[train]==2.0.8" 2>&1 | tee logs/install.log
@@ -65,7 +69,7 @@ python3 scripts/realistic_sft_resource_receipt.py \
   --train experiments/needle-realistic-sft/data/train.needle.jsonl \
   --checkpoint checkpoints/needle2.pkl \
   --adapter artifacts/resource-dry-run-adapter.pkl \
-  --commit "${GITHUB_SHA:-LOCAL}" --run-id "${GITHUB_RUN_ID:-LOCAL}" \
+  --experiment-commit "$EXPERIMENT_SHA" --launcher-commit "$LAUNCHER_SHA" --run-id "$GITHUB_RUN_ID" \
   --output results/resource-receipt.json
 
 python3 - <<'PY'
