@@ -31,5 +31,28 @@ class StageBDispatchLauncherContractTest(unittest.TestCase):
         self.assertNotIn('run_seeded_finetune.py', text)
         self.assertNotIn('${{ inputs.command }}', text)
 
+    def test_full_mode_is_two_independent_replicas_with_paired_eval_and_final_aggregate(self):
+        text = WORKFLOW.read_text(encoding='utf-8')
+        self.assertIn('mode:', text)
+        self.assertIn('resource_dry_run', text)
+        self.assertIn('full', text)
+        self.assertIn("if: inputs.mode == 'full'", text)
+        self.assertIn('matrix:', text)
+        self.assertIn('replica: [R1, R2]', text)
+        self.assertIn('timeout-minutes: 210', text)
+        self.assertIn('REPLICA_ID: ${{ matrix.replica }}', text)
+        self.assertIn('bash scripts/run_realistic_sft_full_train.sh', text)
+        self.assertIn('bash scripts/run_realistic_sft_full_eval.sh', text)
+        self.assertIn('actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093', text)
+        self.assertIn('needle-stage-b-train-${{ matrix.replica }}-${{ github.run_id }}', text)
+        self.assertIn('needle-stage-b-eval-${{ matrix.replica }}-${{ github.run_id }}', text)
+        self.assertIn('realistic_sft_quality_receipt.py final', text)
+        self.assertIn('eval-receipt-R1.json', text)
+        self.assertIn('eval-receipt-R2.json', text)
+        self.assertIn('needle-stage-b-final-${{ github.run_id }}', text)
+        self.assertIn('python-version: "3.12"', text)
+        self.assertNotIn('${{ inputs.command }}', text)
+
+
 if __name__ == '__main__':
     unittest.main()
