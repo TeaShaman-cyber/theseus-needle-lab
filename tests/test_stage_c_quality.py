@@ -51,10 +51,10 @@ class StageCQualityMetricsTest(unittest.TestCase):
 
 class StageCReplicaAcceptanceTest(unittest.TestCase):
     def good_pair(self):
-        arm_a=make_rows("a",positive_correct=34,negative_no_call=16,dominant=24)
-        arm_b=make_rows("b",positive_correct=36,negative_no_call=22,dominant=24)
-        reduced=make_rows("br",positive_correct=35,negative_no_call=21,dominant=24)
-        return arm_a,arm_b,reduced
+        arm_a_final=make_rows("a",positive_correct=34,negative_no_call=16,dominant=24)
+        arm_b_early=make_rows("be",positive_correct=36,negative_no_call=22,dominant=24)
+        arm_b_final=make_rows("bf",positive_correct=35,negative_no_call=21,dominant=24)
+        return arm_a_final,arm_b_early,arm_b_final
 
     def test_good_recovery_passes_all_registered_gates(self):
         a,b,r=self.good_pair()
@@ -66,44 +66,71 @@ class StageCReplicaAcceptanceTest(unittest.TestCase):
         self.assertTrue(result["reduced_weight_retention_ok"])
         self.assertTrue(result["paired_specificity_ok"])
         self.assertTrue(result["accepted"])
+        self.assertEqual(result["arm_b_final"]["negative_no_call"],21)
+        self.assertEqual(result["arm_b_early"]["negative_no_call"],22)
 
     def test_recovery_floor_failure_has_registered_disposition(self):
         a,b,r=self.good_pair()
-        result=evaluate_replica_pair(a,make_rows("b",36,19,24),r)
+        result=evaluate_replica_pair(a,b,make_rows("bfail",36,19,24))
         self.assertEqual(result["disposition"],"REJECTED_APPLICABILITY_RECOVERY_FAILED")
 
     def test_positive_floor_failure_has_registered_disposition(self):
         a,b,r=self.good_pair()
-        result=evaluate_replica_pair(a,make_rows("b",31,22,24),r)
+        result=evaluate_replica_pair(a,b,make_rows("bfail",31,22,24))
         self.assertEqual(result["disposition"],"REJECTED_POSITIVE_RETENTION_REGRESSION")
 
     def test_semantic_collapse_is_rejected(self):
         a,b,r=self.good_pair()
-        collapsed=make_rows("b",36,22,60)
-        result=evaluate_replica_pair(a,collapsed,r)
+        collapsed=make_rows("bfinal",36,22,60)
+        result=evaluate_replica_pair(a,b,collapsed)
         self.assertEqual(result["disposition"],"REJECTED_DECISION_COLLAPSE")
 
     def test_arm_b_must_beat_control_without_worse_positive_correctness(self):
         a=make_rows("a",36,22,24)
-        b=make_rows("b",35,22,24)
-        r=make_rows("r",35,21,24)
-        result=evaluate_replica_pair(a,b,r)
+        b_early=make_rows("be",36,22,24)
+        b_final=make_rows("bf",35,22,24)
+        result=evaluate_replica_pair(a,b_early,b_final)
         self.assertEqual(result["disposition"],"INCONCLUSIVE_RECOVERY_SPECIFICITY")
 
     def test_recovery_must_survive_reduced_weight_phase(self):
-        a,b,_=self.good_pair()
-        r=make_rows("r",35,18,24)
-        result=evaluate_replica_pair(a,b,r)
+        a,_,b_final=self.good_pair()
+        early=make_rows("early",35,18,24)
+        result=evaluate_replica_pair(a,early,b_final)
         self.assertFalse(result["reduced_weight_retention_ok"])
         self.assertEqual(result["disposition"],"REJECTED_APPLICABILITY_RECOVERY_FAILED")
 
     def test_final_acceptance_requires_both_replicas(self):
         a,b,r=self.good_pair()
         good=evaluate_replica_pair(a,b,r)
-        bad=evaluate_replica_pair(a,make_rows("b2",36,19,24),r)
+        bad=evaluate_replica_pair(a,b,make_rows("b2",36,19,24))
         self.assertEqual(final_disposition(good,good),"ACCEPTED_STAGE_C_APPLICABILITY_RECOVERY")
         self.assertEqual(final_disposition(good,bad),"REJECTED_APPLICABILITY_RECOVERY_FAILED")
 
 
 if __name__ == '__main__':
     unittest.main()
+
+class StageCQualityCliTest(unittest.TestCase):
+    def test_replica_and_final_cli_write_receipts(self):
+        import json, pathlib, subprocess, tempfile
+        root=pathlib.Path(__file__).resolve().parents[1]
+        td=pathlib.Path(tempfile.mkdtemp(prefix='stage-c-quality-cli-'))
+        def write(name,rows):
+            p=td/name
+            p.write_text(''.join(json.dumps(r)+'\n' for r in rows))
+            return p
+        a=write('a.jsonl',make_rows('a',34,16,24))
+        be=write('be.jsonl',make_rows('be',36,22,24))
+        bf=write('bf.jsonl',make_rows('bf',35,21,24))
+        r1=td/'r1.json'
+        cmd=['python3',str(root/'scripts/stage_c_quality_receipt.py'),'replica','--arm-a-final',str(a),'--arm-b-early',str(be),'--arm-b-final',str(bf),'--replica-id','R1','--experiment-commit','a'*40,'--launcher-commit','b'*40,'--run-id','123','--output',str(r1)]
+        x=subprocess.run(cmd,text=True,capture_output=True)
+        self.assertEqual(x.returncode,0,x.stderr)
+        receipt=json.loads(r1.read_text())
+        self.assertEqual(receipt['schema'],'theseus.needle.stage_c_replica_eval.v1')
+        self.assertTrue(receipt['evaluation']['accepted'])
+        r2=td/'r2.json'; r2.write_text(json.dumps({**receipt,'replica_id':'R2'}))
+        final=td/'final.json'
+        x=subprocess.run(['python3',str(root/'scripts/stage_c_quality_receipt.py'),'final','--r1',str(r1),'--r2',str(r2),'--output',str(final)],text=True,capture_output=True)
+        self.assertEqual(x.returncode,0,x.stderr)
+        self.assertEqual(json.loads(final.read_text())['disposition'],'ACCEPTED_STAGE_C_APPLICABILITY_RECOVERY')

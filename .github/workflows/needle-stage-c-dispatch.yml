@@ -1,0 +1,218 @@
+name: Needle Stage C manual dispatch
+
+on:
+  workflow_dispatch:
+    inputs:
+      experiment_sha:
+        description: Exact current head SHA of experiment/needle-stage-c-applicability
+        required: true
+        type: string
+      mode:
+        description: Bounded Stage C execution mode
+        required: true
+        default: resource_dry_run
+        type: choice
+        options:
+          - resource_dry_run
+          - full
+
+permissions:
+  contents: read
+
+env:
+  NEEDLE_STAGE_C_ALLOWED_REF: experiment/needle-stage-c-applicability
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Verify requested SHA is exact allowed remote head
+        shell: bash
+        env:
+          REQUESTED_SHA: ${{ inputs.experiment_sha }}
+        run: |
+          set -eu
+          if [[ ! "$REQUESTED_SHA" =~ ^[0-9a-f]{40}$ ]]; then echo BLOCKED_INVALID_SHA; exit 2; fi
+          REMOTE_SHA=$(git ls-remote https://github.com/${GITHUB_REPOSITORY}.git refs/heads/experiment/needle-stage-c-applicability | awk '{print $1}')
+          test -n "$REMOTE_SHA"
+          test "$REMOTE_SHA" = "$REQUESTED_SHA"
+          echo EXACT_ALLOWED_HEAD=PASS
+
+  resource:
+    if: inputs.mode == 'resource_dry_run'
+    needs: gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ inputs.experiment_sha }}
+          fetch-depth: 1
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+      - name: Materialize and audit Stage C curriculum
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install "cactus-needle[train]==2.0.8"
+          python3 scripts/validate_realistic_sft_dataset.py
+          python3 scripts/build_stage_c_dataset.py --write
+          for phase in early reduced; do
+            for arm in a b; do
+              python3 scripts/audit_stage_c_token_lengths.py --projection "experiments/needle-stage-c-applicability/data/${phase}.arm-${arm}.train.needle.jsonl" --canonical "experiments/needle-stage-c-applicability/state/${phase}.arm-${arm}.canonical.jsonl" --max-len 256 --output "results/audit-${phase}-${arm}.json"
+            done
+          done
+          python3 scripts/run_stage_c_curriculum_finetune.py --help >/dev/null
+      - name: Upload Stage C preflight evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: needle-stage-c-resource-${{ github.run_id }}
+          path: |
+            experiments/needle-stage-c-applicability/manifests/
+            results/
+          if-no-files-found: error
+          retention-days: 14
+
+  train:
+    if: inputs.mode == 'full'
+    needs: gate
+    strategy:
+      fail-fast: false
+      matrix:
+        arm: [A, B]
+        replica: [R1, R2]
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ inputs.experiment_sha }}
+          fetch-depth: 1
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+      - name: Train Stage C arm and replica
+        shell: bash
+        env:
+          EXPERIMENT_SHA: ${{ inputs.experiment_sha }}
+          LAUNCHER_SHA: ${{ github.sha }}
+          ARM_ID: ${{ matrix.arm }}
+          REPLICA_ID: ${{ matrix.replica }}
+        run: bash scripts/run_stage_c_full_train.sh
+      - name: Upload Stage C training evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: needle-stage-c-train-${{ matrix.arm }}-${{ matrix.replica }}-${{ github.run_id }}
+          path: |
+            artifacts/
+            results/
+            logs/
+            metrics/
+          if-no-files-found: error
+          retention-days: 30
+
+  eval:
+    if: inputs.mode == 'full'
+    needs: train
+    strategy:
+      fail-fast: false
+      matrix:
+        arm: [A, B]
+        replica: [R1, R2]
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ inputs.experiment_sha }}
+          fetch-depth: 1
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: needle-stage-c-train-${{ matrix.arm }}-${{ matrix.replica }}-${{ github.run_id }}
+          path: train-artifact
+      - name: Evaluate early and final Stage C checkpoints
+        shell: bash
+        env:
+          EXPERIMENT_SHA: ${{ inputs.experiment_sha }}
+          LAUNCHER_SHA: ${{ github.sha }}
+          ARM_ID: ${{ matrix.arm }}
+          REPLICA_ID: ${{ matrix.replica }}
+          TRAIN_ARTIFACT_DIR: train-artifact
+        run: bash scripts/run_stage_c_full_eval.sh
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: needle-stage-c-eval-${{ matrix.arm }}-${{ matrix.replica }}-${{ github.run_id }}
+          path: results/
+          if-no-files-found: error
+          retention-days: 30
+
+  pair:
+    if: inputs.mode == 'full'
+    needs: eval
+    strategy:
+      fail-fast: false
+      matrix:
+        replica: [R1, R2]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ inputs.experiment_sha }}
+          fetch-depth: 1
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: needle-stage-c-eval-A-${{ matrix.replica }}-${{ github.run_id }}
+          path: eval-artifacts/A
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: needle-stage-c-eval-B-${{ matrix.replica }}-${{ github.run_id }}
+          path: eval-artifacts/B
+      - name: Build paired replica receipt
+        run: |
+          mkdir -p results
+          python3 scripts/stage_c_quality_receipt.py replica \
+            --arm-a-final "eval-artifacts/A/results/A-final-heldout-${{ matrix.replica }}.jsonl" \
+            --arm-b-early "eval-artifacts/B/results/B-early-heldout-${{ matrix.replica }}.jsonl" \
+            --arm-b-final "eval-artifacts/B/results/B-final-heldout-${{ matrix.replica }}.jsonl" \
+            --replica-id "${{ matrix.replica }}" --experiment-commit "${{ inputs.experiment_sha }}" \
+            --launcher-commit "${{ github.sha }}" --run-id "${{ github.run_id }}" \
+            --output "results/stage-c-pair-${{ matrix.replica }}.json"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: needle-stage-c-pair-${{ matrix.replica }}-${{ github.run_id }}
+          path: results/stage-c-pair-${{ matrix.replica }}.json
+          retention-days: 30
+
+  aggregate:
+    if: inputs.mode == 'full'
+    needs: pair
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ inputs.experiment_sha }}
+          fetch-depth: 1
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: needle-stage-c-pair-R1-${{ github.run_id }}
+          path: pair/R1
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: needle-stage-c-pair-R2-${{ github.run_id }}
+          path: pair/R2
+      - name: Aggregate final Stage C disposition
+        run: |
+          mkdir -p results
+          python3 scripts/stage_c_quality_receipt.py final --r1 pair/R1/stage-c-pair-R1.json --r2 pair/R2/stage-c-pair-R2.json --output results/final-stage-c-receipt.json
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: needle-stage-c-final-${{ github.run_id }}
+          path: results/final-stage-c-receipt.json
+          retention-days: 30

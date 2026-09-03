@@ -57,31 +57,29 @@ def scope_metrics(rows: list[dict]) -> dict:
     }
 
 
-def evaluate_replica_pair(arm_a_heldout: list[dict], arm_b_heldout: list[dict], arm_b_reduced_weight_heldout: list[dict]) -> dict:
-    a = scope_metrics(arm_a_heldout)
-    b = scope_metrics(arm_b_heldout)
-    reduced = scope_metrics(arm_b_reduced_weight_heldout)
+def evaluate_replica_pair(arm_a_final_heldout: list[dict], arm_b_early_heldout: list[dict], arm_b_final_heldout: list[dict]) -> dict:
+    a = scope_metrics(arm_a_final_heldout)
+    early = scope_metrics(arm_b_early_heldout)
+    final = scope_metrics(arm_b_final_heldout)
 
     if (a["positive_n"], a["negative_n"]) != (72, 24):
-        raise ValueError("unexpected Arm A heldout geometry")
-    if (b["positive_n"], b["negative_n"]) != (72, 24):
-        raise ValueError("unexpected Arm B heldout geometry")
-    if (reduced["positive_n"], reduced["negative_n"]) != (72, 24):
-        raise ValueError("unexpected reduced-weight heldout geometry")
+        raise ValueError("unexpected Arm A final heldout geometry")
+    if (early["positive_n"], early["negative_n"]) != (72, 24):
+        raise ValueError("unexpected Arm B early heldout geometry")
+    if (final["positive_n"], final["negative_n"]) != (72, 24):
+        raise ValueError("unexpected Arm B final heldout geometry")
 
-    recovery_floor_ok = b["negative_no_call"] >= 20
-    positive_floor_ok = b["positive_correct"] >= 32
-    dominant_semantic_ok = b["dominant_semantic_decision_rate"] <= 0.70
-    applicability_not_collapsed = len(b["applicability_observed_classes"]) >= 2
+    recovery_floor_ok = final["negative_no_call"] >= 20
+    positive_floor_ok = final["positive_correct"] >= 32
+    dominant_semantic_ok = final["dominant_semantic_decision_rate"] <= 0.70
+    applicability_not_collapsed = len(final["applicability_observed_classes"]) >= 2
     reduced_weight_retention_ok = (
-        reduced["negative_no_call"] >= 20
-        and reduced["positive_correct"] >= 32
-        and reduced["dominant_semantic_decision_rate"] <= 0.70
-        and len(reduced["applicability_observed_classes"]) >= 2
+        early["negative_no_call"] >= 20
+        and final["negative_no_call"] >= 20
     )
     paired_specificity_ok = (
-        b["negative_no_call"] > a["negative_no_call"]
-        and b["positive_correct"] >= a["positive_correct"]
+        final["negative_no_call"] > a["negative_no_call"]
+        and final["positive_correct"] >= a["positive_correct"]
     )
 
     if not recovery_floor_ok or not reduced_weight_retention_ok:
@@ -97,9 +95,9 @@ def evaluate_replica_pair(arm_a_heldout: list[dict], arm_b_heldout: list[dict], 
 
     accepted = disposition == "ACCEPTED_REPLICA_STAGE_C_APPLICABILITY_RECOVERY"
     return {
-        "arm_a": a,
-        "arm_b": b,
-        "arm_b_reduced_weight": reduced,
+        "arm_a_final": a,
+        "arm_b_early": early,
+        "arm_b_final": final,
         "recovery_floor_ok": recovery_floor_ok,
         "positive_floor_ok": positive_floor_ok,
         "dominant_semantic_ok": dominant_semantic_ok,
@@ -125,3 +123,77 @@ def final_disposition(r1: dict, r2: dict) -> str:
         if disposition in observed:
             return disposition
     return "INCONCLUSIVE_REPLICA_DIVERGENCE"
+
+
+def _load_jsonl_path(path):
+    import json
+    return [json.loads(line) for line in path.read_text(encoding='utf-8').splitlines() if line.strip()]
+
+
+def main() -> int:
+    import argparse
+    import json
+    import pathlib
+    p=argparse.ArgumentParser()
+    sub=p.add_subparsers(dest='command',required=True)
+    r=sub.add_parser('replica')
+    r.add_argument('--arm-a-final',type=pathlib.Path,required=True)
+    r.add_argument('--arm-b-early',type=pathlib.Path,required=True)
+    r.add_argument('--arm-b-final',type=pathlib.Path,required=True)
+    r.add_argument('--replica-id',choices=['R1','R2'],required=True)
+    r.add_argument('--experiment-commit',required=True)
+    r.add_argument('--launcher-commit',required=True)
+    r.add_argument('--run-id',required=True)
+    r.add_argument('--output',type=pathlib.Path,required=True)
+    f=sub.add_parser('final')
+    f.add_argument('--r1',type=pathlib.Path,required=True)
+    f.add_argument('--r2',type=pathlib.Path,required=True)
+    f.add_argument('--output',type=pathlib.Path,required=True)
+    args=p.parse_args()
+    if args.command=='replica':
+        evaluation=evaluate_replica_pair(
+            _load_jsonl_path(args.arm_a_final),
+            _load_jsonl_path(args.arm_b_early),
+            _load_jsonl_path(args.arm_b_final),
+        )
+        receipt={
+            'schema':'theseus.needle.stage_c_replica_eval.v1',
+            'replica_id':args.replica_id,
+            'source':{
+                'experiment_commit':args.experiment_commit,
+                'launcher_commit':args.launcher_commit,
+                'workflow_run_id':args.run_id,
+                'parent_issues':[35,36],
+            },
+            'evaluation':evaluation,
+            'interpretation_boundary':'paired_stage_c_applicability_recovery_with_early_and_final_b_checkpoints',
+        }
+        args.output.parent.mkdir(parents=True,exist_ok=True)
+        args.output.write_text(json.dumps(receipt,sort_keys=True,indent=2)+'\n',encoding='utf-8')
+        print(evaluation['disposition'])
+        return 0
+    r1=json.loads(args.r1.read_text(encoding='utf-8'))
+    r2=json.loads(args.r2.read_text(encoding='utf-8'))
+    if {r1.get('replica_id'),r2.get('replica_id')} != {'R1','R2'}:
+        raise ValueError('final aggregation requires R1 and R2')
+    if r1['source']['experiment_commit'] != r2['source']['experiment_commit']:
+        raise ValueError('replica experiment commits differ')
+    disposition=final_disposition(r1['evaluation'],r2['evaluation'])
+    final={
+        'schema':'theseus.needle.stage_c_final.v1',
+        'source':{
+            'experiment_commit':r1['source']['experiment_commit'],
+            'parent_issues':[35,36],
+        },
+        'replicas':{'R1':r1['evaluation'],'R2':r2['evaluation']},
+        'disposition':disposition,
+        'interpretation_boundary':'pre_registered_two_replica_stage_c_disposition',
+    }
+    args.output.parent.mkdir(parents=True,exist_ok=True)
+    args.output.write_text(json.dumps(final,sort_keys=True,indent=2)+'\n',encoding='utf-8')
+    print(disposition)
+    return 0
+
+
+if __name__=='__main__':
+    raise SystemExit(main())

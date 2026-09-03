@@ -139,3 +139,26 @@ class StageCRealCurriculumProjectionTest(unittest.TestCase):
             self.assertGreater(sum(b_counts[x] for x in failures)/len(failures), sum(b_counts[x] for x in successes)/len(successes))
         manifest=json.loads(out['files']['manifests/stage-c-curriculum-manifest.json'])
         self.assertEqual(manifest['phase_rows'],{'early':{'A':420,'B':420},'reduced':{'A':390,'B':390}})
+
+class StageCCurriculumCliTest(unittest.TestCase):
+    def test_cli_materializes_registered_curriculum(self):
+        import pathlib, shutil, subprocess, tempfile, json
+        root=pathlib.Path(__file__).resolve().parents[1]
+        td=pathlib.Path(tempfile.mkdtemp(prefix='needle-stage-c-cli-'))
+        for rel in [
+            'experiments/needle-realistic-sft/source/semantic-cases.jsonl',
+            'experiments/needle-realistic-sft/contract/route-schema.json',
+            'experiments/needle-realistic-sft/contract/route-positive-prefix.txt',
+            'experiments/needle-stage-c-applicability/source/stage-b-recovery-seed.json',
+            'experiments/needle-stage-c-applicability/contract/curriculum-policy.json',
+        ]:
+            src=root/rel; dst=td/rel; dst.parent.mkdir(parents=True,exist_ok=True); shutil.copy2(src,dst)
+        result=subprocess.run(['python3',str(root/'scripts/build_stage_c_dataset.py'),'--write','--root',str(td)],text=True,capture_output=True)
+        self.assertEqual(result.returncode,0,result.stderr)
+        base=td/'experiments/needle-stage-c-applicability'
+        self.assertEqual(len((base/'data/early.arm-a.train.needle.jsonl').read_text().splitlines()),420)
+        self.assertEqual(len((base/'data/early.arm-b.train.needle.jsonl').read_text().splitlines()),420)
+        self.assertEqual(len((base/'data/reduced.arm-a.train.needle.jsonl').read_text().splitlines()),390)
+        self.assertEqual(len((base/'data/reduced.arm-b.train.needle.jsonl').read_text().splitlines()),390)
+        manifest=json.loads((base/'manifests/stage-c-curriculum-manifest.json').read_text())
+        self.assertEqual(manifest['phase_rows']['early'],{'A':420,'B':420})

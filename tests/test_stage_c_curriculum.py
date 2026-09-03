@@ -40,7 +40,10 @@ class StageCCurriculumRunnerContractTest(unittest.TestCase):
         self.assertIn('--policy',text)
         self.assertIn('--seed',text)
         self.assertIn('--checkpoint',text)
+        self.assertIn('--early-out',text)
         self.assertIn('--out',text)
+        self.assertIn('if phase["name"] == "early":',text)
+        self.assertIn('_write_adapter(args.early_out',text)
 
 
 if __name__=='__main__':

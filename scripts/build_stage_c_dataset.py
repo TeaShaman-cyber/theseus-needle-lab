@@ -179,3 +179,36 @@ def build_curriculum_outputs(semantic_rows: list[dict], seed: dict, policy: dict
     }
     files["manifests/stage-c-curriculum-manifest.json"]=_stable_json_bytes(manifest)
     return {"arms":phases,"files":files}
+
+
+def _write_curriculum_files(root, files: dict[str, bytes]) -> None:
+    from pathlib import Path
+    base=Path(root)/"experiments"/"needle-stage-c-applicability"
+    for rel,payload in files.items():
+        path=base/rel
+        path.parent.mkdir(parents=True,exist_ok=True)
+        path.write_bytes(payload)
+
+
+def main(argv=None) -> int:
+    import argparse
+    from pathlib import Path
+    p=argparse.ArgumentParser(description="Materialize deterministic Needle Stage C curriculum artifacts.")
+    p.add_argument("--write",action="store_true")
+    p.add_argument("--root",type=Path,default=Path(__file__).resolve().parents[1])
+    args=p.parse_args(argv)
+    root=args.root
+    semantic=[json.loads(x) for x in (root/"experiments/needle-realistic-sft/source/semantic-cases.jsonl").read_text(encoding="utf-8").splitlines() if x.strip()]
+    seed=json.loads((root/"experiments/needle-stage-c-applicability/source/stage-b-recovery-seed.json").read_text(encoding="utf-8"))
+    policy=json.loads((root/"experiments/needle-stage-c-applicability/contract/curriculum-policy.json").read_text(encoding="utf-8"))
+    schema=json.loads((root/"experiments/needle-realistic-sft/contract/route-schema.json").read_text(encoding="utf-8"))
+    prefix=(root/"experiments/needle-realistic-sft/contract/route-positive-prefix.txt").read_text(encoding="utf-8")
+    outputs=build_curriculum_outputs(semantic,seed,policy,schema,prefix)
+    if args.write:
+        _write_curriculum_files(root,outputs["files"])
+    print(json.dumps({"phase_rows":json.loads(outputs["files"]["manifests/stage-c-curriculum-manifest.json"])["phase_rows"],"files":sorted(outputs["files"])},sort_keys=True))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

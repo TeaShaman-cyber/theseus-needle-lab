@@ -26,6 +26,7 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--lora-alpha", type=float, default=32.0)
     p.add_argument("--max-len", type=int, default=256)
     p.add_argument("--val-split", type=float, default=0.1)
+    p.add_argument("--early-out", required=True)
     p.add_argument("--out", required=True)
     p.add_argument("--checkpoint-dir", default="checkpoints")
     return p.parse_args()
@@ -45,6 +46,22 @@ def _load_policy(path: str, early_path: str, reduced_path: str, total_epochs: in
         {**phases[1], "path": reduced_path},
     ]
 
+
+
+def _write_adapter(path: str, lora: dict, scale: float, checkpoint: str, rank: int, policy_path: str, phase: str) -> None:
+    pathlib.Path(path).parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "wb") as handle:
+        pickle.dump(
+            {
+                "lora": {"/".join(p): {"A": np.asarray(v["A"]), "B": np.asarray(v["B"])} for p, v in lora.items()},
+                "scale": float(scale),
+                "base": checkpoint,
+                "rank": rank,
+                "stage_c_policy": pathlib.Path(policy_path).name,
+                "stage_c_phase": phase,
+            },
+            handle,
+        )
 
 def main() -> None:
     # Adapted narrowly from cactus-needle 2.0.8 finetune_local: one LoRA and
@@ -154,20 +171,12 @@ def main() -> None:
                 print(f"phase {phase['name']} epoch {epoch + 1}/{phase['epochs']} loss {last:.4f} val {float(np.mean(values)):.4f}")
             else:
                 print(f"phase {phase['name']} epoch {epoch + 1}/{phase['epochs']} loss {last:.4f}")
+        if phase["name"] == "early":
+            _write_adapter(args.early_out, lora, scale, args.checkpoint, args.lora_rank, args.policy, "early")
+            print(f"early_adapter {args.early_out}")
 
     os.makedirs(args.checkpoint_dir, exist_ok=True)
-    pathlib.Path(args.out).parent.mkdir(parents=True, exist_ok=True)
-    with open(args.out, "wb") as handle:
-        pickle.dump(
-            {
-                "lora": {"/".join(p): {"A": np.asarray(v["A"]), "B": np.asarray(v["B"])} for p, v in lora.items()},
-                "scale": float(scale),
-                "base": args.checkpoint,
-                "rank": args.lora_rank,
-                "stage_c_policy": pathlib.Path(args.policy).name,
-            },
-            handle,
-        )
+    _write_adapter(args.out, lora, scale, args.checkpoint, args.lora_rank, args.policy, "final")
     print(f"adapter {args.out}")
 
 
