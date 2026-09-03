@@ -1,0 +1,45 @@
+name: Needle Stage B manual dispatch
+
+on:
+  workflow_dispatch:
+    inputs:
+      experiment_sha:
+        description: Exact current head SHA of experiment/needle-realistic-sft-spec
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  NEEDLE_STAGE_B_ALLOWED_REF: experiment/needle-realistic-sft-spec
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Verify requested SHA is exact allowed remote head
+        shell: bash
+        env:
+          REQUESTED_SHA: ${{ inputs.experiment_sha }}
+        run: |
+          set -eu
+          case "$REQUESTED_SHA" in
+            [0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]) ;;
+            *) echo "BLOCKED_INVALID_SHA"; exit 2 ;;
+          esac
+          REMOTE_SHA=$(git ls-remote origin refs/heads/experiment/needle-realistic-sft-spec | awk '{print $1}')
+          test -n "$REMOTE_SHA"
+          test "$REMOTE_SHA" = "$REQUESTED_SHA"
+          echo "EXACT_ALLOWED_HEAD=PASS"
+
+      - name: Check out exact approved experiment SHA
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ inputs.experiment_sha }}
+          fetch-depth: 1
+
+      - name: Run fixed Stage B resource entrypoint
+        shell: bash
+        run: bash scripts/run_realistic_sft_resource_dry_run.sh
