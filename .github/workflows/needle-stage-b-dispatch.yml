@@ -42,4 +42,20 @@ jobs:
 
       - name: Run fixed Stage B resource entrypoint
         shell: bash
+        env:
+          EXPERIMENT_SHA: ${{ inputs.experiment_sha }}
+          LAUNCHER_SHA: ${{ github.sha }}
         run: bash scripts/run_realistic_sft_resource_dry_run.sh
+
+      - name: Upload Stage B resource evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: needle-stage-b-resource-${{ github.run_id }}
+          path: |
+            artifacts/
+            results/
+            logs/
+            metrics/
+          if-no-files-found: error
+          retention-days: 14
