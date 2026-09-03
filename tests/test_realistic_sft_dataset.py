@@ -196,6 +196,7 @@ class RealisticSftValidatorContractTest(unittest.TestCase):
         workflow = ROOT / ".github" / "workflows" / "needle-realistic-sft-contract.yml"
         text = workflow.read_text(encoding="utf-8")
         self.assertIn("contents: read", text)
+        self.assertIn("actions/checkout@11d5960a326750d5838078e36cf38b85af677262", text)
         self.assertIn("python3 -m unittest discover -s tests -v", text)
         self.assertIn("scripts/build_realistic_sft_dataset.py", text)
         self.assertIn("scripts/validate_realistic_sft_dataset.py", text)
