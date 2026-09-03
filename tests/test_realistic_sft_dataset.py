@@ -286,6 +286,34 @@ class RealisticSftResourceDryRunReceiptTest(unittest.TestCase):
         beyond_budget = build_receipt({**base, "elapsed_seconds": 800.0}, token_audit_status="VERIFIED_ZERO_TRUNCATION")
         self.assertEqual(beyond_budget["operational_capacity"]["disposition"], "EXCEEDS_PLANNED_JOB_BUDGET")
 
+    def test_resource_receipt_cli_exits_zero_for_v3_pass(self):
+        import subprocess, sys, tempfile
+        with tempfile.TemporaryDirectory() as td:
+            td = pathlib.Path(td)
+            (td / "time.txt").write_text("Maximum resident set size (kbytes): 3577016\nElapsed (wall clock) time (h:mm:ss or m:ss): 9:56.72\n")
+            (td / "exit.txt").write_text("0\n")
+            (td / "disk.json").write_text(json.dumps({"disk_free_bytes_before": 1000, "disk_free_bytes_after": 900}) + "\n")
+            (td / "audit.json").write_text(json.dumps({
+                "status": "VERIFIED_ZERO_TRUNCATION",
+                "max_observed_tokens": 201,
+                "truncated_case_ids": [],
+                "runtime": {"tokenizer_model_sha256": "a" * 64},
+            }) + "\n")
+            for name in ["train.jsonl", "checkpoint.pkl", "adapter.pkl"]:
+                (td / name).write_bytes(b"x")
+            out = td / "receipt.json"
+            cmd = [
+                sys.executable, str(ROOT / "scripts" / "realistic_sft_resource_receipt.py"),
+                "--time", str(td / "time.txt"), "--exit-code", str(td / "exit.txt"),
+                "--disk", str(td / "disk.json"), "--token-audit", str(td / "audit.json"),
+                "--train", str(td / "train.jsonl"), "--checkpoint", str(td / "checkpoint.pkl"),
+                "--adapter", str(td / "adapter.pkl"), "--experiment-commit", "b" * 40,
+                "--launcher-commit", "c" * 40, "--run-id", "123", "--output", str(out),
+            ]
+            proc = subprocess.run(cmd, capture_output=True, text=True)
+            self.assertEqual(proc.returncode, 0, proc.stderr + proc.stdout)
+            self.assertEqual(json.loads(out.read_text())["disposition"], "PASS_RESOURCE_AND_CAPACITY_GATES")
+
     def test_resource_workflow_is_manual_read_only_and_calls_fixed_entrypoint(self):
         workflow = ROOT / ".github" / "workflows" / "needle-realistic-sft-resource-dry-run.yml"
         text = workflow.read_text(encoding="utf-8")
