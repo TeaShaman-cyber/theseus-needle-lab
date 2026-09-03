@@ -199,3 +199,59 @@ Before any full training run, Stage C must prove locally that:
 4. recovery weighting and decay are materialized and byte-stable;
 5. Stage B frozen behavioral evaluator still classifies the same reference fixtures identically;
 6. all unit/contract tests pass.
+
+## Council refinement: factorized applicability and canonical recovery state
+
+The approved Stage C design is refined to make tool applicability a first-class gate rather than a flat four-way decision.
+
+### Factorized decision model
+
+Stage C MUST evaluate applicability in two stages:
+
+```text
+input -> applicability gate
+          |- NONE  -> NO_CALL
+          `- ROUTE -> semantic decision: PROBE | READY | UNKNOWN
+```
+
+The primary recovery objective targets the first gate because Stage B's dominant failure was loss of NO_CALL discrimination. The semantic decision head remains separately measured and must not be allowed to hide applicability collapse.
+
+### Canonical state is structured, not free-form rationale
+
+The canonical target/state uses bounded enum fields only. It MUST NOT contain free-form rationale or chain-of-thought-like explanatory text. A minimal decision record is:
+
+```json
+{
+  "applicability": "NONE|ROUTE",
+  "decision": "NO_CALL|PROBE|READY|UNKNOWN",
+  "tool_need": "unnecessary|required|helpful|unknown",
+  "evidence_state": "sufficient|insufficient|conflicting",
+  "cost_class": "low|medium|high",
+  "risk_class": "low|medium|high"
+}
+```
+
+`decision=NO_CALL` is valid only when `applicability=NONE`; otherwise `decision` MUST be one of `PROBE|READY|UNKNOWN`.
+
+### Canonical recovery state
+
+Recovery bookkeeping is stored as JSON state and training JSONL is a deterministic projection from that state. At minimum each recovery entry records:
+
+```json
+{
+  "case_id": "...",
+  "class": "negative_boundary",
+  "failure_count": 0,
+  "success_streak": 0,
+  "recovery_priority": 0.0,
+  "last_outcome": "FALSE_CALL|CORRECT_NO_CALL|OTHER",
+  "retention_zone": "recent|active|normal",
+  "evictable": true
+}
+```
+
+Priority increases after false CALL outcomes and decays only after preregistered stable success. Heldout cases MUST never enter the recovery state.
+
+### Arm parity
+
+Arm A and Arm B MUST use the same base checkpoint, positive training examples, heldout set, training budget, evaluation harness, and seeds. Arm B may differ only in preregistered recovery-state-driven sampling and the canonical factorized target representation.
