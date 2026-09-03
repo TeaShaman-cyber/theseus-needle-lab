@@ -270,6 +270,50 @@ Each expanded semantic source record contains at minimum:
 
 No field containing a hidden label hint may be injected into the model-visible query.
 
+## 6.1 External watcher / CI evidence boundary
+
+Stage B keeps the training source intentionally synthetic and repository-authored. Current Needle Watch CI receipts, broader watcher findings, and external repository/paper discoveries are **not training examples for this baseline**. They may inform reference review and a separate post-training challenge evaluation, but they must not silently enter the 360-row training set or the 96-case pre-registered scientific held-out set.
+
+This preserves the causal question of Stage B: whether the corrected contract plus an upstream-realistic SFT regime can learn the bounded policy from a controlled source corpus.
+
+For any later external or teacher-derived challenge case, preserve two distinct integrity layers:
+
+```text
+source request identity
+        +
+exact response bytes observed by the collector
+        +
+SHA256(exact observed bytes)
+        +
+durable address for those bytes
+        ↓
+parse / normalize / semantic derivation
+        ↓
+challenge-case record + derived-record digest
+```
+
+The source-evidence SHA256 must cover the precise bytes consumed by the collector, not a parsed, normalized, re-encoded, or otherwise projected copy. A later reviewer must be able to retrieve the addressed payload and recompute the digest independently. Transport checksums and derived-record hashes do not substitute for source-evidence integrity.
+
+Current `needle-watch-receipt-v0.2` candidates therefore remain discovery leads unless their referenced primary sources are independently verified. A watcher candidate or CI receipt is not itself evidence that a training/evaluation claim is true.
+
+### Post-baseline external challenge set
+
+After both Stage B replicas and the pre-registered 96-case held-out evaluation are complete, a separate challenge set may be assembled from fresh watcher/CI discoveries and other public primary sources. This set is exploratory and must be reported separately from the Stage B success criterion.
+
+Its purpose is to ask a different question:
+
+> Does a policy learned on the controlled synthetic corpus transfer to newly observed real-world evidence patterns without retraining?
+
+Requirements:
+
+- created only after the baseline training/evaluation manifests are frozen;
+- no challenge case may be copied into Stage B training or scientific held-out data;
+- each external source binds exact-source request identity, exact observed bytes, raw-byte SHA256, durable payload address, and derived challenge-case digest;
+- provenance records distinguish `ci_receipt`, direct primary-source verification, and any later human/teacher interpretation;
+- challenge results are labeled exploratory and cannot rescue a failed pre-registered Stage B outcome.
+
+The latest watcher/CI stream can therefore contribute useful out-of-distribution references while remaining outside the causal baseline.
+
 ## 7. Needle projection contract
 
 ### 7.1 Route-positive examples
