@@ -87,3 +87,23 @@ class StageCArtifactTest(unittest.TestCase):
         for binding in manifest["bindings"]:
             payload=first["files"][binding["path"]]
             self.assertEqual(hashlib.sha256(payload).hexdigest(),binding["sha256"])
+
+class StageCRecoverySeedProvenanceTest(unittest.TestCase):
+    def test_committed_seed_is_two_replica_consensus_and_train_only(self):
+        import json, pathlib
+        root=pathlib.Path(__file__).resolve().parents[1]
+        seed_path=root/'experiments/needle-stage-c-applicability/source/stage-b-recovery-seed.json'
+        seed=json.loads(seed_path.read_text(encoding='utf-8'))
+        self.assertEqual(seed['schema_version'],'needle-stage-c-recovery-seed-v1')
+        self.assertEqual(seed['stage_b_workflow_run_id'],33722433205)
+        self.assertEqual(len(seed['replicas']),2)
+        self.assertEqual({r['replica_id'] for r in seed['replicas']},{'R1','R2'})
+        self.assertEqual(len(seed['false_call_case_ids']),55)
+        self.assertEqual(len(set(seed['false_call_case_ids'])),55)
+        self.assertTrue(all(x.startswith('train-negative-') for x in seed['false_call_case_ids']))
+        self.assertTrue(all(len(r['tuned_train_sha256'])==64 for r in seed['replicas']))
+        semantic=[json.loads(x) for x in (root/'experiments/needle-realistic-sft/source/semantic-cases.jsonl').read_text().splitlines() if x.strip()]
+        train_negative={r['case_id'] for r in semantic if r['split']=='train' and r['applicability']=='none'}
+        heldout={r['case_id'] for r in semantic if r['split']=='heldout'}
+        self.assertTrue(set(seed['false_call_case_ids']) <= train_negative)
+        self.assertTrue(set(seed['false_call_case_ids']).isdisjoint(heldout))
