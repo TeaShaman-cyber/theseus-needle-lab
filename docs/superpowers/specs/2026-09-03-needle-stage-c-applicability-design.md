@@ -255,3 +255,22 @@ Priority increases after false CALL outcomes and decays only after preregistered
 ### Arm parity
 
 Arm A and Arm B MUST use the same base checkpoint, positive training examples, heldout set, training budget, evaluation harness, and seeds. Arm B may differ only in preregistered recovery-state-driven sampling and the canonical factorized target representation.
+
+## Post-review treatment correction (Codex P1, 2026-09-03)
+
+Full run `33777087808` at experiment commit `fd6c236498955c2ac2dc76ecdf971e48bb5e0c7d` is **not scientific evidence**. It was cancelled and classified `INVALIDATED_BY_PREREGISTERED_TREATMENT_MISMATCH` after automated Codex review exposed two implementation/spec mismatches before any result interpretation:
+
+1. Arm B canonical state was stored only in a sidecar and was not present in the supervised target. Corrected Arm B supervision now uses a bounded `policy_state` structured call on every case, plus the existing observable `route` call only when applicability is `ROUTE`. Canonical-state accuracy and observable routing accuracy are evaluated independently; canonical-state accuracy is diagnostic and cannot override routing acceptance.
+2. Recovery weights were normalized only within the recovery subset, so `recovery_weight_scale` did not affect relative sampling. Corrected Arm B weighting uses ordinary-negative baseline weight `1.0` and recovery weight `1.0 + recovery_weight_scale`.
+
+The deterministic largest-remainder allocator also now resolves equal remainders by `sha256(case_id)` rather than lexicographic case ID to avoid name-correlated allocation bias.
+
+The original early-phase `60` additional negative presentations is replaced by `57`. With the actual `55 recovery / 5 ordinary` negative geometry, exactly `60` extras degenerates to one additional presentation for every negative even under `2:1` weights, making Arm B identical to the uniform control. `57` is the nearest lower integer budget to the original 60 that materializes a non-uniform early treatment under the frozen geometry. Reduced phase remains `30` extras at scale `0.5`. All Arm A/B budgets remain equal within each phase.
+
+Any subsequent Stage C run must pass byte-level preflight proving:
+
+- `early Arm A != early Arm B`;
+- `reduced Arm A != reduced Arm B`;
+- `early Arm B != reduced Arm B`;
+- Arm B negative targets contain `policy_state(applicability=NONE)` and no `route` call;
+- Arm B positive targets contain `policy_state(applicability=ROUTE)` plus exactly one `route` call.

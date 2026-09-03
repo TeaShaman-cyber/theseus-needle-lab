@@ -1,3 +1,4 @@
+import json
 import collections
 import unittest
 
@@ -120,7 +121,7 @@ class StageCRealCurriculumProjectionTest(unittest.TestCase):
         schema=json.loads((root/'experiments/needle-realistic-sft/contract/route-schema.json').read_text())
         prefix=(root/'experiments/needle-realistic-sft/contract/route-positive-prefix.txt').read_text()
         out=build_curriculum_outputs(semantic,seed,policy,schema,prefix)
-        self.assertEqual({k:len(v) for k,v in out['arms']['early'].items()},{'A':420,'B':420})
+        self.assertEqual({k:len(v) for k,v in out['arms']['early'].items()},{'A':417,'B':417})
         self.assertEqual({k:len(v) for k,v in out['arms']['reduced'].items()},{'A':390,'B':390})
         heldout={r['case_id'] for r in semantic if r['split']=='heldout'}
         all_train_neg={r['case_id'] for r in semantic if r['split']=='train' and r['applicability']=='none'}
@@ -138,7 +139,7 @@ class StageCRealCurriculumProjectionTest(unittest.TestCase):
             b_counts=collections.Counter(r['case_id'] for r in out['arms'][phase]['B'] if r['case_id'] in all_train_neg)
             self.assertGreater(sum(b_counts[x] for x in failures)/len(failures), sum(b_counts[x] for x in successes)/len(successes))
         manifest=json.loads(out['files']['manifests/stage-c-curriculum-manifest.json'])
-        self.assertEqual(manifest['phase_rows'],{'early':{'A':420,'B':420},'reduced':{'A':390,'B':390}})
+        self.assertEqual(manifest['phase_rows'],{'early':{'A':417,'B':417},'reduced':{'A':390,'B':390}})
 
 class StageCCurriculumCliTest(unittest.TestCase):
     def test_cli_materializes_registered_curriculum(self):
@@ -156,9 +157,52 @@ class StageCCurriculumCliTest(unittest.TestCase):
         result=subprocess.run(['python3',str(root/'scripts/build_stage_c_dataset.py'),'--write','--root',str(td)],text=True,capture_output=True)
         self.assertEqual(result.returncode,0,result.stderr)
         base=td/'experiments/needle-stage-c-applicability'
-        self.assertEqual(len((base/'data/early.arm-a.train.needle.jsonl').read_text().splitlines()),420)
-        self.assertEqual(len((base/'data/early.arm-b.train.needle.jsonl').read_text().splitlines()),420)
+        self.assertEqual(len((base/'data/early.arm-a.train.needle.jsonl').read_text().splitlines()),417)
+        self.assertEqual(len((base/'data/early.arm-b.train.needle.jsonl').read_text().splitlines()),417)
         self.assertEqual(len((base/'data/reduced.arm-a.train.needle.jsonl').read_text().splitlines()),390)
         self.assertEqual(len((base/'data/reduced.arm-b.train.needle.jsonl').read_text().splitlines()),390)
         manifest=json.loads((base/'manifests/stage-c-curriculum-manifest.json').read_text())
-        self.assertEqual(manifest['phase_rows']['early'],{'A':420,'B':420})
+        self.assertEqual(manifest['phase_rows']['early'],{'A':417,'B':417})
+
+class StageCCodexP1RegressionTest(unittest.TestCase):
+    def test_arm_b_supervision_contains_structured_policy_state_and_separate_route_action(self):
+        from scripts.build_stage_c_dataset import build_outputs, POLICY_STATE_SCHEMA
+        semantic=self._semantic_fixture()
+        recovery=[{'case_id':'n1','recovery_priority':1.0}]
+        prefix="Use route to classify the following evidence:\n\n"
+        route_schema={'name':'route','parameters':{'type':'object','properties':{'decision':{'type':'string','enum':['PROBE','READY','UNKNOWN']}},'required':['decision']}}
+        out=build_outputs(semantic,recovery,1,route_schema,prefix)
+        b_rows=[json.loads(x) for x in out['files']['data/arm-b.train.needle.jsonl'].decode().splitlines()]
+        positive=next(r for r in b_rows if r['query'].startswith(prefix))
+        negative=next(r for r in b_rows if not r['query'].startswith(prefix))
+        self.assertEqual(positive['tools'],[POLICY_STATE_SCHEMA,route_schema])
+        self.assertEqual(positive['answers'][0]['name'],'policy_state')
+        self.assertEqual(positive['answers'][0]['arguments']['applicability'],'ROUTE')
+        self.assertEqual(positive['answers'][1]['name'],'route')
+        self.assertEqual(negative['tools'],[POLICY_STATE_SCHEMA,route_schema])
+        self.assertEqual([a['name'] for a in negative['answers']],['policy_state'])
+        self.assertEqual(negative['answers'][0]['arguments']['applicability'],'NONE')
+
+    def test_recovery_scale_is_relative_to_nonzero_ordinary_negative_baseline(self):
+        from scripts.build_stage_c_dataset import build_stage_c_arms
+        semantic=self._semantic_fixture()
+        # n1 is recovery; n2 is ordinary. A stays uniform. B must change as scale changes.
+        early=build_stage_c_arms(semantic,[{'case_id':'n1','recovery_priority':1.0}],additional_negative_budget=12)
+        reduced=build_stage_c_arms(semantic,[{'case_id':'n1','recovery_priority':0.5}],additional_negative_budget=12)
+        def counts(rows):
+            out={}
+            for r in rows:
+                if r['canonical_state']['applicability']=='NONE': out[r['case_id']]=out.get(r['case_id'],0)+1
+            return out
+        self.assertEqual(counts(early['A']),counts(reduced['A']))
+        self.assertNotEqual(counts(early['B']),counts(reduced['B']))
+        self.assertGreater(counts(early['B'])['n1'],counts(early['B'])['n2'])
+        self.assertGreaterEqual(counts(reduced['B'])['n1'],counts(reduced['B'])['n2'])
+
+    @staticmethod
+    def _semantic_fixture():
+        return [
+            {'case_id':'p1','split':'train','applicability':'route','expected_decision':'PROBE','query':'positive'},
+            {'case_id':'n1','split':'train','applicability':'none','expected_decision':None,'query':'negative one'},
+            {'case_id':'n2','split':'train','applicability':'none','expected_decision':None,'query':'negative two'},
+        ]

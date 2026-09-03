@@ -140,3 +140,15 @@ class StageCQualityCliTest(unittest.TestCase):
         x=subprocess.run(['python3',str(root/'scripts/stage_c_quality_receipt.py'),'final','--r1',str(r1),'--r2',str(r2),'--output',str(final)],text=True,capture_output=True)
         self.assertEqual(x.returncode,0,x.stderr)
         self.assertEqual(json.loads(final.read_text())['disposition'],'ACCEPTED_STAGE_C_APPLICABILITY_RECOVERY')
+
+class StageCCanonicalStateMetricTest(unittest.TestCase):
+    def test_scope_metrics_reports_canonical_state_accuracy_without_changing_route_score(self):
+        from scripts.stage_c_quality_receipt import scope_metrics
+        rows=make_rows('state',positive_correct=36,negative_no_call=22,dominant=24)
+        for i,row in enumerate(rows):
+            row['state_correct']=(i % 4 != 0)
+        metrics=scope_metrics(rows)
+        self.assertEqual(metrics['canonical_state_n'],96)
+        self.assertEqual(metrics['canonical_state_correct'],72)
+        self.assertEqual(metrics['canonical_state_accuracy'],0.75)
+        self.assertEqual(metrics['negative_no_call'],22)

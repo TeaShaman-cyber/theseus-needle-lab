@@ -12,7 +12,8 @@ mkdir -p results logs
 python -m pip install "cactus-needle==2.0.8" 2>&1 | tee logs/eval-install.log
 python3 scripts/validate_realistic_sft_dataset.py
 semantic="experiments/needle-realistic-sft/source/semantic-cases.jsonl"
-heldout="experiments/needle-realistic-sft/data/heldout.eval.jsonl"
+route_schema="experiments/needle-realistic-sft/contract/route-schema.json"
+prefix="experiments/needle-realistic-sft/contract/route-positive-prefix.txt"
 early="$TRAIN_ARTIFACT_DIR/artifacts/early-${ARM_ID}-${REPLICA_ID}.cact"
 final="$TRAIN_ARTIFACT_DIR/artifacts/final-${ARM_ID}-${REPLICA_ID}.cact"
 test -s "$early"
@@ -20,5 +21,5 @@ test -s "$final"
 train_receipt="$TRAIN_ARTIFACT_DIR/results/train-receipt-${ARM_ID}-${REPLICA_ID}.json"
 test -s "$train_receipt"
 cp "$train_receipt" "results/train-receipt-${ARM_ID}-${REPLICA_ID}.json"
-python3 scripts/run_realistic_sft_eval.py --projection "$heldout" --semantic "$semantic" --split heldout --model-id "stage-c-${ARM_ID}-${REPLICA_ID}-early" --weights "$early" --output "results/${ARM_ID}-early-heldout-${REPLICA_ID}.jsonl"
-python3 scripts/run_realistic_sft_eval.py --projection "$heldout" --semantic "$semantic" --split heldout --model-id "stage-c-${ARM_ID}-${REPLICA_ID}-final" --weights "$final" --output "results/${ARM_ID}-final-heldout-${REPLICA_ID}.jsonl"
+python3 scripts/run_stage_c_eval.py --semantic "$semantic" --route-schema "$route_schema" --prefix "$prefix" --split heldout --arm-id "$ARM_ID" --model-id "stage-c-${ARM_ID}-${REPLICA_ID}-early" --weights "$early" --output "results/${ARM_ID}-early-heldout-${REPLICA_ID}.jsonl"
+python3 scripts/run_stage_c_eval.py --semantic "$semantic" --route-schema "$route_schema" --prefix "$prefix" --split heldout --arm-id "$ARM_ID" --model-id "stage-c-${ARM_ID}-${REPLICA_ID}-final" --weights "$final" --output "results/${ARM_ID}-final-heldout-${REPLICA_ID}.jsonl"

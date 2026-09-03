@@ -15,7 +15,7 @@ class StageCCurriculumPolicyTest(unittest.TestCase):
         self.assertEqual(p['base_positive_rows'],300)
         self.assertEqual(p['base_negative_rows'],60)
         self.assertEqual(p['phases'],[
-            {'name':'early','epochs':10,'additional_negative_presentations':60,'recovery_weight_scale':1.0},
+            {'name':'early','epochs':10,'additional_negative_presentations':57,'recovery_weight_scale':1.0},
             {'name':'reduced','epochs':5,'additional_negative_presentations':30,'recovery_weight_scale':0.5},
         ])
         self.assertEqual(10*(300+60+60)+5*(300+60+30),6150)

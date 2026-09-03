@@ -43,6 +43,8 @@ def scope_metrics(rows: list[dict]) -> dict:
 
     semantic_total = sum(semantic_predictions.values())
     dominant = max(semantic_predictions.values()) / semantic_total if semantic_total else 1.0
+    canonical_rows = [r for r in rows if r.get("state_correct") is not None]
+    canonical_correct = sum(bool(r.get("state_correct")) for r in canonical_rows)
     return {
         "positive_n": len(positives),
         "positive_correct": sum(bool(r.get("correct")) for r in positives),
@@ -54,6 +56,9 @@ def scope_metrics(rows: list[dict]) -> dict:
         "dominant_semantic_decision_rate": dominant,
         "applicability_observed_classes": sorted(observed_valid_applicability),
         "runtime_or_invalid": runtime_or_invalid,
+        "canonical_state_n": len(canonical_rows),
+        "canonical_state_correct": canonical_correct,
+        "canonical_state_accuracy": (canonical_correct / len(canonical_rows)) if canonical_rows else None,
     }
 
 

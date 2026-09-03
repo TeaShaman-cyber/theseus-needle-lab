@@ -33,7 +33,7 @@ class StageCFullEvalContractTest(unittest.TestCase):
     def test_eval_entrypoint_evaluates_early_and_final_without_training(self):
         text=EVAL.read_text(encoding='utf-8')
         self.assertIn('cactus-needle==2.0.8',text)
-        self.assertIn('run_realistic_sft_eval.py',text)
+        self.assertIn('run_stage_c_eval.py',text)
         self.assertIn('early-${ARM_ID}-${REPLICA_ID}.cact',text)
         self.assertIn('final-${ARM_ID}-${REPLICA_ID}.cact',text)
         self.assertIn('heldout',text)
@@ -77,3 +77,11 @@ class StageCWorkflowContractTest(unittest.TestCase):
 
 if __name__=='__main__':
     unittest.main()
+
+class StageCCodexP1EvalEntrypointRegressionTest(unittest.TestCase):
+    def test_stage_c_eval_uses_factorized_evaluator_with_arm_identity(self):
+        text=(ROOT/'scripts/run_stage_c_full_eval.sh').read_text(encoding='utf-8')
+        self.assertIn('scripts/run_stage_c_eval.py',text)
+        self.assertIn('--arm-id "$ARM_ID"',text)
+        self.assertIn('--route-schema',text)
+        self.assertNotIn('scripts/run_realistic_sft_eval.py',text)

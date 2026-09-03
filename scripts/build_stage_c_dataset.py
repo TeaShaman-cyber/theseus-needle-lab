@@ -2,6 +2,23 @@ from __future__ import annotations
 
 import math
 
+POLICY_STATE_SCHEMA = {
+    "name": "policy_state",
+    "description": "Report the bounded Stage C applicability state; this is a training/evaluation state head, not the observable route action.",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "applicability": {"type": "string", "enum": ["NONE", "ROUTE"]},
+            "decision": {"type": "string", "enum": ["NO_CALL", "PROBE", "READY", "UNKNOWN"]},
+            "tool_need": {"type": "string", "enum": ["unnecessary", "required", "helpful", "unknown"]},
+            "evidence_state": {"type": "string", "enum": ["sufficient", "insufficient", "conflicting"]},
+            "cost_class": {"type": "string", "enum": ["low", "medium", "high"]},
+            "risk_class": {"type": "string", "enum": ["low", "medium", "high"]},
+        },
+        "required": ["applicability", "decision", "tool_need", "evidence_state", "cost_class", "risk_class"],
+    },
+}
+
 
 def canonical_decision_state(row: dict) -> dict:
     applicability = row.get("applicability")
@@ -39,7 +56,7 @@ def _allocate(ids: list[str], weights: dict[str, float], budget: int) -> dict[st
     quotas = {case_id: max(0.0, float(weights.get(case_id, 0.0))) / total * budget for case_id in ids}
     counts = {case_id: math.floor(quotas[case_id]) for case_id in ids}
     remaining = budget - sum(counts.values())
-    order = sorted(ids, key=lambda case_id: (-(quotas[case_id] - counts[case_id]), case_id))
+    order = sorted(ids, key=lambda case_id: (-(quotas[case_id] - counts[case_id]), hashlib.sha256(case_id.encode("utf-8")).hexdigest()))
     for case_id in order[:remaining]:
         counts[case_id] += 1
     return counts
@@ -68,9 +85,7 @@ def build_stage_c_arms(semantic_rows: list[dict], recovery_state: list[dict], ad
     if unknown:
         raise ValueError(f"recovery state references non-training-negative cases: {sorted(unknown)}")
     uniform={case_id:1.0 for case_id in negatives}
-    adaptive={case_id:max(0.0,recovery_by_id.get(case_id,0.0)) for case_id in negatives}
-    if sum(adaptive.values()) <= 0:
-        adaptive=uniform
+    adaptive={case_id:1.0+max(0.0,recovery_by_id.get(case_id,0.0)) for case_id in negatives}
     a_extra=_allocate(negatives,uniform,additional_negative_budget)
     b_extra=_allocate(negatives,adaptive,additional_negative_budget)
     a_counts={case_id:1+a_extra.get(case_id,0) for case_id in negatives}
@@ -92,17 +107,31 @@ def _stable_json_bytes(obj: object) -> bytes:
     return json.dumps(obj, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8") + b"\n"
 
 
-def _behavioral_projection(row: dict, schema: dict, prefix: str) -> dict:
+def _behavioral_projection(row: dict, schema: dict, prefix: str, *, factorized: bool = False) -> dict:
     state=row["canonical_state"]
+    if not factorized:
+        if state["applicability"] == "NONE":
+            return {"query": row["query"], "tools": [schema], "answers": []}
+        decision=state["decision"]
+        if decision not in {"PROBE","READY","UNKNOWN"}:
+            raise ValueError("invalid route decision")
+        return {
+            "query": prefix + row["query"],
+            "tools": [schema],
+            "answers": [{"name":"route","arguments":{"decision":decision}}],
+        }
+
+    state_call={"name":"policy_state","arguments":dict(state)}
+    tools=[POLICY_STATE_SCHEMA,schema]
     if state["applicability"] == "NONE":
-        return {"query": row["query"], "tools": [schema], "answers": []}
+        return {"query": row["query"], "tools": tools, "answers": [state_call]}
     decision=state["decision"]
     if decision not in {"PROBE","READY","UNKNOWN"}:
         raise ValueError("invalid route decision")
     return {
         "query": prefix + row["query"],
-        "tools": [schema],
-        "answers": [{"name":"route","arguments":{"decision":decision}}],
+        "tools": tools,
+        "answers": [state_call,{"name":"route","arguments":{"decision":decision}}],
     }
 
 
@@ -113,7 +142,7 @@ def build_outputs(semantic_rows: list[dict], recovery_state: list[dict], additio
         slug=arm.lower()
         files[f"state/arm-{slug}.canonical.jsonl"]=_jsonl_bytes(arms[arm])
         files[f"data/arm-{slug}.train.needle.jsonl"]=_jsonl_bytes([
-            _behavioral_projection(row,schema,prefix) for row in arms[arm]
+            _behavioral_projection(row,schema,prefix,factorized=(arm=="B")) for row in arms[arm]
         ])
     bindings=[]
     for path in sorted(files):
@@ -163,7 +192,7 @@ def build_curriculum_outputs(semantic_rows: list[dict], seed: dict, policy: dict
             slug=arm.lower()
             files[f"state/{name}.arm-{slug}.canonical.jsonl"]=_jsonl_bytes(arms[arm])
             files[f"data/{name}.arm-{slug}.train.needle.jsonl"]=_jsonl_bytes([
-                _behavioral_projection(row,schema,prefix) for row in arms[arm]
+                _behavioral_projection(row,schema,prefix,factorized=(arm=="B")) for row in arms[arm]
             ])
     bindings=[]
     for path in sorted(files):

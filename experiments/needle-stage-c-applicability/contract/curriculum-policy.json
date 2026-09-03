@@ -7,7 +7,7 @@
     {
       "name": "early",
       "epochs": 10,
-      "additional_negative_presentations": 60,
+      "additional_negative_presentations": 57,
       "recovery_weight_scale": 1.0
     },
     {
