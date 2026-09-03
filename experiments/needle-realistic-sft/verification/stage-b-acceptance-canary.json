@@ -1,0 +1,24 @@
+{
+  "schema_version": "theseus.needle.stage_b_acceptance_claim.v1",
+  "claim_id": "stage-b-acceptance-canary-001",
+  "scope": "synthetic verifier canary only",
+  "math_classes": [
+    "integer_counts",
+    "rational_ratios",
+    "inequalities"
+  ],
+  "required_special_functions": [],
+  "inputs": {
+    "base_heldout_correct": 30,
+    "replica_heldout_correct": 38,
+    "train_correct": 225,
+    "train_total": 300,
+    "base_route_calls": 60,
+    "replica_route_calls": 58,
+    "base_negative_no_call": 22,
+    "replica_negative_no_call": 21,
+    "dominant_decision_count": 40,
+    "valid_heldout_route_calls": 60
+  },
+  "does_not_establish": "This synthetic canary verifies the verifier contract only. It is not a Stage B model-quality result."
+}

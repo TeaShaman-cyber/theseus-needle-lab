@@ -1,0 +1,561 @@
+{
+  "families": [
+    {
+      "applicability": "route",
+      "derivation_family": "runtime-version-v1",
+      "entities": [
+        "runtime-alpha",
+        "provider-beta",
+        "artifact-gamma",
+        "service-delta",
+        "tool-epsilon"
+      ],
+      "expected_decision": "PROBE",
+      "family_id": "probe.stale_runtime_safe_version_probe",
+      "phrases": [
+        "Cached information about {entity} is stale, and a harmless current version query is available.",
+        "The recorded version of {entity} may be outdated; a read-only version check can resolve it.",
+        "Evidence for {entity} predates the current run, while a safe version probe is available now.",
+        "The only evidence about {entity} is old, but its present version can be checked without mutation."
+      ],
+      "rationale": "Current verification is needed and can be performed safely.",
+      "semantic_rule": "stale runtime evidence plus a safe current version check implies PROBE",
+      "split": "train"
+    },
+    {
+      "applicability": "route",
+      "derivation_family": "auth-permission-v1",
+      "entities": [
+        "runtime-alpha",
+        "provider-beta",
+        "artifact-gamma",
+        "service-delta",
+        "tool-epsilon"
+      ],
+      "expected_decision": "PROBE",
+      "family_id": "probe.stale_auth_safe_permission_probe",
+      "phrases": [
+        "The saved permission state for {entity} is stale, and a read-only permission lookup is available.",
+        "Authorization evidence for {entity} is outdated; current access can be checked without changing it.",
+        "A cached grant for {entity} cannot be trusted as current, but a safe permission probe exists.",
+        "The known access state of {entity} is old, while a non-mutating authorization check is available."
+      ],
+      "rationale": "Current authorization should be probed safely.",
+      "semantic_rule": "stale authorization evidence plus a safe permission read implies PROBE",
+      "split": "train"
+    },
+    {
+      "applicability": "route",
+      "derivation_family": "search-scope-v1",
+      "entities": [
+        "runtime-alpha",
+        "provider-beta",
+        "artifact-gamma",
+        "service-delta",
+        "tool-epsilon"
+      ],
+      "expected_decision": "PROBE",
+      "family_id": "probe.incomplete_search_safe_scope_expand",
+      "phrases": [
+        "The search for {entity} covered only part of the available scope, and a broader read-only search is possible.",
+        "Results about {entity} are incomplete; the query can be safely expanded to the remaining scope.",
+        "Only a partial search has been performed for {entity}, with a harmless wider search still available.",
+        "Coverage for {entity} is known incomplete, and another non-mutating search can discriminate the answer."
+      ],
+      "rationale": "Search coverage is incomplete but safely expandable.",
+      "semantic_rule": "incomplete search plus a safe broader search implies PROBE",
+      "split": "train"
+    },
+    {
+      "applicability": "route",
+      "derivation_family": "provider-status-v1",
+      "entities": [
+        "runtime-alpha",
+        "provider-beta",
+        "artifact-gamma",
+        "service-delta",
+        "tool-epsilon"
+      ],
+      "expected_decision": "PROBE",
+      "family_id": "probe.cached_provider_state_safe_status_query",
+      "phrases": [
+        "The cached state of {entity} may have changed, and a live read-only status query is available.",
+        "Only an old provider-state snapshot exists for {entity}; current status can be queried safely.",
+        "The known state for {entity} is cached rather than live, while a harmless status endpoint is available.",
+        "A stale provider snapshot describes {entity}, but its present state can be checked without mutation."
+      ],
+      "rationale": "Live provider state should be checked safely.",
+      "semantic_rule": "cached provider state plus safe live status query implies PROBE",
+      "split": "train"
+    },
+    {
+      "applicability": "route",
+      "derivation_family": "artifact-readback-v1",
+      "entities": [
+        "runtime-alpha",
+        "provider-beta",
+        "artifact-gamma",
+        "service-delta",
+        "tool-epsilon"
+      ],
+      "expected_decision": "PROBE",
+      "family_id": "probe.artifact_pointer_safe_digest_readback",
+      "phrases": [
+        "A pointer to {entity} exists but its current digest is not verified; a read-only digest readback is available.",
+        "The location of {entity} is known, but integrity is stale and can be rechecked safely by digest.",
+        "There is an artifact reference for {entity} without a current hash, while harmless hash readback is possible.",
+        "The stored pointer for {entity} lacks fresh integrity evidence, and a non-mutating digest check can resolve it."
+      ],
+      "rationale": "Artifact integrity can be discriminated by safe readback.",
+      "semantic_rule": "artifact pointer without current digest plus safe readback implies PROBE",
+      "split": "train"
+    },
+    {
+      "applicability": "route",
+      "derivation_family": "runtime-identity-v1",
+      "entities": [
+        "runtime-alpha",
+        "provider-beta",
+        "artifact-gamma",
+        "service-delta",
+        "tool-epsilon"
+      ],
+      "expected_decision": "READY",
+      "family_id": "ready.fresh_runtime_identity_verified",
+      "phrases": [
+        "The current runtime identity for {entity} was just verified from the authoritative endpoint.",
+        "A live authoritative check confirms the present runtime identity of {entity}.",
+        "The active runtime for {entity} has current identity evidence from its authority source.",
+        "Fresh authoritative runtime data confirms exactly which {entity} instance is active."
+      ],
+      "rationale": "Current authoritative runtime identity is already verified.",
+      "semantic_rule": "fresh runtime identity verified by current authority implies READY",
+      "split": "train"
+    },
+    {
+      "applicability": "route",
+      "derivation_family": "persistence-readback-v1",
+      "entities": [
+        "runtime-alpha",
+        "provider-beta",
+        "artifact-gamma",
+        "service-delta",
+        "tool-epsilon"
+      ],
+      "expected_decision": "READY",
+      "family_id": "ready.exact_persistence_readback_match",
+      "phrases": [
+        "The write to {entity} completed and exact readback matches the committed record.",
+        "Durable storage for {entity} was read back exactly after the write and matches byte-for-byte.",
+        "The persisted {entity} record has an exact post-write readback equal to what was committed.",
+        "A completed write to {entity} has already been independently read back with an exact match."
+      ],
+      "rationale": "Durable persistence has exact post-write evidence.",
+      "semantic_rule": "exact durable readback matching the write implies READY",
+      "split": "train"
+    },
+    {
+      "applicability": "route",
+      "derivation_family": "ci-sha-v1",
+      "entities": [
+        "runtime-alpha",
+        "provider-beta",
+        "artifact-gamma",
+        "service-delta",
+        "tool-epsilon"
+      ],
+      "expected_decision": "READY",
+      "family_id": "ready.exact_sha_ci_postcondition_success",
+      "phrases": [
+        "CI for exact commit {entity} completed successfully and all declared postconditions passed.",
+        "The verified workflow run is bound to exact revision {entity} and reports successful postconditions.",
+        "Exact SHA {entity} has a completed green CI run with the required checks satisfied.",
+        "The current evidence binds successful CI postconditions directly to revision {entity}."
+      ],
+      "rationale": "Exact revision and successful CI postconditions are already established.",
+      "semantic_rule": "exact commit identity plus successful CI postconditions implies READY",
+      "split": "train"
+    },
+    {
+      "applicability": "route",
+      "derivation_family": "provider-authority-v1",
+      "entities": [
+        "runtime-alpha",
+        "provider-beta",
+        "artifact-gamma",
+        "service-delta",
+        "tool-epsilon"
+      ],
+      "expected_decision": "READY",
+      "family_id": "ready.current_authoritative_provider_response",
+      "phrases": [
+        "The authoritative provider just returned the current state for {entity}.",
+        "A fresh response from the source of authority directly resolves {entity}.",
+        "Current provider evidence for {entity} comes from the authoritative live interface.",
+        "The live authority for {entity} has already answered the relevant state question."
+      ],
+      "rationale": "The current authority has already resolved the state.",
+      "semantic_rule": "current authoritative provider response directly resolves state implies READY",
+      "split": "train"
+    },
+    {
+      "applicability": "route",
+      "derivation_family": "artifact-integrity-v1",
+      "entities": [
+        "runtime-alpha",
+        "provider-beta",
+        "artifact-gamma",
+        "service-delta",
+        "tool-epsilon"
+      ],
+      "expected_decision": "READY",
+      "family_id": "ready.artifact_integrity_hash_verified",
+      "phrases": [
+        "The current bytes of {entity} were hashed and match the expected digest.",
+        "Integrity verification for {entity} has completed with an exact expected-hash match.",
+        "A fresh digest over {entity} matches the recorded authoritative checksum.",
+        "The present artifact bytes for {entity} have already passed exact hash verification."
+      ],
+      "rationale": "Artifact integrity is already verified exactly.",
+      "semantic_rule": "current artifact hash verified against expected digest implies READY",
+      "split": "train"
+    },
+    {
+      "applicability": "route",
+      "derivation_family": "conflict-no-probe-v1",
+      "entities": [
+        "runtime-alpha",
+        "provider-beta",
+        "artifact-gamma",
+        "service-delta",
+        "tool-epsilon"
+      ],
+      "expected_decision": "UNKNOWN",
+      "family_id": "unknown.stale_conflicting_snapshots_no_probe",
+      "phrases": [
+        "Two stale snapshots disagree about {entity}, and no safe current discriminator is available.",
+        "Historical records conflict for {entity}; there is no non-mutating way to establish which is current.",
+        "The available old evidence about {entity} is contradictory, with no safe probe available now.",
+        "Conflicting cached states exist for {entity}, and current verification cannot be performed safely."
+      ],
+      "rationale": "Conflicting evidence cannot be reconciled safely.",
+      "semantic_rule": "conflicting stale snapshots with no safe discriminator imply UNKNOWN",
+      "split": "train"
+    },
+    {
+      "applicability": "route",
+      "derivation_family": "authority-unreachable-v1",
+      "entities": [
+        "runtime-alpha",
+        "provider-beta",
+        "artifact-gamma",
+        "service-delta",
+        "tool-epsilon"
+      ],
+      "expected_decision": "UNKNOWN",
+      "family_id": "unknown.authority_unreachable_no_safe_probe",
+      "phrases": [
+        "The authority for {entity} is unreachable and no safe alternate probe can resolve the state.",
+        "Current authoritative data for {entity} cannot be reached, with no harmless substitute check available.",
+        "The source of truth for {entity} is unavailable and there is no safe discriminator elsewhere.",
+        "No current authority response can be obtained for {entity}, and alternative verification would require mutation."
+      ],
+      "rationale": "No safe current evidence can be obtained.",
+      "semantic_rule": "authority unreachable with no alternative safe discriminator implies UNKNOWN",
+      "split": "train"
+    },
+    {
+      "applicability": "route",
+      "derivation_family": "private-source-v1",
+      "entities": [
+        "runtime-alpha",
+        "provider-beta",
+        "artifact-gamma",
+        "service-delta",
+        "tool-epsilon"
+      ],
+      "expected_decision": "UNKNOWN",
+      "family_id": "unknown.missing_private_source_inaccessible",
+      "phrases": [
+        "The decisive private source for {entity} is inaccessible, and public evidence cannot substitute for it.",
+        "Answering about {entity} requires a private record that is not available to the current runtime.",
+        "The necessary private evidence for {entity} cannot be accessed and has no authoritative public equivalent.",
+        "A private source is required to resolve {entity}, but that source is currently inaccessible."
+      ],
+      "rationale": "Required evidence is inaccessible.",
+      "semantic_rule": "required private source is inaccessible and cannot be safely substituted implies UNKNOWN",
+      "split": "train"
+    },
+    {
+      "applicability": "route",
+      "derivation_family": "expired-evidence-v1",
+      "entities": [
+        "runtime-alpha",
+        "provider-beta",
+        "artifact-gamma",
+        "service-delta",
+        "tool-epsilon"
+      ],
+      "expected_decision": "UNKNOWN",
+      "family_id": "unknown.expired_ephemeral_evidence_unrecoverable",
+      "phrases": [
+        "The only evidence for {entity} was ephemeral, has expired, and cannot be recovered.",
+        "A transient observation about {entity} is no longer available and has no durable source to re-read.",
+        "The evidence that could resolve {entity} expired without persistence and cannot be reconstructed safely.",
+        "Only unrecoverable ephemeral data ever described {entity}; no current probe can recreate it."
+      ],
+      "rationale": "The decisive evidence is irrecoverably gone.",
+      "semantic_rule": "expired ephemeral evidence with no recoverable source implies UNKNOWN",
+      "split": "train"
+    },
+    {
+      "applicability": "route",
+      "derivation_family": "runtime-ambiguity-v1",
+      "entities": [
+        "runtime-alpha",
+        "provider-beta",
+        "artifact-gamma",
+        "service-delta",
+        "tool-epsilon"
+      ],
+      "expected_decision": "UNKNOWN",
+      "family_id": "unknown.ambiguous_runtime_identity_no_discriminator",
+      "phrases": [
+        "Two possible runtime identities fit {entity}, and no safe discriminator is exposed.",
+        "The active identity behind {entity} is ambiguous with no read-only way to distinguish candidates.",
+        "Evidence permits multiple runtime identities for {entity}, but no harmless identity probe exists.",
+        "The current runtime identity of {entity} cannot be distinguished from the available evidence or tools."
+      ],
+      "rationale": "Runtime identity remains ambiguous without a safe discriminator.",
+      "semantic_rule": "ambiguous runtime identity with no safe discriminator implies UNKNOWN",
+      "split": "train"
+    },
+    {
+      "applicability": "none",
+      "derivation_family": "negative-creative-v1",
+      "entities": [
+        "runtime-alpha",
+        "provider-beta",
+        "artifact-gamma",
+        "service-delta",
+        "tool-epsilon"
+      ],
+      "expected_decision": null,
+      "family_id": "negative.creative_writing",
+      "phrases": [
+        "Write a short imaginative story about {entity}.",
+        "Compose a playful poem featuring {entity}.",
+        "Invent a fictional scene centered on {entity}.",
+        "Create a whimsical dialogue involving {entity}."
+      ],
+      "rationale": "The request is creative rather than an evidence-routing decision.",
+      "semantic_rule": "creative writing does not require the route evidence classifier",
+      "split": "train"
+    },
+    {
+      "applicability": "none",
+      "derivation_family": "negative-knowledge-v1",
+      "entities": [
+        "runtime-alpha",
+        "provider-beta",
+        "artifact-gamma",
+        "service-delta",
+        "tool-epsilon"
+      ],
+      "expected_decision": null,
+      "family_id": "negative.generic_knowledge_math",
+      "phrases": [
+        "Explain the basic concept of {entity} in simple terms.",
+        "Give a concise definition of {entity}.",
+        "Summarize the general idea behind {entity}.",
+        "Describe how {entity} is commonly understood."
+      ],
+      "rationale": "The request asks for generic knowledge, not current evidence routing.",
+      "semantic_rule": "generic knowledge or arithmetic does not require the route classifier",
+      "split": "train"
+    },
+    {
+      "applicability": "none",
+      "derivation_family": "negative-language-v1",
+      "entities": [
+        "runtime-alpha",
+        "provider-beta",
+        "artifact-gamma",
+        "service-delta",
+        "tool-epsilon"
+      ],
+      "expected_decision": null,
+      "family_id": "negative.translation_summarization",
+      "phrases": [
+        "Translate the phrase about {entity} into Russian.",
+        "Summarize this paragraph about {entity} in one sentence.",
+        "Rewrite the description of {entity} more concisely.",
+        "Paraphrase the note about {entity} without changing its meaning."
+      ],
+      "rationale": "The request is a language transformation, not evidence routing.",
+      "semantic_rule": "translation or summarization does not require the route classifier",
+      "split": "train"
+    },
+    {
+      "applicability": "route",
+      "derivation_family": "migration-probe-v1",
+      "entities": [
+        "runtime-kappa",
+        "provider-lambda",
+        "artifact-mu",
+        "service-nu"
+      ],
+      "expected_decision": "PROBE",
+      "family_id": "probe.provider_migration_current_endpoint_probe",
+      "phrases": [
+        "A migration may have changed the endpoint for {entity}; a harmless current endpoint lookup is available.",
+        "The recorded provider route for {entity} predates migration, while a read-only endpoint probe can resolve it.",
+        "Post-migration routing for {entity} is uncertain but can be checked safely against the current endpoint."
+      ],
+      "rationale": "A safe current endpoint probe can resolve migration uncertainty.",
+      "semantic_rule": "provider migration uncertainty plus safe current endpoint probe implies PROBE",
+      "split": "heldout"
+    },
+    {
+      "applicability": "route",
+      "derivation_family": "package-probe-v1",
+      "entities": [
+        "runtime-kappa",
+        "provider-lambda",
+        "artifact-mu",
+        "service-nu"
+      ],
+      "expected_decision": "PROBE",
+      "family_id": "probe.package_version_current_install_probe",
+      "phrases": [
+        "The documented package version for {entity} may be stale; the installed version can be queried safely.",
+        "Version notes for {entity} are old, while a harmless local installed-version check is available.",
+        "The current installed release of {entity} is uncertain but can be read without changing anything."
+      ],
+      "rationale": "A safe installed-version probe can resolve the uncertainty.",
+      "semantic_rule": "stale package information plus safe installed-version query implies PROBE",
+      "split": "heldout"
+    },
+    {
+      "applicability": "route",
+      "derivation_family": "signed-receipt-v1",
+      "entities": [
+        "runtime-kappa",
+        "provider-lambda",
+        "artifact-mu",
+        "service-nu"
+      ],
+      "expected_decision": "READY",
+      "family_id": "ready.signed_receipt_current_readback",
+      "phrases": [
+        "A current signed receipt for {entity} has been read back and its bound content matches exactly.",
+        "The latest receipt for {entity} is signed, current, and exact readback confirms its contents.",
+        "A verified current signature and matching readback already establish the recorded state of {entity}."
+      ],
+      "rationale": "Current signed readback evidence already resolves the state.",
+      "semantic_rule": "current signed receipt and exact readback imply READY",
+      "split": "heldout"
+    },
+    {
+      "applicability": "route",
+      "derivation_family": "health-authority-v1",
+      "entities": [
+        "runtime-kappa",
+        "provider-lambda",
+        "artifact-mu",
+        "service-nu"
+      ],
+      "expected_decision": "READY",
+      "family_id": "ready.live_health_check_authority_match",
+      "phrases": [
+        "A live authoritative health check for {entity} matches the expected state.",
+        "The current health endpoint for {entity} has responded and agrees with the required condition.",
+        "Fresh authority-level health evidence confirms {entity} is in the expected state."
+      ],
+      "rationale": "Live authority evidence already confirms the state.",
+      "semantic_rule": "live health authority matches expected state implies READY",
+      "split": "heldout"
+    },
+    {
+      "applicability": "route",
+      "derivation_family": "logs-prohibited-v1",
+      "entities": [
+        "runtime-kappa",
+        "provider-lambda",
+        "artifact-mu",
+        "service-nu"
+      ],
+      "expected_decision": "UNKNOWN",
+      "family_id": "unknown.irreconcilable_logs_probe_prohibited",
+      "phrases": [
+        "Logs disagree about {entity}, and policy prohibits any current probe that could resolve the conflict.",
+        "Conflicting records describe {entity}, while the only discriminator is explicitly forbidden.",
+        "The available logs for {entity} cannot be reconciled and current probing is not permitted."
+      ],
+      "rationale": "The conflict cannot be safely or permissibly resolved.",
+      "semantic_rule": "irreconcilable logs when probing is prohibited imply UNKNOWN",
+      "split": "heldout"
+    },
+    {
+      "applicability": "route",
+      "derivation_family": "mutation-probe-v1",
+      "entities": [
+        "runtime-kappa",
+        "provider-lambda",
+        "artifact-mu",
+        "service-nu"
+      ],
+      "expected_decision": "UNKNOWN",
+      "family_id": "unknown.missing_capability_probe_would_mutate",
+      "phrases": [
+        "Capability evidence for {entity} is missing, and the only available test would mutate external state.",
+        "It is unknown whether {entity} supports the action; checking would itself perform a mutation.",
+        "No current capability record exists for {entity}, and verification requires a side effect that is not authorized."
+      ],
+      "rationale": "The only discriminator would mutate state and cannot be used.",
+      "semantic_rule": "missing capability evidence when the only probe would mutate state implies UNKNOWN",
+      "split": "heldout"
+    },
+    {
+      "applicability": "none",
+      "derivation_family": "negative-format-v1",
+      "entities": [
+        "runtime-kappa",
+        "provider-lambda",
+        "artifact-mu",
+        "service-nu"
+      ],
+      "expected_decision": null,
+      "family_id": "negative.code_formatting_request",
+      "phrases": [
+        "Format this code snippet involving {entity} with consistent indentation.",
+        "Reformat the example for {entity} without changing its behavior.",
+        "Clean up whitespace in this code sample mentioning {entity}."
+      ],
+      "rationale": "Formatting code is not an evidence-routing decision.",
+      "semantic_rule": "code formatting does not require the route evidence classifier",
+      "split": "heldout"
+    },
+    {
+      "applicability": "none",
+      "derivation_family": "negative-smalltalk-v1",
+      "entities": [
+        "runtime-kappa",
+        "provider-lambda",
+        "artifact-mu",
+        "service-nu"
+      ],
+      "expected_decision": null,
+      "family_id": "negative.social_smalltalk_request",
+      "phrases": [
+        "Tell me something cheerful about {entity}.",
+        "Make a light joke about {entity}.",
+        "Chat casually with me about {entity}."
+      ],
+      "rationale": "Smalltalk is not an evidence-routing decision.",
+      "semantic_rule": "social smalltalk does not require the route evidence classifier",
+      "split": "heldout"
+    }
+  ],
+  "schema_version": "needle-stage-b-families-v1"
+}

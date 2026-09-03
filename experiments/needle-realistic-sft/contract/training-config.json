@@ -1,0 +1,1 @@
+{"batch_size":16,"cactus_needle":"2.0.8","epochs":15,"examples":360,"generate":0,"lora_alpha":32,"lora_rank":16,"lr":0.0001,"max_len":256,"numpy_shuffle_seed":0,"val_split":0.1,"workers":1}
