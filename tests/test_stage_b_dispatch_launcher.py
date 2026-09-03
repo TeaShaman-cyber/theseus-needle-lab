@@ -19,6 +19,13 @@ class StageBDispatchLauncherContractTest(unittest.TestCase):
         self.assertIn('test "$REMOTE_SHA" = "$REQUESTED_SHA"', text)
         self.assertIn('ref: ${{ inputs.experiment_sha }}', text)
         self.assertIn('bash scripts/run_realistic_sft_resource_dry_run.sh', text)
+        self.assertIn('EXPERIMENT_SHA: ${{ inputs.experiment_sha }}', text)
+        self.assertIn('LAUNCHER_SHA: ${{ github.sha }}', text)
+        self.assertIn('actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02', text)
+        self.assertIn('if: always()', text)
+        self.assertIn('needle-stage-b-resource-${{ github.run_id }}', text)
+        for evidence_dir in ['artifacts/', 'results/', 'logs/', 'metrics/']:
+            self.assertIn(evidence_dir, text)
         self.assertIn('contents: read', text)
         self.assertNotIn('needle finetune', text)
         self.assertNotIn('run_seeded_finetune.py', text)
