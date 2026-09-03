@@ -1,3 +1,4 @@
+import pathlib
 import json
 import collections
 import unittest
@@ -206,3 +207,17 @@ class StageCCodexP1RegressionTest(unittest.TestCase):
             {'case_id':'n1','split':'train','applicability':'none','expected_decision':None,'query':'negative one'},
             {'case_id':'n2','split':'train','applicability':'none','expected_decision':None,'query':'negative two'},
         ]
+
+class StageCTrackedArtifactConsistencyTest(unittest.TestCase):
+    def test_tracked_curriculum_artifacts_match_current_builder_exactly(self):
+        from scripts.build_stage_c_dataset import build_curriculum_outputs
+        root=pathlib.Path(__file__).resolve().parents[1]
+        semantic=[json.loads(x) for x in (root/'experiments/needle-realistic-sft/source/semantic-cases.jsonl').read_text(encoding='utf-8').splitlines() if x.strip()]
+        seed=json.loads((root/'experiments/needle-stage-c-applicability/source/stage-b-recovery-seed.json').read_text(encoding='utf-8'))
+        policy=json.loads((root/'experiments/needle-stage-c-applicability/contract/curriculum-policy.json').read_text(encoding='utf-8'))
+        schema=json.loads((root/'experiments/needle-realistic-sft/contract/route-schema.json').read_text(encoding='utf-8'))
+        prefix=(root/'experiments/needle-realistic-sft/contract/route-positive-prefix.txt').read_text(encoding='utf-8')
+        out=build_curriculum_outputs(semantic,seed,policy,schema,prefix)
+        base=root/'experiments/needle-stage-c-applicability'
+        for rel,expected in out['files'].items():
+            self.assertEqual((base/rel).read_bytes(),expected,rel)
