@@ -152,3 +152,32 @@ class StageCCanonicalStateMetricTest(unittest.TestCase):
         self.assertEqual(metrics['canonical_state_correct'],72)
         self.assertEqual(metrics['canonical_state_accuracy'],0.75)
         self.assertEqual(metrics['negative_no_call'],22)
+
+class StageCFinalProvenanceRegressionTest(unittest.TestCase):
+    def test_final_receipt_preserves_each_replica_model_artifacts(self):
+        import json, pathlib, subprocess, tempfile
+        root=pathlib.Path(__file__).resolve().parents[1]
+        td=pathlib.Path(tempfile.mkdtemp(prefix='stage-c-final-provenance-'))
+        base={
+            'schema':'theseus.needle.stage_c_replica_eval.v1',
+            'source':{'experiment_commit':'a'*40},
+            'evaluation':{'accepted':True,'disposition':'ACCEPTED_REPLICA_STAGE_C_APPLICABILITY_RECOVERY'},
+            'model_artifacts':{
+                'arm_a_final_cact_sha256':'1'*64,
+                'arm_b_early_cact_sha256':'2'*64,
+                'arm_b_final_cact_sha256':'3'*64,
+            },
+        }
+        r1=td/'r1.json'; r2=td/'r2.json'; out=td/'final.json'
+        r1.write_text(json.dumps({**base,'replica_id':'R1'}))
+        r2.write_text(json.dumps({**base,'replica_id':'R2','model_artifacts':{
+            'arm_a_final_cact_sha256':'4'*64,
+            'arm_b_early_cact_sha256':'5'*64,
+            'arm_b_final_cact_sha256':'6'*64,
+        }}))
+        x=subprocess.run(['python3',str(root/'scripts/stage_c_quality_receipt.py'),'final','--r1',str(r1),'--r2',str(r2),'--output',str(out)],text=True,capture_output=True)
+        self.assertEqual(x.returncode,0,x.stderr)
+        final=json.loads(out.read_text())
+        self.assertEqual(final['replicas']['R1']['model_artifacts']['arm_a_final_cact_sha256'],'1'*64)
+        self.assertEqual(final['replicas']['R2']['model_artifacts']['arm_b_final_cact_sha256'],'6'*64)
+

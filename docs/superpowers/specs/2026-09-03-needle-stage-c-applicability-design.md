@@ -120,6 +120,10 @@ Stage C does not perform uncontrolled online learning. Instead it models closed-
 
 This preserves reproducibility while testing the co-adaptation/recovery principle inspired by neuroprosthetic and robotic control systems.
 
+### Preregistration correction after invalidated treatment materialization
+
+Before any corrected Stage C outcome run, the reduced-phase additional-negative budget is fixed at 59 rather than 30. The prior 30-row setting was invalidated because integer allocation concentrated every reduced Arm B extra on recovery cases, making proportional recovery emphasis stronger rather than weaker. The corrected deterministic geometry is preregistered by materialized counts: early Arm A/B recovery extras 52/55 of 57, reduced Arm A/B recovery extras 54/55 of 59. Thus Arm B recovery share decreases from 55/57 to 55/59 and the B-vs-A recovery contrast decreases from +3 to +1 while the reduced phase remains 5 epochs versus 10 early epochs. This correction is based only on treatment geometry, not downstream quality outcomes.
+
 ## Acceptance criteria
 
 Arm B is considered a successful applicability-recovery candidate only if all conditions hold on both replicas:

@@ -13,7 +13,7 @@
     {
       "name": "reduced",
       "epochs": 5,
-      "additional_negative_presentations": 30,
+      "additional_negative_presentations": 59,
       "recovery_weight_scale": 0.5
     }
   ],

@@ -20,6 +20,14 @@ test -s "$early"
 test -s "$final"
 train_receipt="$TRAIN_ARTIFACT_DIR/results/train-receipt-${ARM_ID}-${REPLICA_ID}.json"
 test -s "$train_receipt"
+expected_early=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["artifacts"]["early_cact_sha256"])' "$train_receipt")
+expected_final=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["artifacts"]["final_cact_sha256"])' "$train_receipt")
+actual_early=$(sha256sum "$early" | awk '{print $1}')
+actual_final=$(sha256sum "$final" | awk '{print $1}')
+if [[ "$actual_early" != "$expected_early" || "$actual_final" != "$expected_final" ]]; then
+  echo MODEL_ARTIFACT_HASH_MISMATCH
+  exit 3
+fi
 cp "$train_receipt" "results/train-receipt-${ARM_ID}-${REPLICA_ID}.json"
 python3 scripts/run_stage_c_eval.py --semantic "$semantic" --route-schema "$route_schema" --prefix "$prefix" --split heldout --arm-id "$ARM_ID" --model-id "stage-c-${ARM_ID}-${REPLICA_ID}-early" --weights "$early" --output "results/${ARM_ID}-early-heldout-${REPLICA_ID}.jsonl"
 python3 scripts/run_stage_c_eval.py --semantic "$semantic" --route-schema "$route_schema" --prefix "$prefix" --split heldout --arm-id "$ARM_ID" --model-id "stage-c-${ARM_ID}-${REPLICA_ID}-final" --weights "$final" --output "results/${ARM_ID}-final-heldout-${REPLICA_ID}.jsonl"

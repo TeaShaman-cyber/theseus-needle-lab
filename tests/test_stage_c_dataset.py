@@ -123,7 +123,7 @@ class StageCRealCurriculumProjectionTest(unittest.TestCase):
         prefix=(root/'experiments/needle-realistic-sft/contract/route-positive-prefix.txt').read_text()
         out=build_curriculum_outputs(semantic,seed,policy,schema,prefix)
         self.assertEqual({k:len(v) for k,v in out['arms']['early'].items()},{'A':417,'B':417})
-        self.assertEqual({k:len(v) for k,v in out['arms']['reduced'].items()},{'A':390,'B':390})
+        self.assertEqual({k:len(v) for k,v in out['arms']['reduced'].items()},{'A':419,'B':419})
         heldout={r['case_id'] for r in semantic if r['split']=='heldout'}
         all_train_neg={r['case_id'] for r in semantic if r['split']=='train' and r['applicability']=='none'}
         failures=set(seed['false_call_case_ids'])
@@ -140,7 +140,7 @@ class StageCRealCurriculumProjectionTest(unittest.TestCase):
             b_counts=collections.Counter(r['case_id'] for r in out['arms'][phase]['B'] if r['case_id'] in all_train_neg)
             self.assertGreater(sum(b_counts[x] for x in failures)/len(failures), sum(b_counts[x] for x in successes)/len(successes))
         manifest=json.loads(out['files']['manifests/stage-c-curriculum-manifest.json'])
-        self.assertEqual(manifest['phase_rows'],{'early':{'A':417,'B':417},'reduced':{'A':390,'B':390}})
+        self.assertEqual(manifest['phase_rows'],{'early':{'A':417,'B':417},'reduced':{'A':419,'B':419}})
 
 class StageCCurriculumCliTest(unittest.TestCase):
     def test_cli_materializes_registered_curriculum(self):
@@ -160,10 +160,35 @@ class StageCCurriculumCliTest(unittest.TestCase):
         base=td/'experiments/needle-stage-c-applicability'
         self.assertEqual(len((base/'data/early.arm-a.train.needle.jsonl').read_text().splitlines()),417)
         self.assertEqual(len((base/'data/early.arm-b.train.needle.jsonl').read_text().splitlines()),417)
-        self.assertEqual(len((base/'data/reduced.arm-a.train.needle.jsonl').read_text().splitlines()),390)
-        self.assertEqual(len((base/'data/reduced.arm-b.train.needle.jsonl').read_text().splitlines()),390)
+        self.assertEqual(len((base/'data/reduced.arm-a.train.needle.jsonl').read_text().splitlines()),419)
+        self.assertEqual(len((base/'data/reduced.arm-b.train.needle.jsonl').read_text().splitlines()),419)
         manifest=json.loads((base/'manifests/stage-c-curriculum-manifest.json').read_text())
         self.assertEqual(manifest['phase_rows']['early'],{'A':417,'B':417})
+
+class StageCDecayGeometryRegressionTest(unittest.TestCase):
+    def test_real_reduced_phase_is_weaker_by_share_and_control_contrast(self):
+        from scripts.build_stage_c_dataset import build_curriculum_outputs
+        root=pathlib.Path(__file__).resolve().parents[1]
+        semantic=[json.loads(x) for x in (root/'experiments/needle-realistic-sft/source/semantic-cases.jsonl').read_text().splitlines() if x.strip()]
+        seed=json.loads((root/'experiments/needle-stage-c-applicability/source/stage-b-recovery-seed.json').read_text())
+        policy=json.loads((root/'experiments/needle-stage-c-applicability/contract/curriculum-policy.json').read_text())
+        schema=json.loads((root/'experiments/needle-realistic-sft/contract/route-schema.json').read_text())
+        prefix=(root/'experiments/needle-realistic-sft/contract/route-positive-prefix.txt').read_text()
+        out=build_curriculum_outputs(semantic,seed,policy,schema,prefix)
+        failures=set(seed['false_call_case_ids'])
+        def extra_stats(rows):
+            from collections import Counter
+            neg=[r for r in rows if r['canonical_state']['applicability']=='NONE']
+            c=Counter(r['case_id'] for r in neg)
+            rec=sum(v-1 for k,v in c.items() if k in failures)
+            ordinary=sum(v-1 for k,v in c.items() if k not in failures)
+            return rec,ordinary
+        ea=extra_stats(out['arms']['early']['A']); eb=extra_stats(out['arms']['early']['B'])
+        ra=extra_stats(out['arms']['reduced']['A']); rb=extra_stats(out['arms']['reduced']['B'])
+        self.assertEqual((ea,eb),((52,5),(55,2)))
+        self.assertEqual((ra,rb),((54,5),(55,4)))
+        self.assertLess(rb[0]/sum(rb),eb[0]/sum(eb))
+        self.assertLess(rb[0]-ra[0],eb[0]-ea[0])
 
 class StageCCodexP1RegressionTest(unittest.TestCase):
     def test_arm_b_supervision_contains_structured_policy_state_and_separate_route_action(self):

@@ -85,3 +85,12 @@ class StageCCodexP1EvalEntrypointRegressionTest(unittest.TestCase):
         self.assertIn('--arm-id "$ARM_ID"',text)
         self.assertIn('--route-schema',text)
         self.assertNotIn('scripts/run_realistic_sft_eval.py',text)
+
+class StageCCodexProvenanceRegressionTest(unittest.TestCase):
+    def test_eval_entrypoint_verifies_actual_cact_hashes_against_train_receipt(self):
+        text=(ROOT/'scripts/run_stage_c_full_eval.sh').read_text(encoding='utf-8')
+        self.assertIn('sha256sum',text)
+        self.assertIn('early_cact_sha256',text)
+        self.assertIn('final_cact_sha256',text)
+        self.assertIn('MODEL_ARTIFACT_HASH_MISMATCH',text)
+

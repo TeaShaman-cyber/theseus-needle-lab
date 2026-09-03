@@ -206,7 +206,10 @@ def main() -> int:
             'experiment_commit':r1['source']['experiment_commit'],
             'parent_issues':[35,36],
         },
-        'replicas':{'R1':r1['evaluation'],'R2':r2['evaluation']},
+        'replicas':{
+            'R1':{'evaluation':r1['evaluation'],'model_artifacts':r1['model_artifacts']},
+            'R2':{'evaluation':r2['evaluation'],'model_artifacts':r2['model_artifacts']},
+        },
         'disposition':disposition,
         'interpretation_boundary':'pre_registered_two_replica_stage_c_disposition',
     }
