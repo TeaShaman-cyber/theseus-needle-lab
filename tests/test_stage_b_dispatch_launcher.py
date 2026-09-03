@@ -11,6 +11,8 @@ class StageBDispatchLauncherContractTest(unittest.TestCase):
         self.assertNotIn('\n  push:', text)
         self.assertNotIn('\n  schedule:', text)
         self.assertIn('experiment_sha:', text)
+        self.assertIn('^[0-9a-f]{40}$', text)
+        self.assertIn('BLOCKED_INVALID_SHA', text)
         self.assertIn('experiment/needle-realistic-sft-spec', text)
         self.assertIn('git ls-remote origin refs/heads/experiment/needle-realistic-sft-spec', text)
         self.assertIn('test "$REMOTE_SHA" = "$REQUESTED_SHA"', text)

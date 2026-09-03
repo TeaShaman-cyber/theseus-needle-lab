@@ -25,10 +25,10 @@ jobs:
           REQUESTED_SHA: ${{ inputs.experiment_sha }}
         run: |
           set -eu
-          case "$REQUESTED_SHA" in
-            [0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]) ;;
-            *) echo "BLOCKED_INVALID_SHA"; exit 2 ;;
-          esac
+          if [[ ! "$REQUESTED_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "BLOCKED_INVALID_SHA"
+            exit 2
+          fi
           REMOTE_SHA=$(git ls-remote origin refs/heads/experiment/needle-realistic-sft-spec | awk '{print $1}')
           test -n "$REMOTE_SHA"
           test "$REMOTE_SHA" = "$REQUESTED_SHA"
