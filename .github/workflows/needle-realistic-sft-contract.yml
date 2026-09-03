@@ -1,0 +1,28 @@
+name: Needle realistic SFT contract
+
+on:
+  push:
+    branches:
+      - experiment/needle-realistic-sft-spec
+  pull_request:
+    paths:
+      - "experiments/needle-realistic-sft/**"
+      - "scripts/build_realistic_sft_dataset.py"
+      - "scripts/validate_realistic_sft_dataset.py"
+      - "tests/test_realistic_sft_dataset.py"
+      - ".github/workflows/needle-realistic-sft-contract.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Repository tests
+        run: python3 -m unittest discover -s tests -v
+      - name: Deterministic build preview
+        run: python3 scripts/build_realistic_sft_dataset.py
+      - name: Validate committed Stage B artifacts
+        run: python3 scripts/validate_realistic_sft_dataset.py
