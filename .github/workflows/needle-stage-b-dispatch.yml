@@ -29,7 +29,7 @@ jobs:
             echo "BLOCKED_INVALID_SHA"
             exit 2
           fi
-          REMOTE_SHA=$(git ls-remote origin refs/heads/experiment/needle-realistic-sft-spec | awk '{print $1}')
+          REMOTE_SHA=$(git ls-remote https://github.com/${GITHUB_REPOSITORY}.git refs/heads/experiment/needle-realistic-sft-spec | awk '{print $1}')
           test -n "$REMOTE_SHA"
           test "$REMOTE_SHA" = "$REQUESTED_SHA"
           echo "EXACT_ALLOWED_HEAD=PASS"
