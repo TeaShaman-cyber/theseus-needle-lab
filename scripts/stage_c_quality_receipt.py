@@ -330,6 +330,11 @@ def main() -> int:
             },
             'evaluation':evaluation,
             'curriculum_manifest_sha256':registered_manifest_sha,
+            'training_evidence':{
+                'seed':expected_seed,
+                'arm_a_config':train_a['training_config'],
+                'arm_b_config':train_b['training_config'],
+            },
             'model_artifacts':{
                 'arm_a_early_cact_sha256':train_a['artifacts']['early_cact_sha256'],
                 'arm_a_final_cact_sha256':train_a['artifacts']['final_cact_sha256'],
@@ -353,6 +358,14 @@ def main() -> int:
         raise ValueError('final aggregation requires registered curriculum manifest identity')
     if manifest_sha != r2.get('curriculum_manifest_sha256'):
         raise ValueError('replica curriculum manifests differ')
+    for expected_replica, receipt, expected_seed in [('R1',r1,101),('R2',r2,202)]:
+        evidence=receipt.get('training_evidence')
+        if not isinstance(evidence,dict) or evidence.get('seed') != expected_seed:
+            raise ValueError(f'{expected_replica} replica seed evidence mismatch')
+        for arm_key in ('arm_a_config','arm_b_config'):
+            config=evidence.get(arm_key)
+            if not isinstance(config,dict) or config.get('seed') != expected_seed:
+                raise ValueError(f'{expected_replica} replica {arm_key} seed evidence mismatch')
     disposition=final_disposition(r1['evaluation'],r2['evaluation'])
     final={
         'schema':'theseus.needle.stage_c_final.v1',
