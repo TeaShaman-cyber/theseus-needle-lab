@@ -1,0 +1,83 @@
+{
+  "evaluation": {
+    "applicability_regression": true,
+    "dominant_decision_ok": false,
+    "heldout": {
+      "base": {
+        "dominant_semantic_decision_rate": 0.6326530612244898,
+        "negative_n": 24,
+        "negative_no_call": 24,
+        "positive_accuracy": 0.2916666666666667,
+        "positive_correct": 21,
+        "positive_n": 72,
+        "positive_route_calls": 49,
+        "prediction_distribution": {
+          "PROBE": 1,
+          "READY": 17,
+          "UNKNOWN": 31
+        }
+      },
+      "tuned": {
+        "dominant_semantic_decision_rate": 0.8888888888888888,
+        "negative_n": 24,
+        "negative_no_call": 0,
+        "positive_accuracy": 0.4444444444444444,
+        "positive_correct": 32,
+        "positive_n": 72,
+        "positive_route_calls": 72,
+        "prediction_distribution": {
+          "PROBE": 64,
+          "READY": 4,
+          "UNKNOWN": 4
+        }
+      }
+    },
+    "heldout_negative_no_call_ok": false,
+    "heldout_positive_gain_ok": true,
+    "heldout_reachability_ok": true,
+    "learned_and_generalizes": false,
+    "train": {
+      "base": {
+        "dominant_semantic_decision_rate": 0.6443298969072165,
+        "negative_n": 60,
+        "negative_no_call": 60,
+        "positive_accuracy": 0.22333333333333333,
+        "positive_correct": 67,
+        "positive_n": 300,
+        "positive_route_calls": 194,
+        "prediction_distribution": {
+          "PROBE": 10,
+          "READY": 59,
+          "UNKNOWN": 125
+        }
+      },
+      "tuned": {
+        "dominant_semantic_decision_rate": 0.95,
+        "negative_n": 60,
+        "negative_no_call": 5,
+        "positive_accuracy": 0.38333333333333336,
+        "positive_correct": 115,
+        "positive_n": 300,
+        "positive_route_calls": 300,
+        "prediction_distribution": {
+          "PROBE": 285,
+          "READY": 15
+        }
+      }
+    },
+    "train_fit": false
+  },
+  "inputs": {
+    "train_receipt_sha256": "89b99529183ff9ee6edd5ee70e02b3f08079874abe693f799894faee2c2cded0",
+    "tuned_cact_sha256": "83aea76c7e5dab5a2bd7099479d314d403ddbd8e3a3c855de98025385d3066e2"
+  },
+  "interpretation_boundary": "paired_behavioral_evaluation_not_cross_replica_aggregation",
+  "replica_id": "R2",
+  "schema": "theseus.needle.realistic_sft_replica_eval.v1",
+  "source": {
+    "experiment_commit": "7a5f75c4e1ad249803e5bc4e4b805223e436356f",
+    "launcher_commit": "3e0e71d4848b40f35c502e80ff981b2250acecab",
+    "parent_issue": 26,
+    "workflow_run_id": "33722433205"
+  }
+}

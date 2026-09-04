@@ -1,0 +1,36 @@
+{
+  "artifacts": {
+    "adapter_sha256": "af3d545fd67efbf4d5e93904e3ad2c3124830bccbf6b2949bec2b7df2a1a8cd8",
+    "cact_sha256": "fcaccc5f1e3a46985f799be560366bf0dcde646dfba1a474c9d9bbaaddae00df"
+  },
+  "config": {
+    "batch_size": 16,
+    "cactus_needle": "2.0.8",
+    "epochs": 15,
+    "lora_alpha": 32,
+    "lora_rank": 16,
+    "lr": 0.0001,
+    "max_len": 256,
+    "seed": 0,
+    "val_split": 0.1,
+    "workers": 1
+  },
+  "inputs": {
+    "checkpoint_sha256": "4b0a972d163ffc7678fb3c36bace508114872e9d2ce9e10f225825752d3795bc",
+    "train_sha256": "af701b3e2b5d977601a4b026d6ccdf1f46831ae00c9783facf761c579115bf74"
+  },
+  "interpretation_boundary": "training_execution_receipt_not_model_quality_evidence",
+  "replica_id": "R1",
+  "resources": {
+    "build_elapsed_seconds": 4.97,
+    "train_elapsed_seconds": 8491.0,
+    "train_max_rss_kb": 4274024
+  },
+  "schema": "theseus.needle.realistic_sft_replica_train.v1",
+  "source": {
+    "experiment_commit": "7a5f75c4e1ad249803e5bc4e4b805223e436356f",
+    "launcher_commit": "3e0e71d4848b40f35c502e80ff981b2250acecab",
+    "parent_issue": 26,
+    "workflow_run_id": "33722433205"
+  }
+}
