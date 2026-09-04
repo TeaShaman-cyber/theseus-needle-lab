@@ -1,8 +1,15 @@
 from __future__ import annotations
 
 import collections
+import hashlib
+import pathlib
 
 SEMANTIC_DECISIONS = {"PROBE", "READY", "UNKNOWN"}
+CANONICAL_FIELDS=("applicability","decision","tool_need","evidence_state","cost_class","risk_class")
+REGISTERED_CURRICULUM_MANIFEST=pathlib.Path(__file__).resolve().parents[1]/"experiments/needle-stage-c-applicability/manifests/stage-c-curriculum-manifest.json"
+
+def _sha256_path(path: pathlib.Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def _expected_applicability(row: dict) -> str:
@@ -43,8 +50,24 @@ def scope_metrics(rows: list[dict]) -> dict:
 
     semantic_total = sum(semantic_predictions.values())
     dominant = max(semantic_predictions.values()) / semantic_total if semantic_total else 1.0
-    canonical_rows = [r for r in rows if r.get("expected_state") is not None or r.get("predicted_state") is not None]
+    canonical_rows = [r for r in rows if r.get("expected_state") is not None]
     canonical_correct = sum(r.get("expected_state") == r.get("predicted_state") for r in canonical_rows)
+    field_metrics={}
+    for field in CANONICAL_FIELDS:
+        confusion=collections.Counter()
+        correct=0
+        for row in canonical_rows:
+            expected_state=row.get("expected_state") or {}
+            predicted_state=row.get("predicted_state")
+            expected_value=expected_state.get(field,"INVALID")
+            predicted_value=predicted_state.get(field,"INVALID") if isinstance(predicted_state,dict) else "INVALID"
+            confusion[f"{expected_value}->{predicted_value}"] += 1
+            correct += expected_value == predicted_value
+        n=len(canonical_rows)
+        field_metrics[field]={
+            "n":n,"correct":correct,"accuracy":(correct/n) if n else None,
+            "confusion":dict(sorted(confusion.items())),
+        }
     return {
         "positive_n": len(positives),
         "positive_correct": sum(r.get("predicted") == r.get("expected") for r in positives),
@@ -59,6 +82,7 @@ def scope_metrics(rows: list[dict]) -> dict:
         "canonical_state_n": len(canonical_rows),
         "canonical_state_correct": canonical_correct,
         "canonical_state_accuracy": (canonical_correct / len(canonical_rows)) if canonical_rows else None,
+        "canonical_field_metrics":field_metrics,
     }
 
 
@@ -138,8 +162,9 @@ def validate_scope_rows(rows: list[dict], expected: dict[str, tuple[str, str]], 
                 raise ValueError(f"{label} stale state_correct field for {row['id']}")
 
 
-def evaluate_replica_pair(arm_a_final_heldout: list[dict], arm_b_early_heldout: list[dict], arm_b_final_heldout: list[dict]) -> dict:
+def evaluate_replica_pair(arm_a_final_heldout: list[dict], arm_b_early_heldout: list[dict], arm_b_final_heldout: list[dict], arm_a_early_heldout: list[dict] | None = None) -> dict:
     a = scope_metrics(arm_a_final_heldout)
+    a_early = scope_metrics(arm_a_early_heldout) if arm_a_early_heldout is not None else None
     early = scope_metrics(arm_b_early_heldout)
     final = scope_metrics(arm_b_final_heldout)
 
@@ -176,6 +201,7 @@ def evaluate_replica_pair(arm_a_final_heldout: list[dict], arm_b_early_heldout: 
 
     accepted = disposition == "ACCEPTED_REPLICA_STAGE_C_APPLICABILITY_RECOVERY"
     return {
+        "arm_a_early": a_early,
         "arm_a_final": a,
         "arm_b_early": early,
         "arm_b_final": final,
@@ -219,6 +245,8 @@ def main() -> int:
     sub=p.add_subparsers(dest='command',required=True)
     r=sub.add_parser('replica')
     r.add_argument('--semantic',type=pathlib.Path,required=True)
+    r.add_argument('--arm-a-early',type=pathlib.Path,required=True)
+    r.add_argument('--arm-a-early-train',type=pathlib.Path,required=True)
     r.add_argument('--arm-a-final',type=pathlib.Path,required=True)
     r.add_argument('--arm-a-final-train',type=pathlib.Path,required=True)
     r.add_argument('--arm-b-early',type=pathlib.Path,required=True)
@@ -241,18 +269,21 @@ def main() -> int:
         semantic_rows=_load_jsonl_path(args.semantic)
         expected_heldout=expected_scope_from_semantic(semantic_rows,'heldout')
         expected_train=expected_scope_from_semantic(semantic_rows,'train')
+        arm_a_early=_load_jsonl_path(args.arm_a_early)
+        arm_a_early_train=_load_jsonl_path(args.arm_a_early_train)
         arm_a_final=_load_jsonl_path(args.arm_a_final)
         arm_b_early=_load_jsonl_path(args.arm_b_early)
         arm_b_final=_load_jsonl_path(args.arm_b_final)
         arm_a_final_train=_load_jsonl_path(args.arm_a_final_train)
         arm_b_early_train=_load_jsonl_path(args.arm_b_early_train)
         arm_b_final_train=_load_jsonl_path(args.arm_b_final_train)
-        for label, rows in [('arm_a_final_heldout',arm_a_final),('arm_b_early_heldout',arm_b_early),('arm_b_final_heldout',arm_b_final)]:
+        for label, rows in [('arm_a_early_heldout',arm_a_early),('arm_a_final_heldout',arm_a_final),('arm_b_early_heldout',arm_b_early),('arm_b_final_heldout',arm_b_final)]:
             validate_scope_rows(rows,expected_heldout,label)
-        for label, rows in [('arm_a_final_train',arm_a_final_train),('arm_b_early_train',arm_b_early_train),('arm_b_final_train',arm_b_final_train)]:
+        for label, rows in [('arm_a_early_train',arm_a_early_train),('arm_a_final_train',arm_a_final_train),('arm_b_early_train',arm_b_early_train),('arm_b_final_train',arm_b_final_train)]:
             validate_scope_rows(rows,expected_train,label)
-        evaluation=evaluate_replica_pair(arm_a_final,arm_b_early,arm_b_final)
+        evaluation=evaluate_replica_pair(arm_a_final,arm_b_early,arm_b_final,arm_a_early_heldout=arm_a_early)
         evaluation['train_scopes']={
+            'arm_a_early':scope_metrics(arm_a_early_train),
             'arm_a_final':scope_metrics(arm_a_final_train),
             'arm_b_early':scope_metrics(arm_b_early_train),
             'arm_b_final':scope_metrics(arm_b_final_train),
@@ -272,7 +303,12 @@ def main() -> int:
                 raise ValueError('Stage C train receipt realized config mismatch')
             if train.get('inputs',{}).get('base_checkpoint_sha256') != '4b0a972d163ffc7678fb3c36bace508114872e9d2ce9e10f225825752d3795bc':
                 raise ValueError('Stage C train receipt base checkpoint mismatch')
+            registered_manifest_sha=_sha256_path(REGISTERED_CURRICULUM_MANIFEST)
+            if train.get('inputs',{}).get('curriculum_manifest_sha256') != registered_manifest_sha:
+                raise ValueError('Stage C train receipt curriculum manifest mismatch')
         slot_checks=[
+            ('arm_a_early_heldout',arm_a_early,f'stage-c-A-{args.replica_id}-early',train_a['artifacts']['early_cact_sha256']),
+            ('arm_a_early_train',arm_a_early_train,f'stage-c-A-{args.replica_id}-early',train_a['artifacts']['early_cact_sha256']),
             ('arm_a_final_heldout',arm_a_final,f'stage-c-A-{args.replica_id}-final',train_a['artifacts']['final_cact_sha256']),
             ('arm_a_final_train',arm_a_final_train,f'stage-c-A-{args.replica_id}-final',train_a['artifacts']['final_cact_sha256']),
             ('arm_b_early_heldout',arm_b_early,f'stage-c-B-{args.replica_id}-early',train_b['artifacts']['early_cact_sha256']),
@@ -293,7 +329,9 @@ def main() -> int:
                 'parent_issues':[35,36],
             },
             'evaluation':evaluation,
+            'curriculum_manifest_sha256':registered_manifest_sha,
             'model_artifacts':{
+                'arm_a_early_cact_sha256':train_a['artifacts']['early_cact_sha256'],
                 'arm_a_final_cact_sha256':train_a['artifacts']['final_cact_sha256'],
                 'arm_b_early_cact_sha256':train_b['artifacts']['early_cact_sha256'],
                 'arm_b_final_cact_sha256':train_b['artifacts']['final_cact_sha256'],
@@ -310,6 +348,11 @@ def main() -> int:
         raise ValueError('final aggregation requires R1 and R2')
     if r1['source']['experiment_commit'] != r2['source']['experiment_commit']:
         raise ValueError('replica experiment commits differ')
+    manifest_sha=r1.get('curriculum_manifest_sha256')
+    if not isinstance(manifest_sha,str) or len(manifest_sha)!=64 or any(ch not in '0123456789abcdef' for ch in manifest_sha):
+        raise ValueError('final aggregation requires registered curriculum manifest identity')
+    if manifest_sha != r2.get('curriculum_manifest_sha256'):
+        raise ValueError('replica curriculum manifests differ')
     disposition=final_disposition(r1['evaluation'],r2['evaluation'])
     final={
         'schema':'theseus.needle.stage_c_final.v1',
@@ -317,6 +360,7 @@ def main() -> int:
             'experiment_commit':r1['source']['experiment_commit'],
             'parent_issues':[35,36],
         },
+        'curriculum_manifest_sha256':r1.get('curriculum_manifest_sha256'),
         'replicas':{
             'R1':{'evaluation':r1['evaluation'],'model_artifacts':r1['model_artifacts']},
             'R2':{'evaluation':r2['evaluation'],'model_artifacts':r2['model_artifacts']},

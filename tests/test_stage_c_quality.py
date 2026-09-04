@@ -164,6 +164,10 @@ class StageCQualityCliTest(unittest.TestCase):
             }
         for row in be_rows+bf_rows:
             row['expected_state']=add_state(row); row['predicted_state']=dict(row['expected_state']); row['state_correct']=True
+        ae_rows=[dict(r) for r in a_rows]
+        for row in ae_rows:
+            row['model_id']='stage-c-A-R1-early'; row['weights_sha256']='1'*64
+        ae=write('ae.jsonl',ae_rows)
         a=write('a.jsonl',a_rows)
         be=write('be.jsonl',be_rows)
         bf=write('bf.jsonl',bf_rows)
@@ -184,6 +188,10 @@ class StageCQualityCliTest(unittest.TestCase):
             row['model_id']='stage-c-B-R1-final'; row['weights_sha256']='4'*64
         for row in bet_rows+bft_rows:
             row['expected_state']=add_state(row); row['predicted_state']=dict(row['expected_state']); row['state_correct']=True
+        aet_rows=[dict(r) for r in at_rows]
+        for row in aet_rows:
+            row['model_id']='stage-c-A-R1-early'; row['weights_sha256']='1'*64
+        aet=write('aet.jsonl',aet_rows)
         at=write('at.jsonl',at_rows); bet=write('bet.jsonl',bet_rows); bft=write('bft.jsonl',bft_rows)
         semantic=td/'semantic.jsonl'
         semantic_rows=[]
@@ -193,15 +201,18 @@ class StageCQualityCliTest(unittest.TestCase):
             semantic_rows.append({'case_id':row['id'],'split':'train','applicability':'none' if row['expected']=='NO_CALL' else 'route','expected_decision':None if row['expected']=='NO_CALL' else row['expected']})
         semantic.write_text(''.join(json.dumps(r)+'\n' for r in semantic_rows))
         train_a=td/'train-a.json'; train_b=td/'train-b.json'
-        train_a.write_text(json.dumps({'schema':'theseus.needle.stage_c_train.v1','arm_id':'A','replica_id':'R1','source':{'experiment_commit':'a'*40},'inputs':{'base_checkpoint_sha256':'4b0a972d163ffc7678fb3c36bace508114872e9d2ce9e10f225825752d3795bc'},'training_config':{'seed':101,'epochs':15,'batch_size':16,'lr':1e-4,'lora_rank':16,'lora_alpha':32.0,'max_len':512,'val_split':0.0},'artifacts':{'early_cact_sha256':'1'*64,'final_cact_sha256':'2'*64}}))
-        train_b.write_text(json.dumps({'schema':'theseus.needle.stage_c_train.v1','arm_id':'B','replica_id':'R1','source':{'experiment_commit':'a'*40},'inputs':{'base_checkpoint_sha256':'4b0a972d163ffc7678fb3c36bace508114872e9d2ce9e10f225825752d3795bc'},'training_config':{'seed':101,'epochs':15,'batch_size':16,'lr':1e-4,'lora_rank':16,'lora_alpha':32.0,'max_len':512,'val_split':0.0},'artifacts':{'early_cact_sha256':'3'*64,'final_cact_sha256':'4'*64}}))
+        import hashlib
+        manifest_sha=hashlib.sha256((root/'experiments/needle-stage-c-applicability/manifests/stage-c-curriculum-manifest.json').read_bytes()).hexdigest()
+        train_a.write_text(json.dumps({'schema':'theseus.needle.stage_c_train.v1','arm_id':'A','replica_id':'R1','source':{'experiment_commit':'a'*40},'inputs':{'base_checkpoint_sha256':'4b0a972d163ffc7678fb3c36bace508114872e9d2ce9e10f225825752d3795bc','curriculum_manifest_sha256':manifest_sha},'training_config':{'seed':101,'epochs':15,'batch_size':16,'lr':1e-4,'lora_rank':16,'lora_alpha':32.0,'max_len':512,'val_split':0.0},'artifacts':{'early_cact_sha256':'1'*64,'final_cact_sha256':'2'*64}}))
+        train_b.write_text(json.dumps({'schema':'theseus.needle.stage_c_train.v1','arm_id':'B','replica_id':'R1','source':{'experiment_commit':'a'*40},'inputs':{'base_checkpoint_sha256':'4b0a972d163ffc7678fb3c36bace508114872e9d2ce9e10f225825752d3795bc','curriculum_manifest_sha256':manifest_sha},'training_config':{'seed':101,'epochs':15,'batch_size':16,'lr':1e-4,'lora_rank':16,'lora_alpha':32.0,'max_len':512,'val_split':0.0},'artifacts':{'early_cact_sha256':'3'*64,'final_cact_sha256':'4'*64}}))
         r1=td/'r1.json'
-        cmd=['python3',str(root/'scripts/stage_c_quality_receipt.py'),'replica','--semantic',str(semantic),'--arm-a-final',str(a),'--arm-a-final-train',str(at),'--arm-b-early',str(be),'--arm-b-early-train',str(bet),'--arm-b-final',str(bf),'--arm-b-final-train',str(bft),'--arm-a-train-receipt',str(train_a),'--arm-b-train-receipt',str(train_b),'--replica-id','R1','--experiment-commit','a'*40,'--launcher-commit','b'*40,'--run-id','123','--output',str(r1)]
+        cmd=['python3',str(root/'scripts/stage_c_quality_receipt.py'),'replica','--semantic',str(semantic),'--arm-a-early',str(ae),'--arm-a-early-train',str(aet),'--arm-a-final',str(a),'--arm-a-final-train',str(at),'--arm-b-early',str(be),'--arm-b-early-train',str(bet),'--arm-b-final',str(bf),'--arm-b-final-train',str(bft),'--arm-a-train-receipt',str(train_a),'--arm-b-train-receipt',str(train_b),'--replica-id','R1','--experiment-commit','a'*40,'--launcher-commit','b'*40,'--run-id','123','--output',str(r1)]
         x=subprocess.run(cmd,text=True,capture_output=True)
         self.assertEqual(x.returncode,0,x.stderr)
         receipt=json.loads(r1.read_text())
         self.assertEqual(receipt['schema'],'theseus.needle.stage_c_replica_eval.v1')
         self.assertTrue(receipt['evaluation']['accepted'])
+        self.assertEqual(receipt['model_artifacts']['arm_a_early_cact_sha256'],'1'*64)
         self.assertEqual(receipt['model_artifacts']['arm_a_final_cact_sha256'],'2'*64)
         self.assertEqual(receipt['model_artifacts']['arm_b_early_cact_sha256'],'3'*64)
         self.assertEqual(receipt['model_artifacts']['arm_b_final_cact_sha256'],'4'*64)
@@ -240,6 +251,7 @@ class StageCFinalProvenanceRegressionTest(unittest.TestCase):
         base={
             'schema':'theseus.needle.stage_c_replica_eval.v1',
             'source':{'experiment_commit':'a'*40},
+            'curriculum_manifest_sha256':'7'*64,
             'evaluation':{'accepted':True,'disposition':'ACCEPTED_REPLICA_STAGE_C_APPLICABILITY_RECOVERY'},
             'model_artifacts':{
                 'arm_a_final_cact_sha256':'1'*64,
@@ -341,3 +353,89 @@ class StageCCodexLatestRegressionTest(unittest.TestCase):
         self.assertEqual(classify_stage_c_response({'type':'text','text':'no tool needed'},factorized=False)['predicted_route'],'NO_CALL')
         self.assertEqual(classify_stage_c_response({'type':'error','error':'runtime'},factorized=False)['predicted_route'],'INVALID')
         self.assertEqual(classify_stage_c_response({},factorized=False)['predicted_route'],'INVALID')
+
+class StageCCodexEvidenceRegressionTest(unittest.TestCase):
+    def test_scope_metrics_reports_canonical_per_field_accuracy_and_confusion(self):
+        from scripts.stage_c_quality_receipt import scope_metrics
+        rows=make_rows('state',positive_correct=36,negative_no_call=22,dominant=24)
+        fields=('applicability','decision','tool_need','evidence_state','cost_class','risk_class')
+        for i,row in enumerate(rows):
+            expected={
+                'applicability':'NONE' if row['expected']=='NO_CALL' else 'ROUTE',
+                'decision':row['expected'],
+                'tool_need':'unnecessary' if row['expected']=='NO_CALL' else 'required',
+                'evidence_state':'sufficient' if row['expected'] in {'NO_CALL','READY'} else 'insufficient',
+                'cost_class':'low','risk_class':'low',
+            }
+            predicted=dict(expected)
+            if i % 4 == 0:
+                predicted['risk_class']='high'
+            row['expected_state']=expected; row['predicted_state']=predicted
+        metrics=scope_metrics(rows)
+        self.assertEqual(metrics['canonical_field_metrics']['applicability']['accuracy'],1.0)
+        self.assertEqual(metrics['canonical_field_metrics']['risk_class']['correct'],72)
+        self.assertEqual(metrics['canonical_field_metrics']['risk_class']['n'],96)
+        self.assertEqual(metrics['canonical_field_metrics']['risk_class']['confusion']['low->high'],24)
+        self.assertEqual(set(metrics['canonical_field_metrics']),set(fields))
+
+    def test_replica_cli_requires_registered_curriculum_manifest_hash(self):
+        import pathlib, tempfile, json, subprocess
+        root=pathlib.Path(__file__).resolve().parents[1]
+        td=pathlib.Path(tempfile.mkdtemp(prefix='stage-c-manifest-hash-'))
+        # Reuse the comprehensive CLI fixture by constructing valid scopes and intentionally stale train receipt hashes.
+        from tests.test_stage_c_quality import make_rows
+        def write(name,rows):
+            p=td/name; p.write_text(''.join(json.dumps(r)+'\n' for r in rows)); return p
+        a=make_rows('heldout',36,22,24); be=make_rows('heldout',36,22,24); bf=[dict(r) for r in be]
+        # Keep registered labels identical across checkpoint slots; alter only predictions.
+        bf[0]['predicted']='NO_CALL' if bf[0]['expected']!='NO_CALL' else 'READY'; bf[0]['correct']=bf[0]['predicted']==bf[0]['expected']
+        def register(rows,arm,slot,sha):
+            for r in rows:
+                r['model_id']=f'stage-c-{arm}-R1-{slot}'; r['weights_sha256']=sha
+                if arm=='B':
+                    st={'applicability':'NONE' if r['expected']=='NO_CALL' else 'ROUTE','decision':r['expected'],'tool_need':'unnecessary' if r['expected']=='NO_CALL' else 'required','evidence_state':'sufficient' if r['expected'] in {'NO_CALL','READY'} else 'insufficient','cost_class':'low','risk_class':'low'}
+                    r['expected_state']=st; r['predicted_state']=dict(st); r['state_correct']=True
+        register(a,'A','final','2'*64); register(be,'B','early','3'*64); register(bf,'B','final','4'*64)
+        at=[{**r,'id':r['id'].replace('heldout-','train-',1),'category':r['category'].replace('heldout_','train_',1)} for r in a]
+        bet=[{**r,'id':r['id'].replace('heldout-','train-',1),'category':r['category'].replace('heldout_','train_',1)} for r in be]
+        bft=[{**r,'id':r['id'].replace('heldout-','train-',1),'category':r['category'].replace('heldout_','train_',1)} for r in bf]
+        semantic=[]
+        for r in a: semantic.append({'case_id':r['id'],'split':'heldout','applicability':'none' if r['expected']=='NO_CALL' else 'route','expected_decision':None if r['expected']=='NO_CALL' else r['expected']})
+        for r in at: semantic.append({'case_id':r['id'],'split':'train','applicability':'none' if r['expected']=='NO_CALL' else 'route','expected_decision':None if r['expected']=='NO_CALL' else r['expected']})
+        sp=td/'semantic.jsonl'; sp.write_text(''.join(json.dumps(r)+'\n' for r in semantic))
+        cfg={'seed':101,'epochs':15,'batch_size':16,'lr':1e-4,'lora_rank':16,'lora_alpha':32.0,'max_len':512,'val_split':0.0}
+        base='4b0a972d163ffc7678fb3c36bace508114872e9d2ce9e10f225825752d3795bc'
+        stale='f'*64
+        ta=td/'ta.json'; tb=td/'tb.json'
+        ta.write_text(json.dumps({'schema':'theseus.needle.stage_c_train.v1','arm_id':'A','replica_id':'R1','source':{'experiment_commit':'a'*40},'inputs':{'base_checkpoint_sha256':base,'curriculum_manifest_sha256':stale},'training_config':cfg,'artifacts':{'early_cact_sha256':'1'*64,'final_cact_sha256':'2'*64}}))
+        tb.write_text(json.dumps({'schema':'theseus.needle.stage_c_train.v1','arm_id':'B','replica_id':'R1','source':{'experiment_commit':'a'*40},'inputs':{'base_checkpoint_sha256':base,'curriculum_manifest_sha256':stale},'training_config':cfg,'artifacts':{'early_cact_sha256':'3'*64,'final_cact_sha256':'4'*64}}))
+        args=['python3',str(root/'scripts/stage_c_quality_receipt.py'),'replica','--semantic',str(sp),
+          '--arm-a-early',str(write('ae.jsonl',a)),'--arm-a-early-train',str(write('aet.jsonl',at)),
+          '--arm-a-final',str(write('af.jsonl',a)),'--arm-a-final-train',str(write('aft.jsonl',at)),
+          '--arm-b-early',str(write('be.jsonl',be)),'--arm-b-early-train',str(write('bet.jsonl',bet)),
+          '--arm-b-final',str(write('bf.jsonl',bf)),'--arm-b-final-train',str(write('bft.jsonl',bft)),
+          '--arm-a-train-receipt',str(ta),'--arm-b-train-receipt',str(tb),'--replica-id','R1','--experiment-commit','a'*40,'--launcher-commit','b'*40,'--run-id','123','--output',str(td/'out.json')]
+        x=subprocess.run(args,text=True,capture_output=True)
+        self.assertNotEqual(x.returncode,0)
+        self.assertIn('curriculum',x.stderr.lower())
+
+
+    def test_final_rejects_missing_curriculum_manifest_identity(self):
+        import json, pathlib, subprocess, tempfile
+        root=pathlib.Path(__file__).resolve().parents[1]
+        td=pathlib.Path(tempfile.mkdtemp(prefix='stage-c-final-missing-manifest-'))
+        base={'schema':'theseus.needle.stage_c_replica_eval.v1','source':{'experiment_commit':'a'*40},'evaluation':{'accepted':True,'disposition':'ACCEPTED_REPLICA_STAGE_C_APPLICABILITY_RECOVERY'},'model_artifacts':{}}
+        r1=td/'r1.json'; r2=td/'r2.json'; out=td/'out.json'
+        r1.write_text(json.dumps({**base,'replica_id':'R1'})); r2.write_text(json.dumps({**base,'replica_id':'R2'}))
+        x=subprocess.run(['python3',str(root/'scripts/stage_c_quality_receipt.py'),'final','--r1',str(r1),'--r2',str(r2),'--output',str(out)],text=True,capture_output=True)
+        self.assertNotEqual(x.returncode,0)
+        self.assertIn('curriculum',x.stderr.lower())
+
+    def test_replica_pair_preserves_arm_a_early_metrics(self):
+        from scripts.stage_c_quality_receipt import evaluate_replica_pair
+        a_early=make_rows('aearly',35,20,24)
+        a_final=make_rows('afinal',36,21,24)
+        b_early=make_rows('bearly',36,22,24)
+        b_final=make_rows('bfinal',36,22,24)
+        result=evaluate_replica_pair(a_final,b_early,b_final,arm_a_early_heldout=a_early)
+        self.assertEqual(result['arm_a_early']['positive_correct'],35)
