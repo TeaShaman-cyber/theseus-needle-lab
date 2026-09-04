@@ -1,3 +1,4 @@
+import hashlib
 import json
 import pathlib
 import unittest
@@ -5,6 +6,14 @@ import unittest
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 
 class StageCComputeSidecarContractTest(unittest.TestCase):
+
+    def test_claim_binds_current_curriculum_manifest_sha256(self):
+        claim_path=ROOT/'experiments/needle-stage-c-applicability/verification/stage-c-compute-claim.json'
+        manifest_path=ROOT/'experiments/needle-stage-c-applicability/manifests/stage-c-curriculum-manifest.json'
+        claim=json.loads(claim_path.read_text())
+        actual=hashlib.sha256(manifest_path.read_bytes()).hexdigest()
+        self.assertEqual(claim['bindings']['curriculum_manifest_sha256'],actual)
+
     def test_claim_freezes_exact_allocation_arithmetic(self):
         claim=json.loads((ROOT/'experiments/needle-stage-c-applicability/verification/stage-c-compute-claim.json').read_text())
         self.assertEqual(claim['schema_version'],'theseus.needle.stage_c_compute_claim.v1')

@@ -11,6 +11,9 @@ REGISTERED_CURRICULUM_MANIFEST=pathlib.Path(__file__).resolve().parents[1]/"expe
 def _sha256_path(path: pathlib.Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
+def _is_sha256(value: object) -> bool:
+    return isinstance(value, str) and len(value) == 64 and all(ch in '0123456789abcdef' for ch in value)
+
 
 def _expected_applicability(row: dict) -> str:
     return "NONE" if row.get("expected") == "NO_CALL" else "ROUTE"
@@ -354,10 +357,16 @@ def main() -> int:
     if r1['source']['experiment_commit'] != r2['source']['experiment_commit']:
         raise ValueError('replica experiment commits differ')
     manifest_sha=r1.get('curriculum_manifest_sha256')
-    if not isinstance(manifest_sha,str) or len(manifest_sha)!=64 or any(ch not in '0123456789abcdef' for ch in manifest_sha):
+    if not _is_sha256(manifest_sha):
         raise ValueError('final aggregation requires registered curriculum manifest identity')
     if manifest_sha != r2.get('curriculum_manifest_sha256'):
         raise ValueError('replica curriculum manifests differ')
+    required_artifacts=(
+        'arm_a_early_cact_sha256',
+        'arm_a_final_cact_sha256',
+        'arm_b_early_cact_sha256',
+        'arm_b_final_cact_sha256',
+    )
     for expected_replica, receipt, expected_seed in [('R1',r1,101),('R2',r2,202)]:
         evidence=receipt.get('training_evidence')
         if not isinstance(evidence,dict) or evidence.get('seed') != expected_seed:
@@ -366,6 +375,15 @@ def main() -> int:
             config=evidence.get(arm_key)
             if not isinstance(config,dict) or config.get('seed') != expected_seed:
                 raise ValueError(f'{expected_replica} replica {arm_key} seed evidence mismatch')
+        artifacts=receipt.get('model_artifacts')
+        if not isinstance(artifacts,dict):
+            raise ValueError(f'{expected_replica} replica model artifacts missing')
+        for artifact_key in required_artifacts:
+            if not _is_sha256(artifacts.get(artifact_key)):
+                raise ValueError(f'{expected_replica} replica invalid model artifact {artifact_key}')
+    for artifact_key in required_artifacts:
+        if r1['model_artifacts'][artifact_key] == r2['model_artifacts'][artifact_key]:
+            raise ValueError(f'replica model artifact collision: {artifact_key}')
     disposition=final_disposition(r1['evaluation'],r2['evaluation'])
     final={
         'schema':'theseus.needle.stage_c_final.v1',

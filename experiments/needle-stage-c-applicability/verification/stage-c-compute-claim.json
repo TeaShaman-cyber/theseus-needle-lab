@@ -1,7 +1,7 @@
 {
   "authority": "DIAGNOSTIC_ONLY",
   "bindings": {
-    "curriculum_manifest_sha256": "a587c9a3064d347d63008a9af26980561367450f447ddef1628fc097846d450d"
+    "curriculum_manifest_sha256": "e23718d5a10a6dfcce6f36b4db7839bd82d49bb82ca28ff79a39f906b2828c54"
   },
   "claim_id": "stage-c-treatment-geometry-v2",
   "does_not_establish": "Diagnostic verifier only; scientific acceptance remains governed by Stage C paired evaluation receipts.",
