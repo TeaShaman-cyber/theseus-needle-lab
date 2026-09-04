@@ -98,6 +98,8 @@ This correction does not erase the measured result; it changes the causal bounda
 
 ## Reproducibility / provenance
 
+The GitHub Actions run and uploaded artifacts are useful execution evidence, but their retention is finite. For durable citation, this repository preserves the two replica evaluation receipts and the final Stage B receipt under `docs/downstream-findings/evidence/stage-b-33722433205/`, together with `SHA256SUMS`. The larger per-case JSONL files remain temporary workflow artifacts; the preserved receipts retain the headline metrics, dispositions, source identities, and bound artifact hashes used by this note.
+
 The full two-job run completed its gate, training jobs, paired evaluations, and final aggregation. The final scientific result was read back from durable GitHub Actions artifacts.
 
 Relevant identities from #26:
