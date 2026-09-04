@@ -1,4 +1,4 @@
-# Downstream evaluation: SFT can improve positive routing while collapsing NO_CALL specificity
+# Downstream evaluation: Needle 2.0.8 finetune+build pipeline improved positive routing while collapsing NO_CALL specificity
 
 **Status:** reproducible downstream result / not an upstream bug claim  
 **Date:** 2026-09-04  
@@ -24,7 +24,7 @@ flowchart LR
     E --> F[Applicability regression]
 ```
 
-In this run, "better tool routing on positive cases" and "better discrimination of whether a tool should be called at all" moved in opposite directions.
+In this run, the end-to-end `finetune -> needle build -> tuned .cact` pipeline moved positive routing and applicability specificity in opposite directions. The experiment did not separately evaluate the float LoRA adapter before `needle build`, so it does not isolate training from export/deployment numerics.
 
 ## Frozen setup
 
@@ -71,7 +71,30 @@ The preregistered disposition was therefore:
 
 `REJECTED_APPLICABILITY_REGRESSION`
 
-This is not interpreted as ordinary under-training: increasing positive-call reachability further would not address a boundary that already generalized toward "call almost everything."
+This is not interpreted as ordinary under-training of the deployed artifact: increasing positive-call reachability further would not address a deployed boundary that already generalized toward "call almost everything." However, the experiment cannot attribute that collapse uniquely to SFT because scientific evaluation used the built `.cact` artifact, not a separate float-adapter control.
+
+
+## Important upstream 2.0.12 confounder discovered after publication
+
+After publishing the initial downstream summary, upstream issue [cactus-compute/needle#91](https://github.com/cactus-compute/needle/issues/91) materially narrowed the causal interpretation.
+
+The maintainer reports that `cactus-needle==2.0.12` fixes two deployment-relevant mismatches that affected earlier adapters:
+
+- the fine-tuning `<think>...` template now matches native inference;
+- quantization-aware training is now enabled by default and matched to the checkpoint deployment scheme.
+
+Our Stage B run used `cactus-needle==2.0.8`, and its tuned evaluation path was:
+
+```text
+LoRA finetune (2.0.8)
+      -> needle build
+      -> tuned .cact
+      -> scientific evaluation
+```
+
+No float-LoRA-vs-built-`.cact` paired evaluation was preregistered in Stage B. Therefore the observed applicability collapse is authoritative for the **2.0.8 end-to-end deployed artifact**, but it must not be attributed uniquely to the SFT objective. A current-main/2.0.12 retraining canary is required before generalizing the result upstream.
+
+This correction does not erase the measured result; it changes the causal boundary around it.
 
 ## Reproducibility / provenance
 
