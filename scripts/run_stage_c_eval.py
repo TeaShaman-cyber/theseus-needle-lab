@@ -5,6 +5,7 @@ import argparse
 import json
 import pathlib
 import time
+import hashlib
 
 try:
     from scripts.build_stage_c_dataset import POLICY_STATE_SCHEMA, canonical_decision_state
@@ -79,6 +80,7 @@ def build_stage_c_case(source: dict, route_schema: dict, prefix: str, arm_id: st
 
 def evaluate(cases: list[dict], *, weights: str, model_id: str, max_new_tokens: int) -> list[dict]:
     import needle
+    weights_sha256=hashlib.sha256(pathlib.Path(weights).read_bytes()).hexdigest()
     rows=[]
     for case in cases:
         agent=needle.Needle(tools=case["tools"],weights=weights)
@@ -92,7 +94,7 @@ def evaluate(cases: list[dict], *, weights: str, model_id: str, max_new_tokens: 
             "expected":case["expected_route"],"predicted":parsed["predicted_route"],
             "correct":parsed["predicted_route"]==case["expected_route"],
             "expected_state":case["expected_state"],"predicted_state":parsed["predicted_state"],"state_correct":state_correct,
-            "model_id":model_id,"max_new_tokens":max_new_tokens,"latency_ms":round(latency_ms,3),"raw_response":response,
+            "model_id":model_id,"weights_sha256":weights_sha256,"max_new_tokens":max_new_tokens,"latency_ms":round(latency_ms,3),"raw_response":response,
         })
     return rows
 

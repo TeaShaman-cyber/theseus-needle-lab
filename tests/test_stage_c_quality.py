@@ -148,6 +148,12 @@ class StageCQualityCliTest(unittest.TestCase):
             return out
         be_rows=with_registered_truth(make_rows('heldout',36,22,24))
         bf_rows=with_registered_truth(make_rows('heldout',35,21,24))
+        for row in a_rows:
+            row['model_id']='stage-c-A-R1-final'; row['weights_sha256']='2'*64
+        for row in be_rows:
+            row['model_id']='stage-c-B-R1-early'; row['weights_sha256']='3'*64
+        for row in bf_rows:
+            row['model_id']='stage-c-B-R1-final'; row['weights_sha256']='4'*64
         a=write('a.jsonl',a_rows)
         be=write('be.jsonl',be_rows)
         bf=write('bf.jsonl',bf_rows)
@@ -160,6 +166,12 @@ class StageCQualityCliTest(unittest.TestCase):
                 out.append(x)
             return out
         at_rows=train_rows(a_rows); bet_rows=train_rows(be_rows); bft_rows=train_rows(bf_rows)
+        for row in at_rows:
+            row['model_id']='stage-c-A-R1-final'; row['weights_sha256']='2'*64
+        for row in bet_rows:
+            row['model_id']='stage-c-B-R1-early'; row['weights_sha256']='3'*64
+        for row in bft_rows:
+            row['model_id']='stage-c-B-R1-final'; row['weights_sha256']='4'*64
         at=write('at.jsonl',at_rows); bet=write('bet.jsonl',bet_rows); bft=write('bft.jsonl',bft_rows)
         semantic=td/'semantic.jsonl'
         semantic_rows=[]
@@ -227,3 +239,22 @@ class StageCFinalProvenanceRegressionTest(unittest.TestCase):
         self.assertEqual(final['replicas']['R1']['model_artifacts']['arm_a_final_cact_sha256'],'1'*64)
         self.assertEqual(final['replicas']['R2']['model_artifacts']['arm_b_final_cact_sha256'],'6'*64)
 
+
+class StageCLatestReviewRegressionTest(unittest.TestCase):
+    def test_scope_metrics_recomputes_correctness_from_prediction_and_expected(self):
+        rows=make_rows('x',positive_correct=36,negative_no_call=22,dominant=24)
+        rows[0]['correct']=not (rows[0]['predicted']==rows[0]['expected'])
+        metrics=scope_metrics(rows)
+        expected=sum(r['predicted']==r['expected'] for r in rows if r['category'].endswith('_positive'))
+        self.assertEqual(metrics['positive_correct'],expected)
+
+    def test_scope_validation_can_bind_expected_model_id(self):
+        from scripts.stage_c_quality_receipt import validate_scope_rows
+        rows=make_rows('heldout')
+        for row in rows:
+            row['model_id']='stage-c-B-R1-final'
+        expected={r['id']:(r['category'],r['expected']) for r in rows}
+        validate_scope_rows(rows,expected,'heldout',expected_model_id='stage-c-B-R1-final')
+        rows[0]['model_id']='stage-c-B-R1-early'
+        with self.assertRaisesRegex(ValueError,'model_id'):
+            validate_scope_rows(rows,expected,'heldout',expected_model_id='stage-c-B-R1-final')

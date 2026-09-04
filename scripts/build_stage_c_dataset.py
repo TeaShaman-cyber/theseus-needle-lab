@@ -158,27 +158,23 @@ def build_outputs(semantic_rows: list[dict], recovery_state: list[dict], additio
     return {"arms":arms,"files":files}
 
 
-def _recovery_state_from_seed(seed: dict, scale: float) -> list[dict]:
-    return [
-        {"case_id": case_id, "recovery_priority": float(scale)}
-        for case_id in sorted(seed.get("false_call_case_ids", []))
-    ]
-
-
-def build_curriculum_outputs(semantic_rows: list[dict], seed: dict, policy: dict, schema: dict, prefix: str) -> dict:
+def build_curriculum_outputs(semantic_rows: list[dict], seed: dict, policy: dict, schema: dict, prefix: str, recovery_state: list[dict]) -> dict:
     train_rows=[row for row in semantic_rows if row.get("split")=="train"]
     heldout_ids={row["case_id"] for row in semantic_rows if row.get("split")=="heldout"}
     if set(seed.get("false_call_case_ids", [])) & heldout_ids:
         raise ValueError("heldout leakage in recovery seed")
+    recovery_ids={row.get("case_id") for row in recovery_state}
+    if not set(seed.get("false_call_case_ids", [])).issubset(recovery_ids):
+        raise ValueError("canonical recovery state is missing frozen Stage B failure cases")
     phases={}
-    files={}
+    files={"state/recovery.canonical.jsonl":_jsonl_bytes(sorted(recovery_state,key=lambda row:row["case_id"]))}
     phase_rows={}
     phase_meta=[]
     for phase in policy.get("phases", []):
         name=phase["name"]
         scale=float(phase["recovery_weight_scale"])
         additional=int(phase["additional_negative_presentations"])
-        recovery=_recovery_state_from_seed(seed,scale)
+        recovery=[{**row,"recovery_priority":float(row["recovery_priority"])*scale} for row in recovery_state]
         arms=build_stage_c_arms(train_rows,recovery,additional)
         phases[name]=arms
         phase_rows[name]={arm:len(arms[arm]) for arm in ("A","B")}
@@ -230,9 +226,17 @@ def main(argv=None) -> int:
     semantic=[json.loads(x) for x in (root/"experiments/needle-realistic-sft/source/semantic-cases.jsonl").read_text(encoding="utf-8").splitlines() if x.strip()]
     seed=json.loads((root/"experiments/needle-stage-c-applicability/source/stage-b-recovery-seed.json").read_text(encoding="utf-8"))
     policy=json.loads((root/"experiments/needle-stage-c-applicability/contract/curriculum-policy.json").read_text(encoding="utf-8"))
+    recovery_policy=json.loads((root/"experiments/needle-stage-c-applicability/contract/recovery-policy.json").read_text(encoding="utf-8"))
     schema=json.loads((root/"experiments/needle-realistic-sft/contract/route-schema.json").read_text(encoding="utf-8"))
     prefix=(root/"experiments/needle-realistic-sft/contract/route-positive-prefix.txt").read_text(encoding="utf-8")
-    outputs=build_curriculum_outputs(semantic,seed,policy,schema,prefix)
+    try:
+        from scripts.stage_c_recovery_state import build_recovery_state
+    except ModuleNotFoundError:
+        from stage_c_recovery_state import build_recovery_state
+    train_negative=[row for row in semantic if row.get("split")=="train" and row.get("applicability")=="none" and row.get("expected_decision") is None]
+    outcomes=[{"id":case_id,"predicted":"READY"} for case_id in seed.get("false_call_case_ids",[])]
+    recovery_state=build_recovery_state(train_negative,outcomes,recovery_policy)
+    outputs=build_curriculum_outputs(semantic,seed,policy,schema,prefix,recovery_state=recovery_state)
     if args.write:
         _write_curriculum_files(root,outputs["files"])
     print(json.dumps({"phase_rows":json.loads(outputs["files"]["manifests/stage-c-curriculum-manifest.json"])["phase_rows"],"files":sorted(outputs["files"])},sort_keys=True))

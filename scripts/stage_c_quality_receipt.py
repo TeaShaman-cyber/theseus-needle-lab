@@ -47,7 +47,7 @@ def scope_metrics(rows: list[dict]) -> dict:
     canonical_correct = sum(bool(r.get("state_correct")) for r in canonical_rows)
     return {
         "positive_n": len(positives),
-        "positive_correct": sum(bool(r.get("correct")) for r in positives),
+        "positive_correct": sum(r.get("predicted") == r.get("expected") for r in positives),
         "negative_n": len(negatives),
         "negative_no_call": sum(r.get("predicted") == "NO_CALL" for r in negatives),
         "applicability_confusion": dict(sorted(app_conf.items())),
@@ -76,7 +76,7 @@ def expected_scope_from_semantic(semantic_rows: list[dict], split: str) -> dict[
     return expected
 
 
-def validate_scope_rows(rows: list[dict], expected: dict[str, tuple[str, str]], label: str) -> None:
+def validate_scope_rows(rows: list[dict], expected: dict[str, tuple[str, str]], label: str, expected_model_id: str | None = None, expected_weights_sha256: str | None = None) -> None:
     ids = [row.get("id") for row in rows]
     if len(ids) != len(set(ids)) or set(ids) != set(expected):
         raise ValueError(f"{label} evaluation does not contain exact case ids")
@@ -86,6 +86,12 @@ def validate_scope_rows(rows: list[dict], expected: dict[str, tuple[str, str]], 
             raise ValueError(f"{label} category mismatch for {row['id']}")
         if row.get("expected") != decision:
             raise ValueError(f"{label} expected decision mismatch for {row['id']}")
+        if expected_model_id is not None and row.get("model_id") != expected_model_id:
+            raise ValueError(f"{label} model_id mismatch for {row['id']}")
+        if expected_weights_sha256 is not None and row.get("weights_sha256") != expected_weights_sha256:
+            raise ValueError(f"{label} weights sha256 mismatch for {row['id']}")
+        if row.get("correct") is not None and bool(row.get("correct")) != (row.get("predicted") == row.get("expected")):
+            raise ValueError(f"{label} stale correct field for {row['id']}")
 
 
 def evaluate_replica_pair(arm_a_final_heldout: list[dict], arm_b_early_heldout: list[dict], arm_b_final_heldout: list[dict]) -> dict:
@@ -216,6 +222,17 @@ def main() -> int:
                 raise ValueError('Stage C train receipt arm/replica mismatch')
             if train.get('source',{}).get('experiment_commit') != args.experiment_commit:
                 raise ValueError('Stage C train receipt experiment mismatch')
+        slot_checks=[
+            ('arm_a_final_heldout',arm_a_final,f'stage-c-A-{args.replica_id}-final',train_a['artifacts']['final_cact_sha256']),
+            ('arm_a_final_train',arm_a_final_train,f'stage-c-A-{args.replica_id}-final',train_a['artifacts']['final_cact_sha256']),
+            ('arm_b_early_heldout',arm_b_early,f'stage-c-B-{args.replica_id}-early',train_b['artifacts']['early_cact_sha256']),
+            ('arm_b_early_train',arm_b_early_train,f'stage-c-B-{args.replica_id}-early',train_b['artifacts']['early_cact_sha256']),
+            ('arm_b_final_heldout',arm_b_final,f'stage-c-B-{args.replica_id}-final',train_b['artifacts']['final_cact_sha256']),
+            ('arm_b_final_train',arm_b_final_train,f'stage-c-B-{args.replica_id}-final',train_b['artifacts']['final_cact_sha256']),
+        ]
+        for label,rows,model_id,weights_sha256 in slot_checks:
+            expected_scope=expected_heldout if label.endswith('_heldout') else expected_train
+            validate_scope_rows(rows,expected_scope,label,expected_model_id=model_id,expected_weights_sha256=weights_sha256)
         receipt={
             'schema':'theseus.needle.stage_c_replica_eval.v1',
             'replica_id':args.replica_id,

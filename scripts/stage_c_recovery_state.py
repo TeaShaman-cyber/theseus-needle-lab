@@ -42,7 +42,7 @@ def build_recovery_state(semantic_rows: list[dict], outcome_rows: list[dict], po
     semantic_by_id = {row["case_id"]: row for row in semantic_rows}
     if any(row.get("split") != "train" for row in semantic_rows):
         raise ValueError("heldout rows are forbidden in recovery state")
-    state = []
+    state_by_id = {}
     for outcome_row in outcome_rows:
         case_id = outcome_row["id"]
         semantic = semantic_by_id.get(case_id)
@@ -52,15 +52,17 @@ def build_recovery_state(semantic_rows: list[dict], outcome_rows: list[dict], po
             continue
         predicted = outcome_row.get("predicted")
         outcome = "CORRECT_NO_CALL" if predicted == "NO_CALL" else "FALSE_CALL" if predicted in {"PROBE", "READY", "UNKNOWN"} else "OTHER"
-        entry = {
-            "case_id": case_id,
-            "class": "negative_boundary",
-            "failure_count": 0,
-            "success_streak": 0,
-            "recovery_priority": 0.0,
-            "last_outcome": "OTHER",
-            "retention_zone": "normal",
-            "evictable": True,
-        }
-        state.append(update_recovery_entry(entry, outcome, policy))
-    return sorted(state, key=lambda row: row["case_id"])
+        entry = state_by_id.get(case_id)
+        if entry is None:
+            entry = {
+                "case_id": case_id,
+                "class": "negative_boundary",
+                "failure_count": 0,
+                "success_streak": 0,
+                "recovery_priority": 0.0,
+                "last_outcome": "OTHER",
+                "retention_zone": "normal",
+                "evictable": True,
+            }
+        state_by_id[case_id] = update_recovery_entry(entry, outcome, policy)
+    return sorted(state_by_id.values(), key=lambda row: row["case_id"])

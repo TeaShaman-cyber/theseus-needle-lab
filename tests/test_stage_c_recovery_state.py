@@ -88,3 +88,18 @@ class StageCRecoveryStateTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+class StageCRepeatedOutcomeRegressionTest(unittest.TestCase):
+    def test_repeated_outcomes_aggregate_into_single_entry(self):
+        semantic=[{'case_id':'train-negative-x','split':'train','applicability':'none','expected_decision':None}]
+        outcomes=[
+            {'id':'train-negative-x','predicted':'READY'},
+            {'id':'train-negative-x','predicted':'PROBE'},
+            {'id':'train-negative-x','predicted':'NO_CALL'},
+        ]
+        state=build_recovery_state(semantic,outcomes,POLICY)
+        self.assertEqual(len(state),1)
+        self.assertEqual(state[0]['failure_count'],2)
+        self.assertEqual(state[0]['success_streak'],1)
+        self.assertEqual(state[0]['recovery_priority'],2.0)
+        self.assertEqual(state[0]['last_outcome'],'CORRECT_NO_CALL')

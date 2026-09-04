@@ -6,6 +6,13 @@ import unittest
 from scripts.build_stage_c_dataset import build_stage_c_arms, canonical_decision_state
 
 
+def recovery_state_from_seed(seed):
+    return [
+        {"case_id":case_id,"class":"negative_boundary","failure_count":1,"success_streak":0,"recovery_priority":1.0,"last_outcome":"FALSE_CALL","retention_zone":"recent","evictable":False}
+        for case_id in sorted(seed.get("false_call_case_ids", []))
+    ]
+
+
 class StageCDatasetTest(unittest.TestCase):
     def _semantic(self):
         rows=[]
@@ -121,7 +128,7 @@ class StageCRealCurriculumProjectionTest(unittest.TestCase):
         policy=json.loads((root/'experiments/needle-stage-c-applicability/contract/curriculum-policy.json').read_text())
         schema=json.loads((root/'experiments/needle-realistic-sft/contract/route-schema.json').read_text())
         prefix=(root/'experiments/needle-realistic-sft/contract/route-positive-prefix.txt').read_text()
-        out=build_curriculum_outputs(semantic,seed,policy,schema,prefix)
+        out=build_curriculum_outputs(semantic,seed,policy,schema,prefix,recovery_state_from_seed(seed))
         self.assertEqual({k:len(v) for k,v in out['arms']['early'].items()},{'A':417,'B':417})
         self.assertEqual({k:len(v) for k,v in out['arms']['reduced'].items()},{'A':419,'B':419})
         heldout={r['case_id'] for r in semantic if r['split']=='heldout'}
@@ -153,6 +160,7 @@ class StageCCurriculumCliTest(unittest.TestCase):
             'experiments/needle-realistic-sft/contract/route-positive-prefix.txt',
             'experiments/needle-stage-c-applicability/source/stage-b-recovery-seed.json',
             'experiments/needle-stage-c-applicability/contract/curriculum-policy.json',
+            'experiments/needle-stage-c-applicability/contract/recovery-policy.json',
         ]:
             src=root/rel; dst=td/rel; dst.parent.mkdir(parents=True,exist_ok=True); shutil.copy2(src,dst)
         result=subprocess.run(['python3',str(root/'scripts/build_stage_c_dataset.py'),'--write','--root',str(td)],text=True,capture_output=True)
@@ -174,7 +182,7 @@ class StageCDecayGeometryRegressionTest(unittest.TestCase):
         policy=json.loads((root/'experiments/needle-stage-c-applicability/contract/curriculum-policy.json').read_text())
         schema=json.loads((root/'experiments/needle-realistic-sft/contract/route-schema.json').read_text())
         prefix=(root/'experiments/needle-realistic-sft/contract/route-positive-prefix.txt').read_text()
-        out=build_curriculum_outputs(semantic,seed,policy,schema,prefix)
+        out=build_curriculum_outputs(semantic,seed,policy,schema,prefix,recovery_state_from_seed(seed))
         failures=set(seed['false_call_case_ids'])
         def extra_stats(rows):
             from collections import Counter
@@ -242,7 +250,27 @@ class StageCTrackedArtifactConsistencyTest(unittest.TestCase):
         policy=json.loads((root/'experiments/needle-stage-c-applicability/contract/curriculum-policy.json').read_text(encoding='utf-8'))
         schema=json.loads((root/'experiments/needle-realistic-sft/contract/route-schema.json').read_text(encoding='utf-8'))
         prefix=(root/'experiments/needle-realistic-sft/contract/route-positive-prefix.txt').read_text(encoding='utf-8')
-        out=build_curriculum_outputs(semantic,seed,policy,schema,prefix)
+        out=build_curriculum_outputs(semantic,seed,policy,schema,prefix,recovery_state_from_seed(seed))
         base=root/'experiments/needle-stage-c-applicability'
         for rel,expected in out['files'].items():
             self.assertEqual((base/rel).read_bytes(),expected,rel)
+
+class StageCCanonicalRecoveryCurriculumRegressionTest(unittest.TestCase):
+    def test_curriculum_uses_canonical_recovery_priority_not_static_seed_scale(self):
+        from scripts.build_stage_c_dataset import build_curriculum_outputs
+        semantic=[
+            {'case_id':'p1','split':'train','applicability':'route','expected_decision':'PROBE','query':'positive'},
+            {'case_id':'n1','split':'train','applicability':'none','expected_decision':None,'query':'negative one'},
+            {'case_id':'n2','split':'train','applicability':'none','expected_decision':None,'query':'negative two'},
+        ]
+        seed={'false_call_case_ids':['n1']}
+        recovery=[
+            {'case_id':'n1','recovery_priority':4.0},
+            {'case_id':'n2','recovery_priority':0.25},
+        ]
+        policy={'phases':[{'name':'early','epochs':1,'additional_negative_presentations':3,'recovery_weight_scale':1.0}]}
+        route_schema={'name':'route','parameters':{'type':'object','properties':{'decision':{'type':'string','enum':['PROBE','READY','UNKNOWN']}},'required':['decision']}}
+        out=build_curriculum_outputs(semantic,seed,policy,route_schema,'prefix\n',recovery_state=recovery)
+        from collections import Counter
+        b=Counter(r['case_id'] for r in out['arms']['early']['B'] if r['canonical_state']['applicability']=='NONE')
+        self.assertGreater(b['n1'],b['n2'])
