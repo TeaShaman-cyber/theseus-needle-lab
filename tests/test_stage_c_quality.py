@@ -154,6 +154,16 @@ class StageCQualityCliTest(unittest.TestCase):
             row['model_id']='stage-c-B-R1-early'; row['weights_sha256']='3'*64
         for row in bf_rows:
             row['model_id']='stage-c-B-R1-final'; row['weights_sha256']='4'*64
+        def add_state(row):
+            return {
+                'applicability':'NONE' if row['expected']=='NO_CALL' else 'ROUTE',
+                'decision':row['expected'],
+                'tool_need':'unnecessary' if row['expected']=='NO_CALL' else 'required',
+                'evidence_state':'sufficient' if row['expected'] in {'NO_CALL','READY'} else 'insufficient',
+                'cost_class':'low','risk_class':'low',
+            }
+        for row in be_rows+bf_rows:
+            row['expected_state']=add_state(row); row['predicted_state']=dict(row['expected_state']); row['state_correct']=True
         a=write('a.jsonl',a_rows)
         be=write('be.jsonl',be_rows)
         bf=write('bf.jsonl',bf_rows)
@@ -172,6 +182,8 @@ class StageCQualityCliTest(unittest.TestCase):
             row['model_id']='stage-c-B-R1-early'; row['weights_sha256']='3'*64
         for row in bft_rows:
             row['model_id']='stage-c-B-R1-final'; row['weights_sha256']='4'*64
+        for row in bet_rows+bft_rows:
+            row['expected_state']=add_state(row); row['predicted_state']=dict(row['expected_state']); row['state_correct']=True
         at=write('at.jsonl',at_rows); bet=write('bet.jsonl',bet_rows); bft=write('bft.jsonl',bft_rows)
         semantic=td/'semantic.jsonl'
         semantic_rows=[]
@@ -181,8 +193,8 @@ class StageCQualityCliTest(unittest.TestCase):
             semantic_rows.append({'case_id':row['id'],'split':'train','applicability':'none' if row['expected']=='NO_CALL' else 'route','expected_decision':None if row['expected']=='NO_CALL' else row['expected']})
         semantic.write_text(''.join(json.dumps(r)+'\n' for r in semantic_rows))
         train_a=td/'train-a.json'; train_b=td/'train-b.json'
-        train_a.write_text(json.dumps({'schema':'theseus.needle.stage_c_train.v1','arm_id':'A','replica_id':'R1','source':{'experiment_commit':'a'*40},'artifacts':{'early_cact_sha256':'1'*64,'final_cact_sha256':'2'*64}}))
-        train_b.write_text(json.dumps({'schema':'theseus.needle.stage_c_train.v1','arm_id':'B','replica_id':'R1','source':{'experiment_commit':'a'*40},'artifacts':{'early_cact_sha256':'3'*64,'final_cact_sha256':'4'*64}}))
+        train_a.write_text(json.dumps({'schema':'theseus.needle.stage_c_train.v1','arm_id':'A','replica_id':'R1','source':{'experiment_commit':'a'*40},'inputs':{'base_checkpoint_sha256':'4b0a972d163ffc7678fb3c36bace508114872e9d2ce9e10f225825752d3795bc'},'training_config':{'seed':101,'epochs':15,'batch_size':16,'lr':1e-4,'lora_rank':16,'lora_alpha':32.0,'max_len':512,'val_split':0.0},'artifacts':{'early_cact_sha256':'1'*64,'final_cact_sha256':'2'*64}}))
+        train_b.write_text(json.dumps({'schema':'theseus.needle.stage_c_train.v1','arm_id':'B','replica_id':'R1','source':{'experiment_commit':'a'*40},'inputs':{'base_checkpoint_sha256':'4b0a972d163ffc7678fb3c36bace508114872e9d2ce9e10f225825752d3795bc'},'training_config':{'seed':101,'epochs':15,'batch_size':16,'lr':1e-4,'lora_rank':16,'lora_alpha':32.0,'max_len':512,'val_split':0.0},'artifacts':{'early_cact_sha256':'3'*64,'final_cact_sha256':'4'*64}}))
         r1=td/'r1.json'
         cmd=['python3',str(root/'scripts/stage_c_quality_receipt.py'),'replica','--semantic',str(semantic),'--arm-a-final',str(a),'--arm-a-final-train',str(at),'--arm-b-early',str(be),'--arm-b-early-train',str(bet),'--arm-b-final',str(bf),'--arm-b-final-train',str(bft),'--arm-a-train-receipt',str(train_a),'--arm-b-train-receipt',str(train_b),'--replica-id','R1','--experiment-commit','a'*40,'--launcher-commit','b'*40,'--run-id','123','--output',str(r1)]
         x=subprocess.run(cmd,text=True,capture_output=True)
@@ -204,7 +216,16 @@ class StageCCanonicalStateMetricTest(unittest.TestCase):
         from scripts.stage_c_quality_receipt import scope_metrics
         rows=make_rows('state',positive_correct=36,negative_no_call=22,dominant=24)
         for i,row in enumerate(rows):
-            row['state_correct']=(i % 4 != 0)
+            expected_state={
+                'applicability':'NONE' if row['expected']=='NO_CALL' else 'ROUTE',
+                'decision':row['expected'],
+                'tool_need':'unnecessary' if row['expected']=='NO_CALL' else 'required',
+                'evidence_state':'sufficient' if row['expected'] in {'NO_CALL','READY'} else 'insufficient',
+                'cost_class':'low','risk_class':'low',
+            }
+            row['expected_state']=expected_state
+            row['predicted_state']=dict(expected_state) if i % 4 != 0 else {**expected_state,'risk_class':'high'}
+            row['state_correct']=False
         metrics=scope_metrics(rows)
         self.assertEqual(metrics['canonical_state_n'],96)
         self.assertEqual(metrics['canonical_state_correct'],72)
@@ -258,3 +279,41 @@ class StageCLatestReviewRegressionTest(unittest.TestCase):
         rows[0]['model_id']='stage-c-B-R1-early'
         with self.assertRaisesRegex(ValueError,'model_id'):
             validate_scope_rows(rows,expected,'heldout',expected_model_id='stage-c-B-R1-final')
+
+class StageCCanonicalStateIntegrityRegressionTest(unittest.TestCase):
+    @staticmethod
+    def _state(applicability='ROUTE', decision='READY'):
+        return {
+            'applicability': applicability,
+            'decision': decision,
+            'tool_need': 'unnecessary' if applicability == 'NONE' else 'required',
+            'evidence_state': 'sufficient' if decision in {'NO_CALL','READY'} else 'insufficient',
+            'cost_class': 'low',
+            'risk_class': 'low',
+        }
+
+    def test_scope_metrics_recomputes_canonical_accuracy_from_states(self):
+        rows=make_rows('state',positive_correct=36,negative_no_call=22,dominant=24)
+        for row in rows:
+            expected=self._state('NONE','NO_CALL') if row['expected']=='NO_CALL' else self._state('ROUTE',row['expected'])
+            row['expected_state']=expected
+            row['predicted_state']=dict(expected)
+            row['state_correct']=False
+        metrics=scope_metrics(rows)
+        self.assertEqual(metrics['canonical_state_n'],96)
+        self.assertEqual(metrics['canonical_state_correct'],96)
+        self.assertEqual(metrics['canonical_state_accuracy'],1.0)
+
+    def test_arm_b_scope_requires_complete_consistent_canonical_state(self):
+        from scripts.stage_c_quality_receipt import validate_scope_rows
+        rows=make_rows('heldout')
+        expected={r['id']:(r['category'],r['expected']) for r in rows}
+        for row in rows:
+            state=self._state('NONE','NO_CALL') if row['expected']=='NO_CALL' else self._state('ROUTE',row['expected'])
+            row['expected_state']=state
+            row['predicted_state']=dict(state)
+            row['state_correct']=True
+        validate_scope_rows(rows,expected,'arm_b',require_canonical_state=True)
+        rows[0].pop('predicted_state')
+        with self.assertRaisesRegex(ValueError,'canonical state'):
+            validate_scope_rows(rows,expected,'arm_b',require_canonical_state=True)

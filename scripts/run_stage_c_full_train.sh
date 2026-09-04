@@ -54,5 +54,7 @@ python3 scripts/stage_c_train_receipt.py \
   --early-adapter "$early_adapter" --early-cact "$early_cact" \
   --final-adapter "$final_adapter" --final-cact "$final_cact" \
   --curriculum-manifest experiments/needle-stage-c-applicability/manifests/stage-c-curriculum-manifest.json \
+  --checkpoint checkpoints/needle2.pkl --seed "$train_seed" --epochs 15 --batch-size 16 --lr 1e-4 \
+  --lora-rank 16 --lora-alpha 32 --max-len 512 --val-split 0.0 \
   --output "results/train-receipt-${ARM_ID}-${REPLICA_ID}.json"
 sha256sum artifacts/* > results/artifact-sha256.txt

@@ -43,8 +43,8 @@ def scope_metrics(rows: list[dict]) -> dict:
 
     semantic_total = sum(semantic_predictions.values())
     dominant = max(semantic_predictions.values()) / semantic_total if semantic_total else 1.0
-    canonical_rows = [r for r in rows if r.get("state_correct") is not None]
-    canonical_correct = sum(bool(r.get("state_correct")) for r in canonical_rows)
+    canonical_rows = [r for r in rows if r.get("expected_state") is not None or r.get("predicted_state") is not None]
+    canonical_correct = sum(r.get("expected_state") == r.get("predicted_state") for r in canonical_rows)
     return {
         "positive_n": len(positives),
         "positive_correct": sum(r.get("predicted") == r.get("expected") for r in positives),
@@ -76,7 +76,37 @@ def expected_scope_from_semantic(semantic_rows: list[dict], split: str) -> dict[
     return expected
 
 
-def validate_scope_rows(rows: list[dict], expected: dict[str, tuple[str, str]], label: str, expected_model_id: str | None = None, expected_weights_sha256: str | None = None) -> None:
+
+def _registered_canonical_state(decision: str) -> dict:
+    if decision == "NO_CALL":
+        return {
+            "applicability":"NONE","decision":"NO_CALL","tool_need":"unnecessary",
+            "evidence_state":"sufficient","cost_class":"low","risk_class":"low",
+        }
+    if decision in SEMANTIC_DECISIONS:
+        return {
+            "applicability":"ROUTE","decision":decision,"tool_need":"required",
+            "evidence_state":"sufficient" if decision == "READY" else "insufficient",
+            "cost_class":"low","risk_class":"low",
+        }
+    raise ValueError("invalid registered route decision")
+
+
+def _valid_canonical_state(state: dict) -> bool:
+    required={"applicability","decision","tool_need","evidence_state","cost_class","risk_class"}
+    if not isinstance(state,dict) or set(state) != required:
+        return False
+    if state["applicability"] not in {"NONE","ROUTE"}: return False
+    if state["decision"] not in {"NO_CALL","PROBE","READY","UNKNOWN"}: return False
+    if state["applicability"] == "NONE" and state["decision"] != "NO_CALL": return False
+    if state["applicability"] == "ROUTE" and state["decision"] not in SEMANTIC_DECISIONS: return False
+    if state["tool_need"] not in {"unnecessary","required","helpful","unknown"}: return False
+    if state["evidence_state"] not in {"sufficient","insufficient","conflicting"}: return False
+    if state["cost_class"] not in {"low","medium","high"}: return False
+    if state["risk_class"] not in {"low","medium","high"}: return False
+    return True
+
+def validate_scope_rows(rows: list[dict], expected: dict[str, tuple[str, str]], label: str, expected_model_id: str | None = None, expected_weights_sha256: str | None = None, require_canonical_state: bool = False) -> None:
     ids = [row.get("id") for row in rows]
     if len(ids) != len(set(ids)) or set(ids) != set(expected):
         raise ValueError(f"{label} evaluation does not contain exact case ids")
@@ -92,6 +122,18 @@ def validate_scope_rows(rows: list[dict], expected: dict[str, tuple[str, str]], 
             raise ValueError(f"{label} weights sha256 mismatch for {row['id']}")
         if row.get("correct") is not None and bool(row.get("correct")) != (row.get("predicted") == row.get("expected")):
             raise ValueError(f"{label} stale correct field for {row['id']}")
+        if require_canonical_state:
+            expected_state=row.get("expected_state")
+            predicted_state=row.get("predicted_state")
+            if not isinstance(expected_state,dict) or not isinstance(predicted_state,dict):
+                raise ValueError(f"{label} canonical state missing for {row['id']}")
+            if not _valid_canonical_state(expected_state) or not _valid_canonical_state(predicted_state):
+                raise ValueError(f"{label} canonical state invalid for {row['id']}")
+            if expected_state != _registered_canonical_state(decision):
+                raise ValueError(f"{label} expected canonical state mismatch for {row['id']}")
+            derived=expected_state == predicted_state
+            if row.get("state_correct") is not None and bool(row.get("state_correct")) != derived:
+                raise ValueError(f"{label} stale state_correct field for {row['id']}")
 
 
 def evaluate_replica_pair(arm_a_final_heldout: list[dict], arm_b_early_heldout: list[dict], arm_b_final_heldout: list[dict]) -> dict:
@@ -222,6 +264,12 @@ def main() -> int:
                 raise ValueError('Stage C train receipt arm/replica mismatch')
             if train.get('source',{}).get('experiment_commit') != args.experiment_commit:
                 raise ValueError('Stage C train receipt experiment mismatch')
+            expected_seed={'R1':101,'R2':202}[args.replica_id]
+            expected_config={'seed':expected_seed,'epochs':15,'batch_size':16,'lr':1e-4,'lora_rank':16,'lora_alpha':32.0,'max_len':512,'val_split':0.0}
+            if train.get('training_config') != expected_config:
+                raise ValueError('Stage C train receipt realized config mismatch')
+            if train.get('inputs',{}).get('base_checkpoint_sha256') != '4b0a972d163ffc7678fb3c36bace508114872e9d2ce9e10f225825752d3795bc':
+                raise ValueError('Stage C train receipt base checkpoint mismatch')
         slot_checks=[
             ('arm_a_final_heldout',arm_a_final,f'stage-c-A-{args.replica_id}-final',train_a['artifacts']['final_cact_sha256']),
             ('arm_a_final_train',arm_a_final_train,f'stage-c-A-{args.replica_id}-final',train_a['artifacts']['final_cact_sha256']),
@@ -232,7 +280,7 @@ def main() -> int:
         ]
         for label,rows,model_id,weights_sha256 in slot_checks:
             expected_scope=expected_heldout if label.endswith('_heldout') else expected_train
-            validate_scope_rows(rows,expected_scope,label,expected_model_id=model_id,expected_weights_sha256=weights_sha256)
+            validate_scope_rows(rows,expected_scope,label,expected_model_id=model_id,expected_weights_sha256=weights_sha256,require_canonical_state=label.startswith('arm_b_'))
         receipt={
             'schema':'theseus.needle.stage_c_replica_eval.v1',
             'replica_id':args.replica_id,
