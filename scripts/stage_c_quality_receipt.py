@@ -125,10 +125,12 @@ def validate_scope_rows(rows: list[dict], expected: dict[str, tuple[str, str]], 
         if require_canonical_state:
             expected_state=row.get("expected_state")
             predicted_state=row.get("predicted_state")
-            if not isinstance(expected_state,dict) or not isinstance(predicted_state,dict):
-                raise ValueError(f"{label} canonical state missing for {row['id']}")
-            if not _valid_canonical_state(expected_state) or not _valid_canonical_state(predicted_state):
-                raise ValueError(f"{label} canonical state invalid for {row['id']}")
+            if not isinstance(expected_state,dict):
+                raise ValueError(f"{label} canonical expected state missing for {row['id']}")
+            if not _valid_canonical_state(expected_state):
+                raise ValueError(f"{label} canonical expected state invalid for {row['id']}")
+            if predicted_state != "INVALID" and not _valid_canonical_state(predicted_state):
+                raise ValueError(f"{label} canonical state prediction missing or corrupt for {row['id']}")
             if expected_state != _registered_canonical_state(decision):
                 raise ValueError(f"{label} expected canonical state mismatch for {row['id']}")
             derived=expected_state == predicted_state

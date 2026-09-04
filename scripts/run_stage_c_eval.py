@@ -39,8 +39,11 @@ def _strict_state(arguments):
 
 def classify_stage_c_response(response: dict, *, factorized: bool) -> dict:
     calls=response.get("function_calls") or []
-    if response.get("type") != "call" or not calls:
+    response_type=response.get("type")
+    if response_type == "text":
         return {"predicted_route":"NO_CALL","predicted_state":"INVALID" if factorized else None}
+    if response_type != "call" or not calls:
+        return {"predicted_route":"INVALID","predicted_state":"INVALID" if factorized else None}
     route_calls=[c for c in calls if c.get("name")=="route"]
     other=[c for c in calls if c.get("name") not in ({"route","policy_state"} if factorized else {"route"})]
     if other or len(route_calls)>1:

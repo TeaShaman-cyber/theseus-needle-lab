@@ -317,3 +317,27 @@ class StageCCanonicalStateIntegrityRegressionTest(unittest.TestCase):
         rows[0].pop('predicted_state')
         with self.assertRaisesRegex(ValueError,'canonical state'):
             validate_scope_rows(rows,expected,'arm_b',require_canonical_state=True)
+
+
+class StageCCodexLatestRegressionTest(unittest.TestCase):
+    def test_invalid_predicted_state_counts_as_incorrect_instead_of_aborting(self):
+        from scripts.stage_c_quality_receipt import validate_scope_rows, scope_metrics
+        rows=make_rows('heldout')
+        expected={r['id']:(r['category'],r['expected']) for r in rows}
+        state=StageCCanonicalStateIntegrityRegressionTest._state
+        for row in rows:
+            row['expected_state']=state('NONE','NO_CALL') if row['expected']=='NO_CALL' else state('ROUTE',row['expected'])
+            row['predicted_state']=dict(row['expected_state'])
+            row['state_correct']=True
+        rows[0]['predicted_state']='INVALID'
+        rows[0]['state_correct']=False
+        validate_scope_rows(rows,expected,'arm_b',require_canonical_state=True)
+        metrics=scope_metrics(rows)
+        self.assertEqual(metrics['canonical_state_n'],96)
+        self.assertEqual(metrics['canonical_state_correct'],95)
+
+    def test_only_normal_text_response_counts_as_no_call(self):
+        from scripts.run_stage_c_eval import classify_stage_c_response
+        self.assertEqual(classify_stage_c_response({'type':'text','text':'no tool needed'},factorized=False)['predicted_route'],'NO_CALL')
+        self.assertEqual(classify_stage_c_response({'type':'error','error':'runtime'},factorized=False)['predicted_route'],'INVALID')
+        self.assertEqual(classify_stage_c_response({},factorized=False)['predicted_route'],'INVALID')
