@@ -381,9 +381,13 @@ def main() -> int:
         for artifact_key in required_artifacts:
             if not _is_sha256(artifacts.get(artifact_key)):
                 raise ValueError(f'{expected_replica} replica invalid model artifact {artifact_key}')
-    for artifact_key in required_artifacts:
-        if r1['model_artifacts'][artifact_key] == r2['model_artifacts'][artifact_key]:
-            raise ValueError(f'replica model artifact collision: {artifact_key}')
+        artifact_hashes={artifacts[artifact_key] for artifact_key in required_artifacts}
+        if len(artifact_hashes) != len(required_artifacts):
+            raise ValueError(f'{expected_replica} replica model artifact collision within replica')
+    r1_hashes={r1['model_artifacts'][artifact_key] for artifact_key in required_artifacts}
+    r2_hashes={r2['model_artifacts'][artifact_key] for artifact_key in required_artifacts}
+    if r1_hashes & r2_hashes:
+        raise ValueError('replica model artifact collision across replicas')
     disposition=final_disposition(r1['evaluation'],r2['evaluation'])
     final={
         'schema':'theseus.needle.stage_c_final.v1',

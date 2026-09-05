@@ -476,6 +476,65 @@ class StageCReplicaIndependenceRegressionTest(unittest.TestCase):
         x=subprocess.run(["python3",str(root/"scripts/stage_c_quality_receipt.py"),"final","--r1",str(r1),"--r2",str(r2),"--output",str(out)],text=True,capture_output=True)
         self.assertNotEqual(x.returncode,0)
         self.assertIn("artifact",x.stderr.lower())
+
+    def test_final_rejects_permuted_artifact_reuse_across_replicas(self):
+        import json, pathlib, subprocess, tempfile
+        root=pathlib.Path(__file__).resolve().parents[1]
+        td=pathlib.Path(tempfile.mkdtemp(prefix="stage-c-permuted-artifacts-"))
+        r1_artifacts={
+            "arm_a_early_cact_sha256":"1"*64,
+            "arm_a_final_cact_sha256":"2"*64,
+            "arm_b_early_cact_sha256":"3"*64,
+            "arm_b_final_cact_sha256":"4"*64,
+        }
+        r2_artifacts={
+            "arm_a_early_cact_sha256":"2"*64,
+            "arm_a_final_cact_sha256":"1"*64,
+            "arm_b_early_cact_sha256":"4"*64,
+            "arm_b_final_cact_sha256":"3"*64,
+        }
+        base={
+            "schema":"theseus.needle.stage_c_replica_eval.v1",
+            "source":{"experiment_commit":"b"*40},
+            "curriculum_manifest_sha256":"a"*64,
+            "evaluation":{"accepted":True,"disposition":"ACCEPTED_REPLICA_STAGE_C_APPLICABILITY_RECOVERY"},
+        }
+        r1=td/"r1.json"; r2=td/"r2.json"; out=td/"final.json"
+        r1.write_text(json.dumps({**base,"replica_id":"R1","training_evidence":{"seed":101,"arm_a_config":{"seed":101},"arm_b_config":{"seed":101}},"model_artifacts":r1_artifacts}))
+        r2.write_text(json.dumps({**base,"replica_id":"R2","training_evidence":{"seed":202,"arm_a_config":{"seed":202},"arm_b_config":{"seed":202}},"model_artifacts":r2_artifacts}))
+        x=subprocess.run(["python3",str(root/"scripts/stage_c_quality_receipt.py"),"final","--r1",str(r1),"--r2",str(r2),"--output",str(out)],text=True,capture_output=True)
+        self.assertNotEqual(x.returncode,0)
+        self.assertIn("artifact",x.stderr.lower())
+
+    def test_final_rejects_duplicate_checkpoint_hash_within_replica(self):
+        import json, pathlib, subprocess, tempfile
+        root=pathlib.Path(__file__).resolve().parents[1]
+        td=pathlib.Path(tempfile.mkdtemp(prefix="stage-c-intra-replica-artifacts-"))
+        r1_artifacts={
+            "arm_a_early_cact_sha256":"1"*64,
+            "arm_a_final_cact_sha256":"1"*64,
+            "arm_b_early_cact_sha256":"3"*64,
+            "arm_b_final_cact_sha256":"4"*64,
+        }
+        r2_artifacts={
+            "arm_a_early_cact_sha256":"5"*64,
+            "arm_a_final_cact_sha256":"6"*64,
+            "arm_b_early_cact_sha256":"7"*64,
+            "arm_b_final_cact_sha256":"8"*64,
+        }
+        base={
+            "schema":"theseus.needle.stage_c_replica_eval.v1",
+            "source":{"experiment_commit":"b"*40},
+            "curriculum_manifest_sha256":"a"*64,
+            "evaluation":{"accepted":True,"disposition":"ACCEPTED_REPLICA_STAGE_C_APPLICABILITY_RECOVERY"},
+        }
+        r1=td/"r1.json"; r2=td/"r2.json"; out=td/"final.json"
+        r1.write_text(json.dumps({**base,"replica_id":"R1","training_evidence":{"seed":101,"arm_a_config":{"seed":101},"arm_b_config":{"seed":101}},"model_artifacts":r1_artifacts}))
+        r2.write_text(json.dumps({**base,"replica_id":"R2","training_evidence":{"seed":202,"arm_a_config":{"seed":202},"arm_b_config":{"seed":202}},"model_artifacts":r2_artifacts}))
+        x=subprocess.run(["python3",str(root/"scripts/stage_c_quality_receipt.py"),"final","--r1",str(r1),"--r2",str(r2),"--output",str(out)],text=True,capture_output=True)
+        self.assertNotEqual(x.returncode,0)
+        self.assertIn("artifact",x.stderr.lower())
+
     def test_final_rejects_cloned_replica_receipt_with_wrong_seed_binding(self):
         import json, pathlib, subprocess, tempfile
         root=pathlib.Path(__file__).resolve().parents[1]
