@@ -1,5 +1,10 @@
+import hashlib
+import re
 import unittest
 from pathlib import Path
+
+
+APPROVED_ACTIVE_SHA256 = "14ca7b4d9a6f1e5c5fc0cc342e202d4ce7dbb43bec69890504204c92241861e8"
 
 
 class ProjectCookbookContractTests(unittest.TestCase):
@@ -51,8 +56,19 @@ class ProjectCookbookContractTests(unittest.TestCase):
 
     def test_candidate_lessons_do_not_become_active_rules(self):
         active, candidate = self.sections()
-        import re
-        self.assertEqual(re.findall(r"NDL-\d{3}", active), ["NDL-001", "NDL-002", "NDL-003"])
+        self.assertEqual(
+            re.findall(r"NDL-\d{3}", active),
+            ["NDL-001", "NDL-002", "NDL-003"],
+        )
+        self.assertEqual(
+            hashlib.sha256(active.encode("utf-8")).hexdigest(),
+            APPROVED_ACTIVE_SHA256,
+        )
+        tampered = active + "\nCandidate workaround: unreviewed operational shortcut.\n"
+        self.assertNotEqual(
+            hashlib.sha256(tampered.encode("utf-8")).hexdigest(),
+            APPROVED_ACTIVE_SHA256,
+        )
         self.assertNotIn("Candidate lessons are not active guidance", active)
         self.assertIn("Candidate lessons are not active guidance", candidate)
         self.assertIn("reviewed repository change", candidate)
