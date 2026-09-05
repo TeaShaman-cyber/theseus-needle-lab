@@ -22,7 +22,7 @@ Evidence basis:
 
 Experiment execution must bind the exact source revision being tested.
 
-Important artifacts and receipts must preserve their relevant identity and SHA-256 integrity evidence. Do not substitute a local branch name, stale tracking ref, launcher revision, or storage location for the exact experiment/artifact identity.
+Receipts preserve the relevant provenance identities and verification state they attest to. Important artifacts preserve recorded SHA-256 content hashes. Do not substitute a local branch name, stale tracking ref, launcher revision, or storage location for the exact experiment or artifact identity.
 
 Evidence basis:
 - `docs/architecture.md`
@@ -32,7 +32,7 @@ Evidence basis:
 
 Keep `ACCEPTED`, `REJECTED`, and `INCONCLUSIVE` distinct.
 
-An infrastructure timeout, unavailable verifier, incomplete replica set, missing readback, or other unresolved condition must not be silently rewritten as scientific failure or success. Preserve the bounded reason and continue only through a separately justified recovery route.
+`REJECTED` and `INCONCLUSIVE` are preserved outcomes, not failures of record keeping. Do not silently rewrite one disposition as another or infer scientific acceptance from execution success.
 
 Evidence basis:
 - `README.md`
@@ -49,7 +49,7 @@ Do not copy a candidate workaround into the active rules merely because it worke
 
 ## Scope boundary
 
-This cookbook owns Needle-specific scientific, CI, provenance, and experiment-workflow guidance.
+This cookbook covers Needle-specific scientific, CI, provenance, and experiment-workflow procedures.
 
 Runtime-specific MarcoPolo transport, shell, connector, persistence, and tool-routing guidance belongs in the MarcoPolo runtime cookbook.
 
