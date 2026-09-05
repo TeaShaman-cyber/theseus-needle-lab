@@ -1,0 +1,21 @@
+{
+  "schema_version": "needle-stage-c-curriculum-policy-v1",
+  "total_epochs": 15,
+  "base_positive_rows": 300,
+  "base_negative_rows": 60,
+  "phases": [
+    {
+      "name": "early",
+      "epochs": 10,
+      "additional_negative_presentations": 57,
+      "recovery_weight_scale": 1.0
+    },
+    {
+      "name": "reduced",
+      "epochs": 5,
+      "additional_negative_presentations": 59,
+      "recovery_weight_scale": 0.5
+    }
+  ],
+  "max_len": 512
+}

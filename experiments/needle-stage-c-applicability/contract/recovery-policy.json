@@ -1,0 +1,8 @@
+{
+  "schema_version": "needle-stage-c-recovery-policy-v1",
+  "false_call_increment": 1.0,
+  "max_priority": 4.0,
+  "successes_before_decay": 2,
+  "success_decay_factor": 0.5,
+  "min_active_priority": 0.25
+}

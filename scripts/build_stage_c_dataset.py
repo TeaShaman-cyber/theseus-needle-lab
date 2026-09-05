@@ -1,0 +1,247 @@
+from __future__ import annotations
+
+import math
+
+POLICY_STATE_SCHEMA = {
+    "name": "policy_state",
+    "description": "Report the bounded Stage C applicability state; this is a training/evaluation state head, not the observable route action.",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "applicability": {"type": "string", "enum": ["NONE", "ROUTE"]},
+            "decision": {"type": "string", "enum": ["NO_CALL", "PROBE", "READY", "UNKNOWN"]},
+            "tool_need": {"type": "string", "enum": ["unnecessary", "required", "helpful", "unknown"]},
+            "evidence_state": {"type": "string", "enum": ["sufficient", "insufficient", "conflicting"]},
+            "cost_class": {"type": "string", "enum": ["low", "medium", "high"]},
+            "risk_class": {"type": "string", "enum": ["low", "medium", "high"]},
+        },
+        "required": ["applicability", "decision", "tool_need", "evidence_state", "cost_class", "risk_class"],
+    },
+}
+
+
+def canonical_decision_state(row: dict) -> dict:
+    applicability = row.get("applicability")
+    decision = row.get("expected_decision")
+    if applicability == "none" and decision is None:
+        return {
+            "applicability": "NONE",
+            "decision": "NO_CALL",
+            "tool_need": "unnecessary",
+            "evidence_state": "sufficient",
+            "cost_class": "low",
+            "risk_class": "low",
+        }
+    if applicability == "route" and decision in {"PROBE", "READY", "UNKNOWN"}:
+        return {
+            "applicability": "ROUTE",
+            "decision": decision,
+            "tool_need": "required",
+            "evidence_state": "sufficient" if decision == "READY" else "insufficient",
+            "cost_class": "low",
+            "risk_class": "low",
+        }
+    raise ValueError("invalid Stage C semantic row")
+
+
+def _allocate(ids: list[str], weights: dict[str, float], budget: int) -> dict[str, int]:
+    if budget < 0:
+        raise ValueError("negative budget")
+    if not ids:
+        return {}
+    total = sum(max(0.0, float(weights.get(case_id, 0.0))) for case_id in ids)
+    if total <= 0:
+        weights = {case_id: 1.0 for case_id in ids}
+        total = float(len(ids))
+    quotas = {case_id: max(0.0, float(weights.get(case_id, 0.0))) / total * budget for case_id in ids}
+    counts = {case_id: math.floor(quotas[case_id]) for case_id in ids}
+    remaining = budget - sum(counts.values())
+    order = sorted(ids, key=lambda case_id: (-(quotas[case_id] - counts[case_id]), hashlib.sha256(case_id.encode("utf-8")).hexdigest()))
+    for case_id in order[:remaining]:
+        counts[case_id] += 1
+    return counts
+
+
+def _materialize(rows_by_id: dict[str, dict], positives: list[str], negative_counts: dict[str, int]) -> list[dict]:
+    out=[]
+    for case_id in sorted(positives):
+        row=rows_by_id[case_id]
+        out.append({"case_id":case_id,"query":row["query"],"canonical_state":canonical_decision_state(row)})
+    for case_id in sorted(negative_counts):
+        row=rows_by_id[case_id]
+        for occurrence in range(negative_counts[case_id]):
+            out.append({"case_id":case_id,"query":row["query"],"canonical_state":canonical_decision_state(row),"sample_ordinal":occurrence})
+    return out
+
+
+def build_stage_c_arms(semantic_rows: list[dict], recovery_state: list[dict], additional_negative_budget: int) -> dict[str, list[dict]]:
+    if any(row.get("split") != "train" for row in semantic_rows):
+        raise ValueError("heldout rows are forbidden from Stage C training projection")
+    rows_by_id={row["case_id"]:row for row in semantic_rows}
+    positives=sorted(row["case_id"] for row in semantic_rows if row.get("applicability")=="route")
+    negatives=sorted(row["case_id"] for row in semantic_rows if row.get("applicability")=="none" and row.get("expected_decision") is None)
+    recovery_by_id={row["case_id"]:float(row["recovery_priority"]) for row in recovery_state}
+    unknown=set(recovery_by_id)-set(negatives)
+    if unknown:
+        raise ValueError(f"recovery state references non-training-negative cases: {sorted(unknown)}")
+    uniform={case_id:1.0 for case_id in negatives}
+    adaptive={case_id:1.0+max(0.0,recovery_by_id.get(case_id,0.0)) for case_id in negatives}
+    a_extra=_allocate(negatives,uniform,additional_negative_budget)
+    b_extra=_allocate(negatives,adaptive,additional_negative_budget)
+    a_counts={case_id:1+a_extra.get(case_id,0) for case_id in negatives}
+    b_counts={case_id:1+b_extra.get(case_id,0) for case_id in negatives}
+    return {
+        "A":_materialize(rows_by_id,positives,a_counts),
+        "B":_materialize(rows_by_id,positives,b_counts),
+    }
+
+import hashlib
+import json
+
+
+def _jsonl_bytes(rows: list[dict]) -> bytes:
+    return b"".join(json.dumps(row, ensure_ascii=False, separators=(",", ":")).encode("utf-8") + b"\n" for row in rows)
+
+
+def _stable_json_bytes(obj: object) -> bytes:
+    return json.dumps(obj, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8") + b"\n"
+
+
+def _behavioral_projection(row: dict, schema: dict, prefix: str, *, factorized: bool = False) -> dict:
+    state=row["canonical_state"]
+    if not factorized:
+        if state["applicability"] == "NONE":
+            return {"query": row["query"], "tools": [schema], "answers": []}
+        decision=state["decision"]
+        if decision not in {"PROBE","READY","UNKNOWN"}:
+            raise ValueError("invalid route decision")
+        return {
+            "query": prefix + row["query"],
+            "tools": [schema],
+            "answers": [{"name":"route","arguments":{"decision":decision}}],
+        }
+
+    state_call={"name":"policy_state","arguments":dict(state)}
+    tools=[POLICY_STATE_SCHEMA,schema]
+    if state["applicability"] == "NONE":
+        return {"query": row["query"], "tools": tools, "answers": [state_call]}
+    decision=state["decision"]
+    if decision not in {"PROBE","READY","UNKNOWN"}:
+        raise ValueError("invalid route decision")
+    return {
+        "query": prefix + row["query"],
+        "tools": tools,
+        "answers": [state_call,{"name":"route","arguments":{"decision":decision}}],
+    }
+
+
+def build_outputs(semantic_rows: list[dict], recovery_state: list[dict], additional_negative_budget: int, schema: dict, prefix: str) -> dict:
+    arms=build_stage_c_arms(semantic_rows,recovery_state,additional_negative_budget)
+    files={}
+    for arm in ("A","B"):
+        slug=arm.lower()
+        files[f"state/arm-{slug}.canonical.jsonl"]=_jsonl_bytes(arms[arm])
+        files[f"data/arm-{slug}.train.needle.jsonl"]=_jsonl_bytes([
+            _behavioral_projection(row,schema,prefix,factorized=(arm=="B")) for row in arms[arm]
+        ])
+    bindings=[]
+    for path in sorted(files):
+        payload=files[path]
+        bindings.append({"path":path,"sha256":hashlib.sha256(payload).hexdigest(),"bytes":len(payload)})
+    manifest={
+        "schema_version":"needle-stage-c-dataset-manifest-v1",
+        "additional_negative_budget_per_arm":additional_negative_budget,
+        "arm_rows":{arm:len(arms[arm]) for arm in ("A","B")},
+        "bindings":bindings,
+    }
+    files["manifests/stage-c-dataset-manifest.json"]=_stable_json_bytes(manifest)
+    return {"arms":arms,"files":files}
+
+
+def build_curriculum_outputs(semantic_rows: list[dict], seed: dict, policy: dict, schema: dict, prefix: str, recovery_state: list[dict]) -> dict:
+    train_rows=[row for row in semantic_rows if row.get("split")=="train"]
+    heldout_ids={row["case_id"] for row in semantic_rows if row.get("split")=="heldout"}
+    if set(seed.get("false_call_case_ids", [])) & heldout_ids:
+        raise ValueError("heldout leakage in recovery seed")
+    recovery_ids={row.get("case_id") for row in recovery_state}
+    if not set(seed.get("false_call_case_ids", [])).issubset(recovery_ids):
+        raise ValueError("canonical recovery state is missing frozen Stage B failure cases")
+    phases={}
+    files={"state/recovery.canonical.jsonl":_jsonl_bytes(sorted(recovery_state,key=lambda row:row["case_id"]))}
+    phase_rows={}
+    phase_meta=[]
+    for phase in policy.get("phases", []):
+        name=phase["name"]
+        scale=float(phase["recovery_weight_scale"])
+        additional=int(phase["additional_negative_presentations"])
+        recovery=[{**row,"recovery_priority":float(row["recovery_priority"])*scale} for row in recovery_state]
+        arms=build_stage_c_arms(train_rows,recovery,additional)
+        phases[name]=arms
+        phase_rows[name]={arm:len(arms[arm]) for arm in ("A","B")}
+        phase_meta.append({
+            "name":name,
+            "epochs":int(phase["epochs"]),
+            "additional_negative_presentations":additional,
+            "recovery_weight_scale":scale,
+        })
+        for arm in ("A","B"):
+            slug=arm.lower()
+            files[f"state/{name}.arm-{slug}.canonical.jsonl"]=_jsonl_bytes(arms[arm])
+            files[f"data/{name}.arm-{slug}.train.needle.jsonl"]=_jsonl_bytes([
+                _behavioral_projection(row,schema,prefix,factorized=(arm=="B")) for row in arms[arm]
+            ])
+    bindings=[]
+    for path in sorted(files):
+        payload=files[path]
+        bindings.append({"path":path,"sha256":hashlib.sha256(payload).hexdigest(),"bytes":len(payload)})
+    manifest={
+        "schema_version":"needle-stage-c-curriculum-manifest-v1",
+        "source_stage_b_run_id":seed.get("stage_b_workflow_run_id"),
+        "source_stage_b_experiment_commit":seed.get("source_experiment_commit"),
+        "phase_rows":phase_rows,
+        "phases":phase_meta,
+        "bindings":bindings,
+    }
+    files["manifests/stage-c-curriculum-manifest.json"]=_stable_json_bytes(manifest)
+    return {"arms":phases,"files":files}
+
+
+def _write_curriculum_files(root, files: dict[str, bytes]) -> None:
+    from pathlib import Path
+    base=Path(root)/"experiments"/"needle-stage-c-applicability"
+    for rel,payload in files.items():
+        path=base/rel
+        path.parent.mkdir(parents=True,exist_ok=True)
+        path.write_bytes(payload)
+
+
+def main(argv=None) -> int:
+    import argparse
+    from pathlib import Path
+    p=argparse.ArgumentParser(description="Materialize deterministic Needle Stage C curriculum artifacts.")
+    p.add_argument("--write",action="store_true")
+    p.add_argument("--root",type=Path,default=Path(__file__).resolve().parents[1])
+    args=p.parse_args(argv)
+    root=args.root
+    semantic=[json.loads(x) for x in (root/"experiments/needle-realistic-sft/source/semantic-cases.jsonl").read_text(encoding="utf-8").splitlines() if x.strip()]
+    seed=json.loads((root/"experiments/needle-stage-c-applicability/source/stage-b-recovery-seed.json").read_text(encoding="utf-8"))
+    policy=json.loads((root/"experiments/needle-stage-c-applicability/contract/curriculum-policy.json").read_text(encoding="utf-8"))
+    recovery_policy=json.loads((root/"experiments/needle-stage-c-applicability/contract/recovery-policy.json").read_text(encoding="utf-8"))
+    schema=json.loads((root/"experiments/needle-realistic-sft/contract/route-schema.json").read_text(encoding="utf-8"))
+    prefix=(root/"experiments/needle-realistic-sft/contract/route-positive-prefix.txt").read_text(encoding="utf-8")
+    try:
+        from scripts.stage_c_recovery_state import build_recovery_state
+    except ModuleNotFoundError:
+        from stage_c_recovery_state import build_recovery_state
+    train_negative=[row for row in semantic if row.get("split")=="train" and row.get("applicability")=="none" and row.get("expected_decision") is None]
+    outcomes=[{"id":case_id,"predicted":"READY"} for case_id in seed.get("false_call_case_ids",[])]
+    recovery_state=build_recovery_state(train_negative,outcomes,recovery_policy)
+    outputs=build_curriculum_outputs(semantic,seed,policy,schema,prefix,recovery_state=recovery_state)
+    if args.write:
+        _write_curriculum_files(root,outputs["files"])
+    print(json.dumps({"phase_rows":json.loads(outputs["files"]["manifests/stage-c-curriculum-manifest.json"])["phase_rows"],"files":sorted(outputs["files"])},sort_keys=True))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -1,0 +1,114 @@
+import pathlib
+import unittest
+
+ROOT=pathlib.Path(__file__).resolve().parents[1]
+WORKFLOW=ROOT/'.github/workflows/needle-stage-c-dispatch.yml'
+TRAIN=ROOT/'scripts/run_stage_c_full_train.sh'
+EVAL=ROOT/'scripts/run_stage_c_full_eval.sh'
+
+
+class StageCFullTrainContractTest(unittest.TestCase):
+    def test_train_entrypoint_is_exact_two_phase_and_arm_replica_scoped(self):
+        text=TRAIN.read_text(encoding='utf-8')
+        self.assertIn('${EXPERIMENT_SHA:?EXPERIMENT_SHA is required}',text)
+        self.assertIn('${LAUNCHER_SHA:?LAUNCHER_SHA is required}',text)
+        self.assertIn('${ARM_ID:?ARM_ID is required}',text)
+        self.assertIn('${REPLICA_ID:?REPLICA_ID is required}',text)
+        self.assertIn('A|B',text)
+        self.assertIn('R1) train_seed=101',text)
+        self.assertIn('R2) train_seed=202',text)
+        self.assertIn('cactus-needle[train]==2.0.8',text)
+        self.assertIn('python3 scripts/build_stage_c_dataset.py --write',text)
+        self.assertIn('scripts/audit_stage_c_token_lengths.py',text)
+        self.assertIn('scripts/run_stage_c_curriculum_finetune.py',text)
+        self.assertIn('--early-out',text)
+        self.assertIn('needle build',text)
+        self.assertIn('stage_c_train_receipt.py',text)
+        self.assertIn('train-receipt-${ARM_ID}-${REPLICA_ID}.json',text)
+        self.assertIn('early-${ARM_ID}-${REPLICA_ID}.cact',text)
+        self.assertIn('final-${ARM_ID}-${REPLICA_ID}.cact',text)
+        self.assertNotIn('run_seeded_finetune.py',text)
+        self.assertIn('--seed "$train_seed"',text)
+        self.assertIn('--val-split 0.0',text)
+        self.assertNotIn('--seed 0',text)
+        self.assertNotIn('--val-split 0.1',text)
+
+    def test_curriculum_runner_uses_replica_seed_for_lora_initialization(self):
+        runner=(ROOT/'scripts/run_stage_c_curriculum_finetune.py').read_text(encoding='utf-8')
+        self.assertIn('jax.random.PRNGKey(args.seed)',runner)
+        self.assertNotIn('jax.random.PRNGKey(0)',runner)
+
+
+class StageCFullEvalContractTest(unittest.TestCase):
+    def test_eval_entrypoint_evaluates_early_and_final_without_training(self):
+        text=EVAL.read_text(encoding='utf-8')
+        self.assertIn('cactus-needle==2.0.8',text)
+        self.assertIn('run_stage_c_eval.py',text)
+        self.assertIn('early-${ARM_ID}-${REPLICA_ID}.cact',text)
+        self.assertIn('final-${ARM_ID}-${REPLICA_ID}.cact',text)
+        self.assertIn('heldout',text)
+        self.assertIn('--split train',text)
+        self.assertIn('${ARM_ID}-final-train-${REPLICA_ID}.jsonl',text)
+        self.assertIn('${ARM_ID}-early-train-${REPLICA_ID}.jsonl',text)
+        self.assertIn('${ARM_ID}-final-train-${REPLICA_ID}.jsonl',text)
+        self.assertIn('train-receipt-${ARM_ID}-${REPLICA_ID}.json',text)
+        self.assertNotIn('finetune',text)
+        self.assertNotIn('needle build',text)
+
+
+class StageCWorkflowContractTest(unittest.TestCase):
+    def test_workflow_is_manual_exact_head_read_only_and_fixed_entrypoints(self):
+        text=WORKFLOW.read_text(encoding='utf-8')
+        self.assertIn('workflow_dispatch:',text)
+        self.assertNotIn('\n  push:',text)
+        self.assertNotIn('\n  schedule:',text)
+        self.assertIn('experiment_sha:',text)
+        self.assertIn('experiment/needle-stage-c-applicability',text)
+        self.assertIn('git ls-remote https://github.com/${GITHUB_REPOSITORY}.git refs/heads/experiment/needle-stage-c-applicability',text)
+        self.assertIn('contents: read',text)
+        self.assertNotIn('secrets.',text)
+        self.assertNotIn('${{ inputs.command }}',text)
+        self.assertIn('mode:',text)
+        self.assertIn('resource_dry_run',text)
+        self.assertIn('full',text)
+
+    def test_full_graph_is_two_arms_two_replicas_with_pair_and_final_receipts(self):
+        text=WORKFLOW.read_text(encoding='utf-8')
+        self.assertIn('arm: [A, B]',text)
+        self.assertIn('replica: [R1, R2]',text)
+        self.assertIn('ARM_ID: ${{ matrix.arm }}',text)
+        self.assertIn('REPLICA_ID: ${{ matrix.replica }}',text)
+        self.assertIn('bash scripts/run_stage_c_full_train.sh',text)
+        self.assertIn('bash scripts/run_stage_c_full_eval.sh',text)
+        self.assertIn('stage_c_quality_receipt.py replica',text)
+        self.assertIn('eval-artifacts/A/A-final-heldout-${{ matrix.replica }}.jsonl',text)
+        self.assertIn('eval-artifacts/B/B-early-heldout-${{ matrix.replica }}.jsonl',text)
+        self.assertIn('eval-artifacts/A/A-final-train-${{ matrix.replica }}.jsonl',text)
+        self.assertIn('eval-artifacts/B/B-early-train-${{ matrix.replica }}.jsonl',text)
+        self.assertIn('eval-artifacts/B/B-final-train-${{ matrix.replica }}.jsonl',text)
+        self.assertIn('--semantic "experiments/needle-realistic-sft/source/semantic-cases.jsonl"',text)
+        self.assertNotIn('eval-artifacts/A/results/',text)
+        self.assertIn('stage_c_quality_receipt.py final',text)
+        self.assertIn('needle-stage-c-pair-${{ matrix.replica }}-${{ github.run_id }}',text)
+        self.assertIn('needle-stage-c-final-${{ github.run_id }}',text)
+
+
+if __name__=='__main__':
+    unittest.main()
+
+class StageCCodexP1EvalEntrypointRegressionTest(unittest.TestCase):
+    def test_stage_c_eval_uses_factorized_evaluator_with_arm_identity(self):
+        text=(ROOT/'scripts/run_stage_c_full_eval.sh').read_text(encoding='utf-8')
+        self.assertIn('scripts/run_stage_c_eval.py',text)
+        self.assertIn('--arm-id "$ARM_ID"',text)
+        self.assertIn('--route-schema',text)
+        self.assertNotIn('scripts/run_realistic_sft_eval.py',text)
+
+class StageCCodexProvenanceRegressionTest(unittest.TestCase):
+    def test_eval_entrypoint_verifies_actual_cact_hashes_against_train_receipt(self):
+        text=(ROOT/'scripts/run_stage_c_full_eval.sh').read_text(encoding='utf-8')
+        self.assertIn('sha256sum',text)
+        self.assertIn('early_cact_sha256',text)
+        self.assertIn('final_cact_sha256',text)
+        self.assertIn('MODEL_ARTIFACT_HASH_MISMATCH',text)
+

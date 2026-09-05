@@ -1,0 +1,39 @@
+name: Needle Stage C compute sidecar
+on:
+  workflow_dispatch:
+    inputs:
+      experiment_sha:
+        description: Exact Stage C experiment SHA
+        required: true
+        type: string
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ inputs.experiment_sha }}
+          fetch-depth: 1
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "22"
+      - name: Install pinned verifier clients
+        run: |
+          python -m pip install "mcp-sympy==0.1.0"
+          npm ci --ignore-scripts --prefix verification/stage-c-sidecars
+      - name: Run compute verifier with explicit fallback
+        run: node scripts/stage_c_compute_verifier.mjs
+      - name: Upload diagnostic compute receipt
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: needle-stage-c-compute-${{ github.run_id }}
+          path: experiments/needle-stage-c-applicability/verification/generated/
+          if-no-files-found: error
+          retention-days: 30
