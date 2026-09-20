@@ -63,8 +63,9 @@ execution, acceptance, merge, release, or any other consequential mutation.
 
 Promotion is conditional, not mandatory. Work may transition directly to
 `DISPOSITION` from `SPECIFIED`, `PLANNED`, `WORKING`, `QA`, `EXECUTING`,
-`MODEL_OR_DOMAIN_WITNESS`, `REVIEW`, or `ACCEPTANCE_GATE` when it is blocked,
-parked, superseded, abandoned, or not accepted for promotion.
+`MODEL_OR_DOMAIN_WITNESS`, `REVIEW`, `ACCEPTANCE_GATE`, `PROMOTION`, or
+unsuccessful `READBACK` when it is blocked, parked, superseded, abandoned,
+partially mutated, or not accepted for promotion.
 
 Typical examples:
 
@@ -78,7 +79,14 @@ MODEL_OR_DOMAIN_WITNESS -- insufficient / inconclusive --> DISPOSITION
 REVIEW -- superseded / parked --> DISPOSITION
 ACCEPTANCE_GATE -- declined / no promotion authority --> DISPOSITION
 ACCEPTANCE_GATE -- accepted + authorized --> PROMOTION -> READBACK -> DISPOSITION
+PROMOTION -- failed / partial --> DISPOSITION
+READBACK -- unavailable / mismatch --> DISPOSITION
 ```
+
+For failed or partial promotion/readback, record the resulting evidence state as
+`BLOCKED`, `UNKNOWN`, or `REPROBE_REQUIRED` as applicable, preserve any observed
+partial mutation identity, and do not claim `PROMOTED` until authoritative
+readback succeeds.
 
 A terminal exit preserves the evidence already produced. It does not fabricate a
 promotion/readback event and does not erase a negative or inconclusive research

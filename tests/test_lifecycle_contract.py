@@ -49,6 +49,9 @@ class LifecycleContractTests(unittest.TestCase):
         self.assertIn("SPECIFIED -- abandoned --> DISPOSITION", text)
         self.assertIn("PLANNED -- superseded --> DISPOSITION", text)
         self.assertIn("WORKING -- blocked --> DISPOSITION", text)
+        self.assertIn("PROMOTION -- failed / partial --> DISPOSITION", text)
+        self.assertIn("READBACK -- unavailable / mismatch --> DISPOSITION", text)
+        self.assertIn("BLOCKED`, `UNKNOWN`, or `REPROBE_REQUIRED`", text)
         self.assertIn("QA -- blocked --> DISPOSITION", text)
         self.assertIn("EXECUTING -- failed / blocked --> DISPOSITION", text)
         self.assertIn(
