@@ -62,13 +62,16 @@ execution, acceptance, merge, release, or any other consequential mutation.
 ### Terminal exits without promotion
 
 Promotion is conditional, not mandatory. Work may transition directly to
-`DISPOSITION` from `QA`, `EXECUTING`, `MODEL_OR_DOMAIN_WITNESS`, `REVIEW`,
-or `ACCEPTANCE_GATE` when it is blocked, parked, superseded, abandoned, or not
-accepted for promotion.
+`DISPOSITION` from `SPECIFIED`, `PLANNED`, `WORKING`, `QA`, `EXECUTING`,
+`MODEL_OR_DOMAIN_WITNESS`, `REVIEW`, or `ACCEPTANCE_GATE` when it is blocked,
+parked, superseded, abandoned, or not accepted for promotion.
 
 Typical examples:
 
 ```text
+SPECIFIED -- abandoned --> DISPOSITION
+PLANNED -- superseded --> DISPOSITION
+WORKING -- blocked --> DISPOSITION
 QA -- blocked --> DISPOSITION
 EXECUTING -- failed / blocked --> DISPOSITION
 MODEL_OR_DOMAIN_WITNESS -- insufficient / inconclusive --> DISPOSITION

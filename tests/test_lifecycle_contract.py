@@ -46,6 +46,9 @@ class LifecycleContractTests(unittest.TestCase):
     def test_terminal_exits_do_not_require_promotion(self):
         text = LIFECYCLE.read_text(encoding="utf-8")
         self.assertIn("Terminal exits without promotion", text)
+        self.assertIn("SPECIFIED -- abandoned --> DISPOSITION", text)
+        self.assertIn("PLANNED -- superseded --> DISPOSITION", text)
+        self.assertIn("WORKING -- blocked --> DISPOSITION", text)
         self.assertIn("QA -- blocked --> DISPOSITION", text)
         self.assertIn("EXECUTING -- failed / blocked --> DISPOSITION", text)
         self.assertIn(
