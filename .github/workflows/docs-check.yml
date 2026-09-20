@@ -22,16 +22,6 @@ jobs:
           printf 'runner_arch=%s\n' "${RUNNER_ARCH:-unknown}"
           printf 'image_os=%s\n' "${ImageOS:-unknown}"
           printf 'image_version=%s\n' "${ImageVersion:-unknown}"
-      - name: Validate bootstrap files
+      - name: Run canonical repository QA
         shell: bash
-        run: |
-          set -eu
-          for f in \
-            README.md \
-            docs/architecture.md \
-            docs/experiment-lifecycle.md \
-            experiments/README.md \
-            receipts/README.md \
-            .github/ISSUE_TEMPLATE/experiment.yml; do
-            test -s "$f"
-          done
+        run: tools/dev/check
