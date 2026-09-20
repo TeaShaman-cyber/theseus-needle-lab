@@ -12,12 +12,12 @@ IDEA
   -> PLANNED
   -> WORKING
   -> QA
+  -> EXECUTING
   -> MODEL_OR_DOMAIN_WITNESS
   -> REVIEW
   -> ACCEPTANCE_GATE
-  -> PROMOTION
-  -> READBACK
-  -> DISPOSITION
+     |-- accepted + promotion authorized --> PROMOTION -> READBACK -> DISPOSITION
+     \-- no promotion / blocked / parked --> DISPOSITION
 ```
 
 An experiment starts as an Issue. Before execution it records the question or
@@ -37,6 +37,10 @@ execution, acceptance, merge, release, or any other consequential mutation.
 - **QA** — deterministic repository-local checks passed for the exact revision.
   QA does not prove model quality, scientific truth, generalization, or provider
   availability.
+- **EXECUTING** — the declared training, evaluation, or other experiment is
+  actively running against the exact planned revision/configuration. Runtime
+  telemetry and checkpoint/recovery evidence belong here. Execution in progress
+  is not yet a model/domain witness.
 - **MODEL_OR_DOMAIN_WITNESS** — bounded model/domain evidence was observed for
   the exact artifact/configuration/population declared by the experiment.
   A witness is evidence, not acceptance.
@@ -54,6 +58,28 @@ execution, acceptance, merge, release, or any other consequential mutation.
   insufficient when independent readback is available.
 - **DISPOSITION** — the work receives a terminal operational state and unresolved
   findings are linked to their durable destination.
+
+### Terminal exits without promotion
+
+Promotion is conditional, not mandatory. Work may transition directly to
+`DISPOSITION` from `QA`, `EXECUTING`, `MODEL_OR_DOMAIN_WITNESS`, `REVIEW`,
+or `ACCEPTANCE_GATE` when it is blocked, parked, superseded, abandoned, or not
+accepted for promotion.
+
+Typical examples:
+
+```text
+QA -- blocked --> DISPOSITION
+EXECUTING -- failed / blocked --> DISPOSITION
+MODEL_OR_DOMAIN_WITNESS -- insufficient / inconclusive --> DISPOSITION
+REVIEW -- superseded / parked --> DISPOSITION
+ACCEPTANCE_GATE -- declined / no promotion authority --> DISPOSITION
+ACCEPTANCE_GATE -- accepted + authorized --> PROMOTION -> READBACK -> DISPOSITION
+```
+
+A terminal exit preserves the evidence already produced. It does not fabricate a
+promotion/readback event and does not erase a negative or inconclusive research
+result.
 
 ## Research outcome
 

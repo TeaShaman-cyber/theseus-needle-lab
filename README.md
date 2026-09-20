@@ -15,7 +15,7 @@ Its purpose is to make Needle learning experiments observable, reproducible, and
 
 ## Research flow
 
-`Issue/spec -> work -> QA -> model/domain witness -> review -> acceptance gate -> promotion -> readback -> disposition`
+`Issue/spec -> work -> QA -> execution -> model/domain witness -> review -> acceptance gate -> promotion/readback or direct disposition`
 
 Research outcome (`ACCEPTED | REJECTED | INCONCLUSIVE`) is tracked separately
 from delivery/branch disposition. See [architecture](docs/architecture.md) and

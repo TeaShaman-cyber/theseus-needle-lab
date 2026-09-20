@@ -7,13 +7,13 @@ evidence, model/domain evidence, review, acceptance, promotion, and readback.
 Issue / specification
   -> commit / PR
   -> deterministic QA
-  -> experiment / execution
+  -> execution / running
   -> artifact + provenance
   -> model/domain witness
   -> review
   -> explicit acceptance gate
-  -> authorized promotion
-  -> authoritative readback
+      |-- accepted + authorized --> promotion -> authoritative readback
+      \-- no promotion / blocked / parked --------------------------|
   -> terminal disposition
 ```
 
@@ -39,8 +39,10 @@ separately from delivery/branch disposition.
   configuration, and population. They do not silently generalize beyond that
   boundary.
 - Review records findings; it does not itself grant merge/promotion authority.
-- Acceptance is an explicit gate over QA, witness, provenance, and review
-  evidence for a declared purpose.
+- Acceptance is an explicit gate over QA, execution/witness provenance, and
+  review evidence for a declared purpose.
+- Work that is blocked, parked, superseded, abandoned, or declined at acceptance
+  can move directly to terminal disposition without pretending promotion occurred.
 - Promotion is a separate consequential mutation and requires current authority.
 - Important promotion requires readback from the authoritative target.
 - GitHub-hosted artifacts are retention-bound storage; integrity is established

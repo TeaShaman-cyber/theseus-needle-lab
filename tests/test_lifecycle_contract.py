@@ -16,6 +16,7 @@ class LifecycleContractTests(unittest.TestCase):
             "PLANNED",
             "WORKING",
             "QA",
+            "EXECUTING",
             "MODEL_OR_DOMAIN_WITNESS",
             "REVIEW",
             "ACCEPTANCE_GATE",
@@ -36,10 +37,25 @@ class LifecycleContractTests(unittest.TestCase):
     def test_qa_witness_review_acceptance_and_promotion_are_not_collapsed(self):
         text = LIFECYCLE.read_text(encoding="utf-8")
         self.assertIn("QA does not prove model quality", text)
+        self.assertIn("Execution in progress", text)
         self.assertIn("A witness is evidence, not acceptance", text)
         self.assertIn("reviewer comment cannot silently", text)
         self.assertIn("PROMOTION", text)
         self.assertIn("authoritative target", text)
+
+    def test_terminal_exits_do_not_require_promotion(self):
+        text = LIFECYCLE.read_text(encoding="utf-8")
+        self.assertIn("Terminal exits without promotion", text)
+        self.assertIn("QA -- blocked --> DISPOSITION", text)
+        self.assertIn("EXECUTING -- failed / blocked --> DISPOSITION", text)
+        self.assertIn(
+            "ACCEPTANCE_GATE -- declined / no promotion authority --> DISPOSITION",
+            text,
+        )
+        self.assertIn(
+            "ACCEPTANCE_GATE -- accepted + authorized --> PROMOTION -> READBACK -> DISPOSITION",
+            text,
+        )
 
     def test_degraded_external_states_fail_open_claims_not_checks(self):
         text = LIFECYCLE.read_text(encoding="utf-8")
@@ -58,7 +74,7 @@ class LifecycleContractTests(unittest.TestCase):
     def test_readme_exposes_the_mature_flow(self):
         text = README.read_text(encoding="utf-8")
         self.assertIn(
-            "QA -> model/domain witness -> review -> acceptance gate -> promotion -> readback -> disposition",
+            "QA -> execution -> model/domain witness -> review -> acceptance gate -> promotion/readback or direct disposition",
             text,
         )
         self.assertIn("ACCEPTED | REJECTED | INCONCLUSIVE", text)
