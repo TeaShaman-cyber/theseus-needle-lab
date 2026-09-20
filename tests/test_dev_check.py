@@ -21,6 +21,7 @@ class DevCheckContractTests(unittest.TestCase):
         self.assertIn("python3 -m unittest discover -s tests -v", text)
         self.assertIn("python3 -m compileall -q", text)
         self.assertIn("python3 -m json.tool", text)
+        self.assertIn("python3 scripts/check_tracked_whitespace.py", text)
         self.assertIn("git diff --check", text)
         for forbidden in (
             "needle finetune",

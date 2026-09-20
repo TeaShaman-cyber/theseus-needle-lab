@@ -32,7 +32,10 @@ while IFS= read -r path; do
   python3 -m json.tool "$path" >/dev/null
 done < <(git ls-files '*.json' | sort)
 
-printf '%s\n' '== whitespace =='
+printf '%s\n' '== committed/tracked whitespace =='
+python3 scripts/check_tracked_whitespace.py
+
+printf '%s\n' '== local diff whitespace =='
 git diff --check
 git diff --cached --check
 
