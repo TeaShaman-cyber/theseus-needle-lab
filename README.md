@@ -15,9 +15,11 @@ Its purpose is to make Needle learning experiments observable, reproducible, and
 
 ## Research flow
 
-`Issue -> commit/PR -> Action -> artifact/hash -> evaluation -> receipt -> disposition`
+`Issue/spec -> work -> QA -> model/domain witness -> review -> acceptance gate -> promotion -> readback -> disposition`
 
-See [architecture](docs/architecture.md) and [experiment lifecycle](docs/experiment-lifecycle.md).
+Research outcome (`ACCEPTED | REJECTED | INCONCLUSIVE`) is tracked separately
+from delivery/branch disposition. See [architecture](docs/architecture.md) and
+[experiment lifecycle](docs/experiment-lifecycle.md).
 
 ## Canonical QA endpoint
 
