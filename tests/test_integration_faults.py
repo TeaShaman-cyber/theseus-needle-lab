@@ -194,6 +194,53 @@ class IntegrationFaultContractTests(unittest.TestCase):
         self.assertNotEqual(observation["canary_disposition"], "NO_CURRENT_SIGNAL")
         self.module.validate_receipt(receipt, self.taxonomy)
 
+    def test_receipt_binds_exact_taxonomy_digest_not_version_only(self):
+        observation = self.module.classify_checkpoint(checkpoint())
+        receipt = self.module.build_receipt(
+            observation,
+            checkpoint(),
+            checkpoint_sha256="d" * 64,
+            taxonomy=self.taxonomy,
+        )
+        self.assertRegex(receipt["taxonomy_sha256"], r"^[0-9a-f]{64}$")
+
+        changed_taxonomy = copy.deepcopy(self.taxonomy)
+        changed_taxonomy["classes"]["READBACK_UNAVAILABLE"]["allowed_evidence_status"] = [
+            "PARTIAL"
+        ]
+        with self.assertRaisesRegex(ValueError, "taxonomy digest mismatch"):
+            self.module.validate_receipt(receipt, changed_taxonomy)
+
+    def test_partial_artifact_provenance_preserves_scan_errors(self):
+        partial = checkpoint(
+            execution_status="SUCCEEDED",
+            artifact_scan_status="PARTIAL",
+            command_exit_code=0,
+        )
+        partial["artifact_scan_errors"] = [
+            {
+                "path": "artifacts/changing.bin",
+                "error_type": "CONCURRENT_MODIFICATION",
+            }
+        ]
+        observation = self.module.classify_checkpoint(partial)
+        receipt = self.module.build_receipt(
+            observation,
+            partial,
+            checkpoint_sha256="d" * 64,
+            taxonomy=self.taxonomy,
+        )
+        self.assertEqual(
+            receipt["execution"]["artifact_scan_errors"],
+            partial["artifact_scan_errors"],
+        )
+        self.module.validate_receipt_against_checkpoint(
+            receipt,
+            partial,
+            "d" * 64,
+            self.taxonomy,
+        )
+
     def test_receipt_validation_rejects_mapping_tamper(self):
         observation = self.module.classify_checkpoint(checkpoint())
         receipt = self.module.build_receipt(

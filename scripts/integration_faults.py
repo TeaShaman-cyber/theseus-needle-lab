@@ -39,6 +39,16 @@ def sha256_file(path: pathlib.Path) -> str:
     return digest.hexdigest()
 
 
+def taxonomy_sha256(taxonomy: dict[str, Any]) -> str:
+    canonical = json.dumps(
+        taxonomy,
+        sort_keys=True,
+        separators=(",", ":"),
+        allow_nan=False,
+    ).encode("utf-8")
+    return hashlib.sha256(canonical).hexdigest()
+
+
 def load_taxonomy(path: pathlib.Path = DEFAULT_TAXONOMY) -> dict[str, Any]:
     taxonomy = load_json(path)
     if taxonomy.get("schema_version") != "needle-integration-fault-taxonomy-v1":
@@ -109,6 +119,8 @@ def _validate_checkpoint_projection(checkpoint: dict[str, Any]) -> None:
         "PARTIAL",
     }:
         raise ValueError("invalid artifact scan status")
+    if not isinstance(checkpoint.get("artifact_scan_errors"), list):
+        raise ValueError("checkpoint artifact scan errors must be a list")
     if not isinstance(checkpoint.get("artifacts"), list):
         raise ValueError("checkpoint artifacts must be a list")
 
@@ -184,6 +196,7 @@ def _checkpoint_projection(checkpoint: dict[str, Any]) -> dict[str, Any]:
             "execution_status": checkpoint["execution_status"],
             "lifecycle_state": checkpoint["lifecycle_state"],
             "artifact_scan_status": checkpoint["artifact_scan_status"],
+            "artifact_scan_errors": list(checkpoint["artifact_scan_errors"]),
             "command_exit_code": checkpoint.get("command_exit_code"),
             "command_signal": checkpoint.get("command_signal"),
         },
@@ -225,6 +238,7 @@ def build_receipt(
     receipt: dict[str, Any] = {
         "schema_version": RECEIPT_SCHEMA,
         "taxonomy_version": taxonomy["schema_version"],
+        "taxonomy_sha256": taxonomy_sha256(taxonomy),
         "fault_class": fault_class,
         "fault_kind": class_spec["kind"],
         "mapped_state": class_spec["mapped_state"],
@@ -258,6 +272,8 @@ def validate_receipt(
         raise ValueError("unsupported integration fault receipt schema")
     if receipt.get("taxonomy_version") != taxonomy["schema_version"]:
         raise ValueError("fault taxonomy version mismatch")
+    if receipt.get("taxonomy_sha256") != taxonomy_sha256(taxonomy):
+        raise ValueError("fault taxonomy digest mismatch")
     if "scientific_outcome" in receipt:
         raise ValueError("fault receipt cannot decide scientific outcome")
 

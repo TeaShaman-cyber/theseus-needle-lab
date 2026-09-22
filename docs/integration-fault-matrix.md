@@ -59,3 +59,11 @@ The #61/#65 canary can build explicit bounded-witness receipts from observed
 reference/candidate comparisons. A missing built artifact or unavailable
 readback remains an infrastructure state and must never be converted into
 NO_CURRENT_SIGNAL or an invented successful NO_CALL observation.
+
+Receipts bind both the taxonomy version and a canonical SHA-256 digest of the
+taxonomy content. A same-version taxonomy edit therefore cannot silently
+reinterpret an older receipt.
+
+Partial artifact provenance preserves the execution checkpoint's artifact scan
+errors so downstream consumers can distinguish a verified artifact set from
+incomplete provenance without guessing why the scan was partial.
