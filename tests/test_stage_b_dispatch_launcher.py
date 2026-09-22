@@ -51,6 +51,12 @@ class StageBDispatchLauncherContractTest(unittest.TestCase):
         self.assertIn('eval-receipt-R2.json', text)
         self.assertIn('needle-stage-b-final-${{ github.run_id }}', text)
         self.assertIn('python-version: "3.12"', text)
+        self.assertGreaterEqual(text.count('execution_telemetry.py'), 4)
+        self.assertGreaterEqual(text.count('--heartbeat-seconds 300'), 2)
+        self.assertIn('GITHUB_RUN_ATTEMPT', text)
+        self.assertIn('--stage train', text)
+        self.assertIn('--stage eval', text)
+        self.assertGreaterEqual(text.count('telemetry/'), 4)
         self.assertNotIn('${{ inputs.command }}', text)
 
 
