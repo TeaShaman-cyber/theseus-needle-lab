@@ -36,7 +36,22 @@ def load_json(path: pathlib.Path) -> dict[str, Any]:
 
 
 def round_metric(value: float) -> float:
-    return round(float(value), 6)
+    parsed = float(value)
+    if not math.isfinite(parsed):
+        raise ValueError("derived metric must be finite")
+    return round(parsed, 6)
+
+
+def positive_integer(value: Any, name: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
+        raise ValueError(f"{name} must be a positive integer")
+    return value
+
+
+def nonnegative_integer(value: Any, name: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+        raise ValueError(f"{name} must be a nonnegative integer")
+    return value
 
 
 def finite_nonnegative(value: Any, name: str) -> float:
@@ -57,12 +72,14 @@ def validate_fixture(manifest: dict[str, Any], trace: dict[str, Any]) -> None:
     if trace.get("topology_id") != manifest["topology"]["topology_id"]:
         raise ValueError("trace topology does not match manifest")
 
-    budget = int(manifest["topology"]["fast_tier_budget_bytes"])
-    slow_budget = int(manifest["topology"]["slow_tier_budget_bytes"])
-    if budget <= 0:
-        raise ValueError("fast tier budget must be positive")
-    if slow_budget <= 0:
-        raise ValueError("slow tier budget must be positive")
+    budget = positive_integer(
+        manifest["topology"]["fast_tier_budget_bytes"],
+        "fast_tier_budget_bytes",
+    )
+    slow_budget = positive_integer(
+        manifest["topology"]["slow_tier_budget_bytes"],
+        "slow_tier_budget_bytes",
+    )
 
     finite_nonnegative(
         manifest["topology"]["transfer_seconds_per_byte"],
@@ -84,8 +101,11 @@ def validate_fixture(manifest: dict[str, Any], trace: dict[str, Any]) -> None:
 
     working_sets = manifest["working_sets"]
     for name, size in working_sets.items():
-        if not name or int(size) <= 0 or int(size) > budget:
-            raise ValueError("invalid working-set size")
+        if not name:
+            raise ValueError("invalid working-set name")
+        parsed_size = positive_integer(size, f"working_sets.{name}")
+        if parsed_size > budget:
+            raise ValueError("working-set size exceeds fast-tier budget")
 
     fixed_sets = manifest["policies"]["static_fixed"].get("fixed_sets", [])
     if not isinstance(fixed_sets, list) or not fixed_sets:
@@ -107,8 +127,7 @@ def validate_fixture(manifest: dict[str, Any], trace: dict[str, Any]) -> None:
         if event["phase"] not in {"prefill", "decode", "request", "synthetic"}:
             raise ValueError("unsupported phase")
         finite_nonnegative(event["base_latency_seconds"], "base_latency_seconds")
-        if int(event["tokens"]) < 0:
-            raise ValueError("negative token count")
+        nonnegative_integer(event["tokens"], "tokens")
 
 
 class Simulator:
@@ -117,8 +136,14 @@ class Simulator:
         self.trace = trace
         self.policy = policy
         self.topology = manifest["topology"]
-        self.working_sets = {key: int(value) for key, value in manifest["working_sets"].items()}
-        self.budget = int(self.topology["fast_tier_budget_bytes"])
+        self.working_sets = {
+            key: positive_integer(value, f"working_sets.{key}")
+            for key, value in manifest["working_sets"].items()
+        }
+        self.budget = positive_integer(
+            self.topology["fast_tier_budget_bytes"],
+            "fast_tier_budget_bytes",
+        )
         self.transfer_seconds_per_byte = float(self.topology["transfer_seconds_per_byte"])
         self.miss_penalty_seconds = float(self.topology["miss_penalty_seconds"])
         self.policy_config = manifest["policies"][policy]

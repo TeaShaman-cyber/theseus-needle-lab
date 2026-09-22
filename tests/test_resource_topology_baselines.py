@@ -41,6 +41,21 @@ class ResourceTopologyBaselineTests(unittest.TestCase):
         self.assertTrue(control["prefetch_latency_gt_lru"])
         self.assertTrue(control["prefetch_bytes_moved_ge_lru"])
 
+    def test_overflowed_aggregate_metrics_fail_closed(self):
+        manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
+        manifest["policies"]["aggressive_prefetch"][
+            "controller_overhead_seconds_per_event"
+        ] = 1e308
+
+        with tempfile.TemporaryDirectory(dir=ROOT) as tmp:
+            manifest_path = pathlib.Path(tmp) / "manifest.json"
+            manifest_path.write_text(
+                json.dumps(manifest, sort_keys=True, indent=2) + "\n",
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(ValueError, "derived metric must be finite"):
+                module.build_receipt(manifest_path, TRACE)
+
     def test_receipt_contains_required_resource_metrics(self):
         receipt = module.build_receipt(MANIFEST, TRACE)
         required = {
@@ -58,6 +73,32 @@ class ResourceTopologyBaselineTests(unittest.TestCase):
         }
         for policy, metrics in receipt["policies"].items():
             self.assertTrue(required.issubset(metrics), policy)
+
+    def test_fractional_or_boolean_discrete_fields_fail_closed(self):
+        manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
+        trace = json.loads(TRACE.read_text(encoding="utf-8"))
+
+        cases = [
+            ("fast_tier_budget_bytes", 12582912.9),
+            ("slow_tier_budget_bytes", 134217728.5),
+            ("fast_tier_budget_bytes", True),
+        ]
+        for field, value in cases:
+            with self.subTest(field=field, value=value):
+                candidate = copy.deepcopy(manifest)
+                candidate["topology"][field] = value
+                with self.assertRaisesRegex(ValueError, "positive integer"):
+                    module.validate_fixture(candidate, trace)
+
+        candidate = copy.deepcopy(manifest)
+        candidate["working_sets"]["A"] = 6291456.5
+        with self.assertRaisesRegex(ValueError, "positive integer"):
+            module.validate_fixture(candidate, trace)
+
+        candidate_trace = copy.deepcopy(trace)
+        candidate_trace["events"][0]["tokens"] = 0.5
+        with self.assertRaisesRegex(ValueError, "nonnegative integer"):
+            module.validate_fixture(manifest, candidate_trace)
 
     def test_negative_or_nonfinite_costs_fail_closed(self):
         manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))

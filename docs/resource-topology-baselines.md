@@ -36,3 +36,9 @@ of the purported fixed set.
 A decode phase that is present but has zero modeled duration is distinguished
 from an absent decode phase: throughput is null with status
 OBSERVED_ZERO_DURATION, not NOT_OBSERVED.
+
+Hard memory budgets, working-set byte counts, and token counts are discrete
+integer fields and are rejected when fractional or boolean instead of silently
+coerced. Derived floating metrics must remain finite; overflow to NaN/Infinity
+fails closed before a valid receipt can be emitted. Receipt serialization uses
+strict JSON and forbids non-standard NaN/Infinity tokens.
