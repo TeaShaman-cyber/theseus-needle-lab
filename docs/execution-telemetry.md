@@ -38,3 +38,7 @@ The terminal command checkpoint is paired with a terminal heartbeat before
 artifact scanning begins. Validation requires the final heartbeat execution,
 lifecycle, and artifact-scan states to match the checkpoint as well as its
 sequence and identity.
+
+Hosted recovery canary artifacts are keyed by both GitHub run ID and run attempt,
+so rerunning the same workflow execution cannot collide with immutable artifacts
+from an earlier attempt.

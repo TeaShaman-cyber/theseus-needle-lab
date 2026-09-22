@@ -19,6 +19,7 @@ class ExecutionRecoveryCanaryContractTests(unittest.TestCase):
         self.assertIn("--expected-lifecycle-state ARTIFACT_PROVENANCE", text)
         self.assertIn("RECOVERY_READBACK_PASS", text)
         self.assertIn("retention-days: 7", text)
+        self.assertEqual(text.count("needle-execution-recovery-${{ github.run_id }}-${{ github.run_attempt }}"), 2)
 
 
 if __name__ == "__main__":
