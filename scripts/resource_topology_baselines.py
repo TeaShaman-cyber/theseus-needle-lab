@@ -80,6 +80,15 @@ def validate_fixture(manifest: dict[str, Any], trace: dict[str, Any]) -> None:
         manifest["topology"]["slow_tier_budget_bytes"],
         "slow_tier_budget_bytes",
     )
+    if manifest["topology"].get("slow_tier_semantics") != "backing_store_retains_all_working_sets":
+        raise ValueError("unsupported slow-tier semantics")
+
+    required_policies = {"static_fixed", "lru", "aggressive_prefetch"}
+    if not required_policies.issubset(manifest.get("policies", {})):
+        raise ValueError("required baseline policy missing")
+    fallback_policy = manifest.get("deterministic_fallback_policy")
+    if fallback_policy not in required_policies:
+        raise ValueError("deterministic fallback policy must name a baseline policy")
 
     finite_nonnegative(
         manifest["topology"]["transfer_seconds_per_byte"],
@@ -100,12 +109,16 @@ def validate_fixture(manifest: dict[str, Any], trace: dict[str, Any]) -> None:
                 raise ValueError(f"{policy_name}.lookahead_events must be a nonnegative integer")
 
     working_sets = manifest["working_sets"]
+    total_working_set_bytes = 0
     for name, size in working_sets.items():
         if not name:
             raise ValueError("invalid working-set name")
         parsed_size = positive_integer(size, f"working_sets.{name}")
         if parsed_size > budget:
             raise ValueError("working-set size exceeds fast-tier budget")
+        total_working_set_bytes += parsed_size
+    if total_working_set_bytes > slow_budget:
+        raise ValueError("working sets exceed slow-tier backing-store budget")
 
     fixed_sets = manifest["policies"]["static_fixed"].get("fixed_sets", [])
     if not isinstance(fixed_sets, list) or not fixed_sets:
@@ -144,6 +157,13 @@ class Simulator:
             self.topology["fast_tier_budget_bytes"],
             "fast_tier_budget_bytes",
         )
+        self.slow_budget = positive_integer(
+            self.topology["slow_tier_budget_bytes"],
+            "slow_tier_budget_bytes",
+        )
+        self.slow_tier_semantics = self.topology["slow_tier_semantics"]
+        self.slow_occupancy_bytes = sum(self.working_sets.values())
+        self.slow_headroom_bytes = self.slow_budget - self.slow_occupancy_bytes
         self.transfer_seconds_per_byte = float(self.topology["transfer_seconds_per_byte"])
         self.miss_penalty_seconds = float(self.topology["miss_penalty_seconds"])
         self.policy_config = manifest["policies"][policy]
@@ -156,6 +176,9 @@ class Simulator:
         self.evictions = 0
         self.demand_hits = 0
         self.demand_misses = 0
+        self.seen_demands: set[str] = set()
+        self.cold_accesses = 0
+        self.warm_accesses = 0
         self.prefetch_loads = 0
         self.prefetch_bytes = 0
         self.peak_occupancy = 0
@@ -258,6 +281,11 @@ class Simulator:
         for index, event in enumerate(self.trace["events"]):
             phase = event["phase"]
             name = event["working_set_id"]
+            if name in self.seen_demands:
+                self.warm_accesses += 1
+            else:
+                self.cold_accesses += 1
+                self.seen_demands.add(name)
             _, demand_cost = self._demand(name)
 
             controller = self.overhead
@@ -293,12 +321,30 @@ class Simulator:
             decode_rate = None
             decode_status = "OBSERVED_ZERO_DURATION"
 
+        if self.cold_accesses and self.warm_accesses:
+            cold_warm_state = "MIXED"
+        elif self.cold_accesses:
+            cold_warm_state = "COLD_ONLY"
+        elif self.warm_accesses:
+            cold_warm_state = "WARM_ONLY"
+        else:
+            cold_warm_state = "NOT_OBSERVED"
+
         return {
             "policy": self.policy,
-            "hard_budget_respected": self.peak_occupancy <= self.budget,
+            "hard_budget_respected": (
+                self.peak_occupancy <= self.budget
+                and self.slow_occupancy_bytes <= self.slow_budget
+            ),
+            "fast_tier_budget_respected": self.peak_occupancy <= self.budget,
             "fast_tier_budget_bytes": self.budget,
             "peak_occupancy_bytes": self.peak_occupancy,
             "minimum_headroom_bytes": self.min_headroom,
+            "slow_tier_budget_respected": self.slow_occupancy_bytes <= self.slow_budget,
+            "slow_tier_budget_bytes": self.slow_budget,
+            "slow_tier_occupancy_bytes": self.slow_occupancy_bytes,
+            "slow_tier_headroom_bytes": self.slow_headroom_bytes,
+            "slow_tier_semantics": self.slow_tier_semantics,
             "demand_hits": self.demand_hits,
             "demand_misses": self.demand_misses,
             "demand_hit_rate": round_metric(self.demand_hits / accesses),
@@ -317,7 +363,9 @@ class Simulator:
             "decode_throughput_measurement_status": decode_status,
             "quality_deviation": None,
             "quality_measurement_status": "NOT_MEASURED",
-            "cold_warm_state": "mixed",
+            "cold_accesses": self.cold_accesses,
+            "warm_accesses": self.warm_accesses,
+            "cold_warm_state": cold_warm_state,
             "topology_id": self.topology["topology_id"],
             "memory_model": self.topology["memory_model"],
         }
@@ -365,8 +413,10 @@ def build_receipt(manifest_path: pathlib.Path, trace_path: pathlib.Path) -> dict
         "hard_resource_budget": {
             "fast_tier_budget_bytes": manifest["topology"]["fast_tier_budget_bytes"],
             "slow_tier_budget_bytes": manifest["topology"]["slow_tier_budget_bytes"],
+            "slow_tier_semantics": manifest["topology"]["slow_tier_semantics"],
         },
         "native_policy_status": manifest["native_policy_status"],
+        "deterministic_fallback_policy": manifest["deterministic_fallback_policy"],
         "policies": metrics,
         "negative_control": negative_control,
         "disposition": "BASELINE_RECEIPT_VALID" if negative_control["pass"] else "NEGATIVE_CONTROL_FAILED",

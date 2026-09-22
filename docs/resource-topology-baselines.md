@@ -42,3 +42,16 @@ integer fields and are rejected when fractional or boolean instead of silently
 coerced. Derived floating metrics must remain finite; overflow to NaN/Infinity
 fails closed before a valid receipt can be emitted. Receipt serialization uses
 strict JSON and forbids non-standard NaN/Infinity tokens.
+
+The synthetic slow tier is explicitly modeled as a backing store that retains all
+working sets while the fast tier caches a bounded subset. Slow-tier occupancy and
+headroom are therefore measured as deterministic fixture properties and must fit
+the declared slow-tier budget.
+
+Cold/warm state is derived from the trace, not hard-coded: the first demand for a
+working set is cold and later demands are warm. Cache hit/miss remains a separate
+policy-dependent metric.
+
+When a native/router-derived policy is unavailable in this synthetic fixture, the
+declared deterministic fallback policy is LRU. This is fixture behavior, not a
+claim about a real Needle runtime.

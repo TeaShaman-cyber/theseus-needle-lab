@@ -23,15 +23,63 @@ spec.loader.exec_module(module)
 class ResourceTopologyBaselineTests(unittest.TestCase):
     def test_fixture_is_valid_and_all_policies_share_hard_budget(self):
         receipt = module.build_receipt(MANIFEST, TRACE)
-        budget = receipt["hard_resource_budget"]["fast_tier_budget_bytes"]
+        fast_budget = receipt["hard_resource_budget"]["fast_tier_budget_bytes"]
+        slow_budget = receipt["hard_resource_budget"]["slow_tier_budget_bytes"]
         self.assertEqual(receipt["disposition"], "BASELINE_RECEIPT_VALID")
         self.assertEqual(receipt["native_policy_status"], "NOT_EXPOSED_IN_SYNTHETIC_FIXTURE")
+        self.assertEqual(receipt["deterministic_fallback_policy"], "lru")
         for metrics in receipt["policies"].values():
             self.assertTrue(metrics["hard_budget_respected"])
-            self.assertEqual(metrics["fast_tier_budget_bytes"], budget)
-            self.assertLessEqual(metrics["peak_occupancy_bytes"], budget)
+            self.assertTrue(metrics["fast_tier_budget_respected"])
+            self.assertTrue(metrics["slow_tier_budget_respected"])
+            self.assertEqual(metrics["fast_tier_budget_bytes"], fast_budget)
+            self.assertLessEqual(metrics["peak_occupancy_bytes"], fast_budget)
+            self.assertEqual(metrics["slow_tier_budget_bytes"], slow_budget)
+            self.assertLessEqual(metrics["slow_tier_occupancy_bytes"], slow_budget)
+            self.assertEqual(
+                metrics["slow_tier_headroom_bytes"],
+                slow_budget - metrics["slow_tier_occupancy_bytes"],
+            )
+            self.assertEqual(
+                metrics["slow_tier_semantics"],
+                "backing_store_retains_all_working_sets",
+            )
             self.assertIsNone(metrics["quality_deviation"])
             self.assertEqual(metrics["quality_measurement_status"], "NOT_MEASURED")
+
+    def test_cold_warm_state_is_derived_from_trace(self):
+        receipt = module.build_receipt(MANIFEST, TRACE)
+        for metrics in receipt["policies"].values():
+            self.assertEqual(metrics["cold_accesses"], 3)
+            self.assertEqual(metrics["warm_accesses"], 9)
+            self.assertEqual(metrics["cold_warm_state"], "MIXED")
+
+        manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
+        cold_only_trace = {
+            "schema_version": "theseus.needle.resource_topology_trace.v1",
+            "topology_id": manifest["topology"]["topology_id"],
+            "events": [
+                {
+                    "request_id": "R1",
+                    "phase": "request",
+                    "working_set_id": "A",
+                    "base_latency_seconds": 0.01,
+                    "tokens": 0,
+                }
+            ],
+        }
+        module.validate_fixture(manifest, cold_only_trace)
+        metrics = module.Simulator(manifest, cold_only_trace, "lru").run()
+        self.assertEqual(metrics["cold_accesses"], 1)
+        self.assertEqual(metrics["warm_accesses"], 0)
+        self.assertEqual(metrics["cold_warm_state"], "COLD_ONLY")
+
+    def test_slow_tier_backing_store_budget_fails_closed(self):
+        manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
+        trace = json.loads(TRACE.read_text(encoding="utf-8"))
+        manifest["topology"]["slow_tier_budget_bytes"] = 12582912
+        with self.assertRaisesRegex(ValueError, "slow-tier backing-store budget"):
+            module.validate_fixture(manifest, trace)
 
     def test_negative_control_proves_hit_rate_is_not_system_objective(self):
         receipt = module.build_receipt(MANIFEST, TRACE)
@@ -67,6 +115,11 @@ class ResourceTopologyBaselineTests(unittest.TestCase):
             "decode_tokens_per_second",
             "peak_occupancy_bytes",
             "minimum_headroom_bytes",
+            "slow_tier_occupancy_bytes",
+            "slow_tier_headroom_bytes",
+            "cold_accesses",
+            "warm_accesses",
+            "cold_warm_state",
             "quality_deviation",
             "cache_or_state_churn_bytes",
             "controller_overhead_seconds",
