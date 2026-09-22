@@ -15,7 +15,10 @@ PASS. It records only what can be recovered and independently read back.
 
 Artifact snapshots intentionally exclude hidden files to match the default
 actions/upload-artifact behavior, and skip symlinks instead of following them.
-Artifact scanning must not replace the wrapped command's exit status.
+Per-artifact stat/hash failures are recorded as partial scan evidence instead of
+replacing the wrapped command's exit status. The terminal command status is
+persisted before artifact scanning begins, so a scanner or filesystem race cannot
+leave a completed command reported as RUNNING.
 
 The production launcher cadence is five minutes. Heartbeats are deliberately small
 JSONL state records, not full process telemetry. Hard runner cancellation or job

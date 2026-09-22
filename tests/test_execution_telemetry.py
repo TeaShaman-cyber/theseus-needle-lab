@@ -1,14 +1,22 @@
 import hashlib
+import importlib.util
 import json
 import pathlib
 import subprocess
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "scripts" / "execution_telemetry.py"
+
+
+spec = importlib.util.spec_from_file_location("execution_telemetry", SCRIPT)
+module = importlib.util.module_from_spec(spec)
+assert spec.loader is not None
+spec.loader.exec_module(module)
 
 
 class ExecutionTelemetryTests(unittest.TestCase):
@@ -61,6 +69,8 @@ class ExecutionTelemetryTests(unittest.TestCase):
             self.assertEqual(checkpoint["schema_version"], "needle-execution-checkpoint-v1")
             self.assertEqual(checkpoint["execution_status"], "SUCCEEDED")
             self.assertEqual(checkpoint["lifecycle_state"], "ARTIFACT_PROVENANCE")
+            self.assertEqual(checkpoint["artifact_scan_status"], "COMPLETE")
+            self.assertEqual(checkpoint["artifact_scan_errors"], [])
             self.assertEqual(checkpoint["identity"]["experiment_sha"], "a" * 40)
             self.assertEqual(checkpoint["identity"]["launcher_sha"], "b" * 40)
             self.assertEqual(checkpoint["identity"]["run_attempt"], 2)
@@ -121,6 +131,8 @@ class ExecutionTelemetryTests(unittest.TestCase):
             checkpoint = json.loads((work / "telemetry/execution-checkpoint.json").read_text())
             self.assertEqual(checkpoint["execution_status"], "FAILED")
             self.assertEqual(checkpoint["command_exit_code"], 17)
+            self.assertEqual(checkpoint["artifact_scan_status"], "COMPLETE")
+            self.assertEqual(checkpoint["artifact_scan_errors"], [])
             self.assertEqual(checkpoint["lifecycle_state"], "ARTIFACT_PROVENANCE")
             self.assertEqual(checkpoint["artifacts"][0]["path"], "artifacts/recoverable.txt")
 
@@ -179,6 +191,48 @@ class ExecutionTelemetryTests(unittest.TestCase):
             self.assertEqual(
                 [artifact["path"] for artifact in checkpoint["artifacts"]],
                 ["artifacts/visible.txt"],
+            )
+
+    def test_per_artifact_scan_error_is_recorded_without_losing_other_artifacts(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            work = pathlib.Path(tmp)
+            root = work / "artifacts"
+            root.mkdir()
+            good = root / "good.txt"
+            bad = root / "bad.txt"
+            good.write_text("good")
+            bad.write_text("bad")
+
+            real_hash = module.sha256_file
+
+            def flaky_hash(path):
+                if path.name == "bad.txt":
+                    raise PermissionError("simulated unreadable artifact")
+                return real_hash(path)
+
+            with mock.patch.object(module, "sha256_file", side_effect=flaky_hash):
+                artifacts, errors = module.snapshot_artifacts([root], work)
+
+            self.assertEqual([item["path"] for item in artifacts], ["artifacts/good.txt"])
+            self.assertEqual(
+                errors,
+                [{"path": "artifacts/bad.txt", "error_type": "PermissionError"}],
+            )
+
+    def test_scanner_exception_becomes_partial_evidence_not_wrapper_failure(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            work = pathlib.Path(tmp)
+            with mock.patch.object(
+                module,
+                "snapshot_artifacts",
+                side_effect=RuntimeError("simulated scanner defect"),
+            ):
+                artifacts, errors = module.safe_snapshot_artifacts([], work)
+
+            self.assertEqual(artifacts, [])
+            self.assertEqual(
+                errors,
+                [{"path": ".", "error_type": "SCANNER_RuntimeError"}],
             )
 
     def test_invalid_identity_fails_closed_before_execution(self):

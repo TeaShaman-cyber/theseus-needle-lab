@@ -15,6 +15,7 @@ SCHEMA_VERSION = "needle-execution-checkpoint-v1"
 SHA_RE = re.compile(r"^[0-9a-f]{40}$")
 EXECUTION_STATUSES = {"RUNNING", "SUCCEEDED", "FAILED"}
 LIFECYCLE_STATES = {"EXECUTING", "ARTIFACT_PROVENANCE"}
+ARTIFACT_SCAN_STATUSES = {"NOT_STARTED", "IN_PROGRESS", "COMPLETE", "PARTIAL"}
 
 
 def utc_now() -> str:
@@ -65,40 +66,83 @@ def _validated_artifact_roots(roots: list[str], cwd: pathlib.Path) -> list[pathl
     return validated
 
 
-def snapshot_artifacts(roots: list[pathlib.Path], cwd: pathlib.Path) -> list[dict[str, Any]]:
+def _scan_path_label(path: pathlib.Path, cwd: pathlib.Path) -> str:
+    try:
+        return path.relative_to(cwd).as_posix()
+    except ValueError:
+        return path.name or "<artifact>"
+
+
+def _scan_error(path: pathlib.Path, cwd: pathlib.Path, error_type: str) -> dict[str, str]:
+    return {
+        "path": _scan_path_label(path, cwd),
+        "error_type": error_type,
+    }
+
+
+def snapshot_artifacts(
+    roots: list[pathlib.Path],
+    cwd: pathlib.Path,
+) -> tuple[list[dict[str, Any]], list[dict[str, str]]]:
     found: list[dict[str, Any]] = []
+    errors: list[dict[str, str]] = []
     workspace = cwd.resolve()
     seen: set[str] = set()
 
     for root in roots:
-        if root.is_symlink() or not root.exists():
+        try:
+            if root.is_symlink() or not root.exists():
+                continue
+            candidates = [root] if root.is_file() else sorted(root.rglob("*"))
+        except OSError as exc:
+            errors.append(_scan_error(root, cwd, type(exc).__name__))
             continue
 
-        candidates = [root] if root.is_file() else sorted(root.rglob("*"))
         for path in candidates:
-            if path.is_symlink() or not path.is_file() or _path_is_hidden(path, root):
-                continue
             try:
-                resolved = path.resolve().relative_to(workspace)
-            except ValueError:
-                # Match upload semantics without allowing an artifact symlink or
-                # other escaped path to overwrite the wrapped command's status.
+                if path.is_symlink() or not path.is_file() or _path_is_hidden(path, root):
+                    continue
+                try:
+                    resolved = path.resolve().relative_to(workspace)
+                except ValueError:
+                    errors.append(_scan_error(path, cwd, "ESCAPED_WORKSPACE"))
+                    continue
+
+                rel = resolved.as_posix()
+                if rel in seen:
+                    continue
+
+                size = path.stat().st_size
+                digest = sha256_file(path)
+            except OSError as exc:
+                errors.append(_scan_error(path, cwd, type(exc).__name__))
                 continue
 
-            rel = resolved.as_posix()
-            if rel in seen:
-                continue
             seen.add(rel)
             found.append(
                 {
                     "path": rel,
-                    "bytes": path.stat().st_size,
-                    "sha256": sha256_file(path),
+                    "bytes": size,
+                    "sha256": digest,
                 }
             )
 
     found.sort(key=lambda item: item["path"])
-    return found
+    errors.sort(key=lambda item: (item["path"], item["error_type"]))
+    return found, errors
+
+
+def safe_snapshot_artifacts(
+    roots: list[pathlib.Path],
+    cwd: pathlib.Path,
+) -> tuple[list[dict[str, Any]], list[dict[str, str]]]:
+    try:
+        return snapshot_artifacts(roots, cwd)
+    except Exception as exc:
+        # Artifact discovery is evidence collection after the wrapped command has
+        # already finished. Never let a scanner defect replace that command's
+        # terminal status.
+        return [], [_scan_error(cwd, cwd, f"SCANNER_{type(exc).__name__}")]
 
 
 def heartbeat_record(state: dict[str, Any]) -> dict[str, Any]:
@@ -152,6 +196,8 @@ def run_command(args: argparse.Namespace) -> int:
         "heartbeat_sequence": 0,
         "command_exit_code": None,
         "command_signal": None,
+        "artifact_scan_status": "NOT_STARTED",
+        "artifact_scan_errors": [],
         "artifacts": [],
     }
     atomic_json(checkpoint, state)
@@ -168,8 +214,6 @@ def run_command(args: argparse.Namespace) -> int:
             atomic_json(checkpoint, state)
             append_heartbeat(heartbeat, heartbeat_record(state))
 
-    artifacts = snapshot_artifacts(artifact_roots, cwd)
-    state["heartbeat_sequence"] += 1
     state["updated_at"] = utc_now()
     state["ended_at"] = state["updated_at"]
     raw_return_code = int(return_code)
@@ -179,6 +223,17 @@ def run_command(args: argparse.Namespace) -> int:
     else:
         state["command_exit_code"] = raw_return_code
     state["execution_status"] = "SUCCEEDED" if raw_return_code == 0 else "FAILED"
+    state["artifact_scan_status"] = "IN_PROGRESS"
+
+    # Persist terminal command status before post-execution evidence scanning so
+    # a filesystem race cannot leave a completed command reported as RUNNING.
+    atomic_json(checkpoint, state)
+
+    artifacts, scan_errors = safe_snapshot_artifacts(artifact_roots, cwd)
+    state["heartbeat_sequence"] += 1
+    state["updated_at"] = utc_now()
+    state["artifact_scan_errors"] = scan_errors
+    state["artifact_scan_status"] = "PARTIAL" if scan_errors else "COMPLETE"
     state["artifacts"] = artifacts
     if artifacts:
         state["lifecycle_state"] = "ARTIFACT_PROVENANCE"
@@ -188,7 +243,9 @@ def run_command(args: argparse.Namespace) -> int:
         "EXECUTION_TELEMETRY_STATUS="
         f"{state['execution_status']} "
         f"LIFECYCLE_STATE={state['lifecycle_state']} "
-        f"ARTIFACTS={len(artifacts)}"
+        f"ARTIFACT_SCAN_STATUS={state['artifact_scan_status']} "
+        f"ARTIFACTS={len(artifacts)} "
+        f"SCAN_ERRORS={len(scan_errors)}"
     )
     return int(state["command_exit_code"])
 
@@ -210,6 +267,8 @@ def load_checkpoint(path: pathlib.Path) -> dict[str, Any]:
         "heartbeat_sequence",
         "command_exit_code",
         "command_signal",
+        "artifact_scan_status",
+        "artifact_scan_errors",
         "artifacts",
     }
     if not required.issubset(value):
@@ -227,6 +286,10 @@ def load_checkpoint(path: pathlib.Path) -> dict[str, Any]:
         raise SystemExit("CHECKPOINT_EXECUTION_STATUS_INVALID")
     if value["lifecycle_state"] not in LIFECYCLE_STATES:
         raise SystemExit("CHECKPOINT_LIFECYCLE_STATE_INVALID")
+    if value["artifact_scan_status"] not in ARTIFACT_SCAN_STATUSES:
+        raise SystemExit("CHECKPOINT_ARTIFACT_SCAN_STATUS_INVALID")
+    if not isinstance(value["artifact_scan_errors"], list):
+        raise SystemExit("CHECKPOINT_ARTIFACT_SCAN_ERRORS_INVALID")
     return value
 
 
