@@ -77,6 +77,23 @@ class LifecycleContractTests(unittest.TestCase):
         self.assertIn("Review records findings; it does not itself grant", architecture)
         self.assertIn("Promotion is a separate consequential mutation", architecture)
 
+    def test_architecture_shows_terminal_exits_before_and_after_acceptance(self):
+        architecture = ARCHITECTURE.read_text(encoding="utf-8")
+        self.assertIn("Any pre-promotion stage:", architecture)
+        self.assertIn(
+            "QA / execution / artifact provenance / witness / review",
+            architecture,
+        )
+        self.assertIn(
+            "blocked / parked / superseded / abandoned ---------------> terminal disposition",
+            architecture,
+        )
+        self.assertIn("Promotion/readback failure:", architecture)
+        self.assertIn(
+            "failed / partial / unavailable / mismatch ---------------> terminal disposition",
+            architecture,
+        )
+
     def test_readme_exposes_the_mature_flow(self):
         text = README.read_text(encoding="utf-8")
         self.assertIn(

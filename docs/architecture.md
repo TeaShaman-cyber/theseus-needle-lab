@@ -13,8 +13,16 @@ Issue / specification
   -> review
   -> explicit acceptance gate
       |-- accepted + authorized --> promotion -> authoritative readback
-      \-- no promotion / blocked / parked --------------------------|
+      \-- declined / no promotion authority ------------------------|
   -> terminal disposition
+
+Any pre-promotion stage:
+  QA / execution / artifact provenance / witness / review
+      \-- blocked / parked / superseded / abandoned ---------------> terminal disposition
+
+Promotion/readback failure:
+  promotion / readback
+      \-- failed / partial / unavailable / mismatch ---------------> terminal disposition
 ```
 
 The research outcome (`ACCEPTED | REJECTED | INCONCLUSIVE`) is recorded
