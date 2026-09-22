@@ -13,6 +13,7 @@ IDEA
   -> WORKING
   -> QA
   -> EXECUTING
+  -> ARTIFACT_PROVENANCE
   -> MODEL_OR_DOMAIN_WITNESS
   -> REVIEW
   -> ACCEPTANCE_GATE
@@ -41,6 +42,11 @@ execution, acceptance, merge, release, or any other consequential mutation.
   actively running against the exact planned revision/configuration. Runtime
   telemetry and checkpoint/recovery evidence belong here. Execution in progress
   is not yet a model/domain witness.
+- **ARTIFACT_PROVENANCE** — execution has completed far enough to produce the
+  declared artifact/output and its exact identity, hashes, configuration, and
+  recovery/provenance record are preserved. This state classifies completed
+  execution awaiting evaluation/witness collection; artifact existence does not
+  imply model/domain quality.
 - **MODEL_OR_DOMAIN_WITNESS** — bounded model/domain evidence was observed for
   the exact artifact/configuration/population declared by the experiment.
   A witness is evidence, not acceptance.
@@ -63,7 +69,7 @@ execution, acceptance, merge, release, or any other consequential mutation.
 
 Promotion is conditional, not mandatory. Work may transition directly to
 `DISPOSITION` from `SPECIFIED`, `PLANNED`, `WORKING`, `QA`, `EXECUTING`,
-`MODEL_OR_DOMAIN_WITNESS`, `REVIEW`, `ACCEPTANCE_GATE`, `PROMOTION`, or
+`ARTIFACT_PROVENANCE`, `MODEL_OR_DOMAIN_WITNESS`, `REVIEW`, `ACCEPTANCE_GATE`, `PROMOTION`, or
 unsuccessful `READBACK` when it is blocked, parked, superseded, abandoned,
 partially mutated, or not accepted for promotion.
 
@@ -75,6 +81,7 @@ PLANNED -- superseded --> DISPOSITION
 WORKING -- blocked --> DISPOSITION
 QA -- blocked --> DISPOSITION
 EXECUTING -- failed / blocked --> DISPOSITION
+ARTIFACT_PROVENANCE -- invalid / incomplete / blocked --> DISPOSITION
 MODEL_OR_DOMAIN_WITNESS -- insufficient / inconclusive --> DISPOSITION
 REVIEW -- superseded / parked --> DISPOSITION
 ACCEPTANCE_GATE -- declined / no promotion authority --> DISPOSITION

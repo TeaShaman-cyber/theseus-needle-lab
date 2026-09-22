@@ -17,6 +17,7 @@ class LifecycleContractTests(unittest.TestCase):
             "WORKING",
             "QA",
             "EXECUTING",
+            "ARTIFACT_PROVENANCE",
             "MODEL_OR_DOMAIN_WITNESS",
             "REVIEW",
             "ACCEPTANCE_GATE",
@@ -38,6 +39,9 @@ class LifecycleContractTests(unittest.TestCase):
         text = LIFECYCLE.read_text(encoding="utf-8")
         self.assertIn("QA does not prove model quality", text)
         self.assertIn("Execution in progress", text)
+        self.assertIn("ARTIFACT_PROVENANCE", text)
+        self.assertIn("execution awaiting evaluation/witness collection", text)
+        self.assertIn("artifact existence does not", text)
         self.assertIn("A witness is evidence, not acceptance", text)
         self.assertIn("reviewer comment cannot silently", text)
         self.assertIn("PROMOTION", text)
@@ -54,6 +58,10 @@ class LifecycleContractTests(unittest.TestCase):
         self.assertIn("BLOCKED`, `UNKNOWN`, or `REPROBE_REQUIRED`", text)
         self.assertIn("QA -- blocked --> DISPOSITION", text)
         self.assertIn("EXECUTING -- failed / blocked --> DISPOSITION", text)
+        self.assertIn(
+            "ARTIFACT_PROVENANCE -- invalid / incomplete / blocked --> DISPOSITION",
+            text,
+        )
         self.assertIn(
             "ACCEPTANCE_GATE -- declined / no promotion authority --> DISPOSITION",
             text,
@@ -97,7 +105,7 @@ class LifecycleContractTests(unittest.TestCase):
     def test_readme_exposes_the_mature_flow(self):
         text = README.read_text(encoding="utf-8")
         self.assertIn(
-            "QA -> execution -> model/domain witness -> review -> acceptance gate -> promotion/readback or direct disposition",
+            "QA -> execution -> artifact provenance -> model/domain witness -> review -> acceptance gate -> promotion/readback or direct disposition",
             text,
         )
         self.assertIn("ACCEPTED | REJECTED | INCONCLUSIVE", text)
