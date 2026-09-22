@@ -18,6 +18,13 @@ SHA40_RE = re.compile(r"^[0-9a-f]{40}$")
 SHA64_RE = re.compile(r"^[0-9a-f]{64}$")
 EVIDENCE_STATUSES = {"VERIFIED", "PARTIAL", "UNAVAILABLE"}
 CLASSIFICATION_SOURCES = {"CHECKPOINT_DERIVED", "EXPLICIT_OBSERVATION"}
+CANONICAL_MAPPED_STATES = {
+    "BLOCKED",
+    "DEGRADED",
+    "UNKNOWN",
+    "REPROBE_REQUIRED",
+    "MODEL_OR_DOMAIN_WITNESS",
+}
 FORBIDDEN_MAPPED_STATES = {"PASS", "NO_CALL", "ACCEPTED", "REJECTED"}
 
 
@@ -57,6 +64,8 @@ def load_taxonomy(path: pathlib.Path = DEFAULT_TAXONOMY) -> dict[str, Any]:
     allowed_states = taxonomy.get("allowed_mapped_states")
     if not isinstance(allowed_states, list) or not allowed_states:
         raise ValueError("taxonomy mapped-state list is missing")
+    if set(allowed_states) != CANONICAL_MAPPED_STATES:
+        raise ValueError("taxonomy mapped-state set does not match lifecycle contract")
     if set(allowed_states) & FORBIDDEN_MAPPED_STATES:
         raise ValueError("taxonomy contains forbidden success/outcome states")
 
@@ -79,11 +88,21 @@ def load_taxonomy(path: pathlib.Path = DEFAULT_TAXONOMY) -> dict[str, Any]:
             or not set(statuses).issubset(EVIDENCE_STATUSES)
         ):
             raise ValueError(f"invalid evidence statuses for {name}")
+        sources = spec.get("allowed_classification_sources")
+        if (
+            not isinstance(sources, list)
+            or not sources
+            or not set(sources).issubset(CLASSIFICATION_SOURCES)
+        ):
+            raise ValueError(f"invalid classification sources for {name}")
         required = spec.get("required_observation_fields")
         if not isinstance(required, list):
             raise ValueError(f"invalid required fields for {name}")
         if not isinstance(spec.get("requires_checkpoint"), bool):
             raise ValueError(f"invalid checkpoint requirement for {name}")
+        next_evidence = spec.get("required_next_evidence")
+        if not isinstance(next_evidence, str) or not next_evidence:
+            raise ValueError(f"invalid required next evidence for {name}")
         if spec["kind"] == "bounded_witness" and statuses != ["VERIFIED"]:
             raise ValueError(f"bounded witness must require VERIFIED evidence: {name}")
     return taxonomy
@@ -102,27 +121,94 @@ def _validate_checkpoint_projection(checkpoint: dict[str, Any]) -> None:
         raise ValueError("invalid experiment SHA")
     if not SHA40_RE.fullmatch(str(identity["launcher_sha"])):
         raise ValueError("invalid launcher SHA")
+    for key in ("run_id", "stage", "unit"):
+        if not isinstance(identity[key], str) or not identity[key]:
+            raise ValueError(f"invalid execution checkpoint identity field: {key}")
     if (
         not isinstance(identity["run_attempt"], int)
         or isinstance(identity["run_attempt"], bool)
         or identity["run_attempt"] < 1
     ):
         raise ValueError("invalid run attempt")
-    if checkpoint.get("execution_status") not in {"RUNNING", "SUCCEEDED", "FAILED"}:
+
+    execution_status = checkpoint.get("execution_status")
+    lifecycle_state = checkpoint.get("lifecycle_state")
+    scan_status = checkpoint.get("artifact_scan_status")
+    exit_code = checkpoint.get("command_exit_code")
+    signal = checkpoint.get("command_signal")
+    scan_errors = checkpoint.get("artifact_scan_errors")
+    artifacts = checkpoint.get("artifacts")
+
+    if execution_status not in {"RUNNING", "SUCCEEDED", "FAILED"}:
         raise ValueError("invalid execution status")
-    if checkpoint.get("lifecycle_state") not in {"EXECUTING", "ARTIFACT_PROVENANCE"}:
+    if lifecycle_state not in {"EXECUTING", "ARTIFACT_PROVENANCE"}:
         raise ValueError("invalid execution lifecycle state")
-    if checkpoint.get("artifact_scan_status") not in {
-        "NOT_STARTED",
-        "IN_PROGRESS",
-        "COMPLETE",
-        "PARTIAL",
-    }:
+    if scan_status not in {"NOT_STARTED", "IN_PROGRESS", "COMPLETE", "PARTIAL"}:
         raise ValueError("invalid artifact scan status")
-    if not isinstance(checkpoint.get("artifact_scan_errors"), list):
+    if not isinstance(scan_errors, list):
         raise ValueError("checkpoint artifact scan errors must be a list")
-    if not isinstance(checkpoint.get("artifacts"), list):
+    if not isinstance(artifacts, list):
         raise ValueError("checkpoint artifacts must be a list")
+
+    if execution_status == "RUNNING":
+        if exit_code is not None or signal is not None:
+            raise ValueError("running checkpoint cannot have terminal exit evidence")
+        if scan_status != "NOT_STARTED":
+            raise ValueError("running checkpoint cannot have artifact scan progress")
+    elif execution_status == "SUCCEEDED":
+        if exit_code != 0 or signal is not None:
+            raise ValueError("successful checkpoint has inconsistent exit evidence")
+        if scan_status == "NOT_STARTED":
+            raise ValueError("terminal checkpoint must start artifact scan")
+    else:
+        if (
+            not isinstance(exit_code, int)
+            or isinstance(exit_code, bool)
+            or exit_code == 0
+        ):
+            raise ValueError("failed checkpoint requires nonzero integer exit code")
+        if scan_status == "NOT_STARTED":
+            raise ValueError("terminal checkpoint must start artifact scan")
+        if signal is not None:
+            if (
+                not isinstance(signal, int)
+                or isinstance(signal, bool)
+                or signal <= 0
+                or exit_code != 128 + signal
+            ):
+                raise ValueError("failed checkpoint has inconsistent signal evidence")
+
+    if scan_status == "COMPLETE" and scan_errors:
+        raise ValueError("complete artifact scan cannot carry scan errors")
+    if scan_status == "PARTIAL" and not scan_errors:
+        raise ValueError("partial artifact scan requires scan errors")
+
+    for item in scan_errors:
+        if not isinstance(item, dict):
+            raise ValueError("invalid artifact scan error entry")
+        if not isinstance(item.get("path"), str) or not item["path"]:
+            raise ValueError("invalid artifact scan error path")
+        if not isinstance(item.get("error_type"), str) or not item["error_type"]:
+            raise ValueError("invalid artifact scan error type")
+
+    for artifact in artifacts:
+        if not isinstance(artifact, dict):
+            raise ValueError("invalid artifact identity entry")
+        if not isinstance(artifact.get("path"), str) or not artifact["path"]:
+            raise ValueError("invalid artifact path")
+        if (
+            not isinstance(artifact.get("bytes"), int)
+            or isinstance(artifact["bytes"], bool)
+            or artifact["bytes"] < 0
+        ):
+            raise ValueError("invalid artifact byte count")
+        if not SHA64_RE.fullmatch(str(artifact.get("sha256", ""))):
+            raise ValueError("invalid artifact SHA-256")
+
+    if lifecycle_state == "ARTIFACT_PROVENANCE" and not artifacts:
+        raise ValueError("artifact provenance lifecycle requires artifact identity")
+    if artifacts and lifecycle_state != "ARTIFACT_PROVENANCE":
+        raise ValueError("artifact identity requires artifact provenance lifecycle")
 
 
 def classify_checkpoint(checkpoint: dict[str, Any]) -> dict[str, Any] | None:
@@ -179,6 +265,30 @@ def classify_checkpoint(checkpoint: dict[str, Any]) -> dict[str, Any] | None:
     return None
 
 
+def _checkpoint_derived_fields() -> tuple[str, ...]:
+    return (
+        "fault_class",
+        "evidence_status",
+        "classification_source",
+        "observed_surface",
+        "metric_or_check",
+        "observed_value",
+        "expected_or_reference_value",
+    )
+
+
+def _validate_checkpoint_derived_claim(
+    claim: dict[str, Any],
+    checkpoint: dict[str, Any],
+) -> None:
+    derived = classify_checkpoint(checkpoint)
+    if derived is None:
+        raise ValueError("checkpoint does not contain a mechanically classified fault")
+    for key in _checkpoint_derived_fields():
+        if claim.get(key) != derived.get(key):
+            raise ValueError(f"checkpoint-derived classification mismatch: {key}")
+
+
 def _required_observation_fields(
     observation: dict[str, Any],
     class_spec: dict[str, Any],
@@ -225,6 +335,8 @@ def build_receipt(
     source = observation.get("classification_source", "EXPLICIT_OBSERVATION")
     if source not in CLASSIFICATION_SOURCES:
         raise ValueError("invalid classification source")
+    if source not in class_spec["allowed_classification_sources"]:
+        raise ValueError("classification source is not allowed for fault class")
 
     if class_spec["requires_checkpoint"]:
         if checkpoint is None:
@@ -234,6 +346,11 @@ def build_receipt(
         projection = _checkpoint_projection(checkpoint)
     else:
         projection = {"identity": None, "execution": None, "artifacts": []}
+
+    if source == "CHECKPOINT_DERIVED":
+        if checkpoint is None:
+            raise ValueError("checkpoint-derived classification requires checkpoint")
+        _validate_checkpoint_derived_claim(observation, checkpoint)
 
     receipt: dict[str, Any] = {
         "schema_version": RECEIPT_SCHEMA,
@@ -245,6 +362,7 @@ def build_receipt(
         "evidence_status": evidence_status,
         "classification_source": source,
         "observed_surface": observation["observed_surface"],
+        "required_next_evidence": class_spec["required_next_evidence"],
         "execution_checkpoint_sha256": checkpoint_sha256,
         **projection,
     }
@@ -287,10 +405,14 @@ def validate_receipt(
         raise ValueError("fault mapped state mismatch")
     if receipt.get("mapped_state") in FORBIDDEN_MAPPED_STATES:
         raise ValueError("forbidden success/outcome mapped state")
+    if receipt.get("required_next_evidence") != class_spec["required_next_evidence"]:
+        raise ValueError("required next evidence mismatch")
     if receipt.get("evidence_status") not in class_spec["allowed_evidence_status"]:
         raise ValueError("invalid receipt evidence status")
     if receipt.get("classification_source") not in CLASSIFICATION_SOURCES:
         raise ValueError("invalid receipt classification source")
+    if receipt.get("classification_source") not in class_spec["allowed_classification_sources"]:
+        raise ValueError("receipt classification source is not allowed for fault class")
     _required_observation_fields(receipt, class_spec)
 
     if class_spec["requires_checkpoint"]:
@@ -323,6 +445,8 @@ def validate_receipt_against_checkpoint(
         raise ValueError("receipt checkpoint execution mismatch")
     if receipt.get("artifacts") != projection["artifacts"]:
         raise ValueError("receipt checkpoint artifact mismatch")
+    if receipt.get("classification_source") == "CHECKPOINT_DERIVED":
+        _validate_checkpoint_derived_claim(receipt, checkpoint)
 
 
 def _write_json(path: pathlib.Path, value: dict[str, Any]) -> None:
@@ -384,11 +508,16 @@ def _build_command(args: argparse.Namespace) -> int:
 def _validate_command(args: argparse.Namespace) -> int:
     taxonomy = load_taxonomy(args.taxonomy)
     receipt = load_json(args.receipt)
+    validate_receipt(receipt, taxonomy)
+    class_spec = taxonomy["classes"][receipt["fault_class"]]
+
     if args.checkpoint is None:
-        validate_receipt(receipt, taxonomy)
+        if class_spec["requires_checkpoint"]:
+            raise SystemExit("CHECKPOINT_REQUIRED_FOR_BOUND_VALIDATION")
     else:
         checkpoint, digest = _checkpoint_from_path(args.checkpoint)
         validate_receipt_against_checkpoint(receipt, checkpoint, digest, taxonomy)
+
     print(
         "INTEGRATION_FAULT_RECEIPT_VALID=PASS "
         f"CLASS={receipt['fault_class']} "

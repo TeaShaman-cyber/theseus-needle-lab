@@ -2,6 +2,8 @@ import copy
 import importlib.util
 import json
 import pathlib
+import subprocess
+import sys
 import tempfile
 import unittest
 
@@ -95,6 +97,74 @@ class IntegrationFaultContractTests(unittest.TestCase):
         self.assertNotIn('"REJECTED"', serialized)
         self.assertNotIn('"ACCEPTED"', serialized)
 
+    def test_taxonomy_cannot_expand_lifecycle_states_or_classification_sources(self):
+        changed = copy.deepcopy(self.taxonomy)
+        changed["allowed_mapped_states"].append("FOO")
+        with tempfile.TemporaryDirectory() as tmp:
+            path = pathlib.Path(tmp) / "taxonomy.json"
+            path.write_text(
+                json.dumps(changed, sort_keys=True, indent=2) + "\n",
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(ValueError, "lifecycle contract"):
+                self.module.load_taxonomy(path)
+
+        self.assertEqual(
+            self.taxonomy["classes"]["EXECUTION_FAILED"]["allowed_classification_sources"],
+            ["CHECKPOINT_DERIVED"],
+        )
+        observation = {
+            "fault_class": "EXECUTION_FAILED",
+            "evidence_status": "VERIFIED",
+            "classification_source": "EXPLICIT_OBSERVATION",
+            "observed_surface": "recovery_canary",
+            "metric_or_check": "command_exit_code",
+            "observed_value": 17,
+            "expected_or_reference_value": 0,
+        }
+        with self.assertRaisesRegex(ValueError, "classification source"):
+            self.module.build_receipt(
+                observation,
+                checkpoint(),
+                checkpoint_sha256="d" * 64,
+                taxonomy=self.taxonomy,
+            )
+
+    def test_each_fault_names_missing_or_next_evidence_without_deciding_authority(self):
+        for name, spec in self.taxonomy["classes"].items():
+            with self.subTest(name=name):
+                self.assertIsInstance(spec["required_next_evidence"], str)
+                self.assertTrue(spec["required_next_evidence"])
+                self.assertNotIn(
+                    spec["required_next_evidence"],
+                    {"PROMOTE", "MERGE", "ACCEPT", "REJECT"},
+                )
+
+        cp = checkpoint(
+            execution_status="RUNNING",
+            lifecycle_state="EXECUTING",
+            artifact_scan_status="NOT_STARTED",
+            command_exit_code=None,
+        )
+        cp["artifacts"] = []
+        observation = self.module.classify_checkpoint(cp)
+        receipt = self.module.build_receipt(
+            observation,
+            cp,
+            checkpoint_sha256="d" * 64,
+            taxonomy=self.taxonomy,
+        )
+        self.assertEqual(receipt["mapped_state"], "UNKNOWN")
+        self.assertEqual(
+            receipt["required_next_evidence"],
+            "terminal_execution_checkpoint",
+        )
+
+        tampered = copy.deepcopy(receipt)
+        tampered["required_next_evidence"] = "PROMOTE"
+        with self.assertRaisesRegex(ValueError, "required next evidence mismatch"):
+            self.module.validate_receipt(tampered, self.taxonomy)
+
     def test_checkpoint_failure_classification_is_mechanical_only(self):
         observation = self.module.classify_checkpoint(checkpoint())
         self.assertEqual(observation["fault_class"], "EXECUTION_FAILED")
@@ -108,9 +178,10 @@ class IntegrationFaultContractTests(unittest.TestCase):
         ambiguous = checkpoint(
             execution_status="RUNNING",
             lifecycle_state="EXECUTING",
-            artifact_scan_status="IN_PROGRESS",
+            artifact_scan_status="NOT_STARTED",
             command_exit_code=None,
         )
+        ambiguous["artifacts"] = []
         observation = self.module.classify_checkpoint(ambiguous)
         self.assertEqual(observation["fault_class"], "EXECUTION_AMBIGUOUS")
         self.assertEqual(observation["evidence_status"], "PARTIAL")
@@ -120,6 +191,9 @@ class IntegrationFaultContractTests(unittest.TestCase):
             artifact_scan_status="PARTIAL",
             command_exit_code=0,
         )
+        incomplete["artifact_scan_errors"] = [
+            {"path": "artifacts/recoverable.txt", "error_type": "CONCURRENT_MODIFICATION"}
+        ]
         observation = self.module.classify_checkpoint(incomplete)
         self.assertEqual(
             observation["fault_class"],
@@ -133,6 +207,149 @@ class IntegrationFaultContractTests(unittest.TestCase):
             command_exit_code=0,
         )
         self.assertIsNone(self.module.classify_checkpoint(healthy))
+
+    def test_checkpoint_projection_rejects_internally_inconsistent_state(self):
+        cases = []
+
+        value = checkpoint(execution_status="SUCCEEDED", command_exit_code=17)
+        cases.append(value)
+
+        value = checkpoint(execution_status="FAILED", command_exit_code=0)
+        cases.append(value)
+
+        value = checkpoint(
+            execution_status="FAILED",
+            command_exit_code=143,
+            command_signal=9,
+        )
+        cases.append(value)
+
+        value = checkpoint(
+            execution_status="RUNNING",
+            lifecycle_state="EXECUTING",
+            artifact_scan_status="IN_PROGRESS",
+            command_exit_code=None,
+        )
+        cases.append(value)
+
+        value = checkpoint(
+            execution_status="SUCCEEDED",
+            artifact_scan_status="COMPLETE",
+            command_exit_code=0,
+        )
+        value["artifact_scan_errors"] = [{"path": "x", "error_type": "E"}]
+        cases.append(value)
+
+        value = checkpoint(
+            execution_status="SUCCEEDED",
+            artifact_scan_status="PARTIAL",
+            command_exit_code=0,
+        )
+        value["artifact_scan_errors"] = []
+        cases.append(value)
+
+        for value in cases:
+            with self.subTest(value=value):
+                with self.assertRaises(ValueError):
+                    self.module.classify_checkpoint(value)
+
+    def test_checkpoint_derived_receipt_cannot_be_reclassified(self):
+        cp = checkpoint()
+        observation = self.module.classify_checkpoint(cp)
+        receipt = self.module.build_receipt(
+            observation,
+            cp,
+            checkpoint_sha256="d" * 64,
+            taxonomy=self.taxonomy,
+        )
+
+        tampered = copy.deepcopy(receipt)
+        tampered["fault_class"] = "EXECUTION_INTERRUPTED"
+        tampered["metric_or_check"] = "command_signal"
+        tampered["observed_value"] = 15
+        tampered["expected_or_reference_value"] = 0
+
+        self.module.validate_receipt(tampered, self.taxonomy)
+        with self.assertRaisesRegex(ValueError, "checkpoint-derived classification mismatch"):
+            self.module.validate_receipt_against_checkpoint(
+                tampered,
+                cp,
+                "d" * 64,
+                self.taxonomy,
+            )
+
+        bad_observation = copy.deepcopy(observation)
+        bad_observation["fault_class"] = "EXECUTION_INTERRUPTED"
+        bad_observation["metric_or_check"] = "command_signal"
+        bad_observation["observed_value"] = 15
+        with self.assertRaisesRegex(ValueError, "checkpoint-derived classification mismatch"):
+            self.module.build_receipt(
+                bad_observation,
+                cp,
+                checkpoint_sha256="d" * 64,
+                taxonomy=self.taxonomy,
+            )
+
+    def test_partial_artifact_missing_and_ungrounded_invalid_identity_fail_closed(self):
+        partial_missing = {
+            "fault_class": "ARTIFACT_MISSING",
+            "evidence_status": "PARTIAL",
+            "observed_surface": "built_cact",
+            "metric_or_check": "artifact_presence",
+            "observed_value": False,
+            "expected_or_reference_value": True,
+        }
+        with self.assertRaises(ValueError):
+            self.module.build_receipt(
+                partial_missing,
+                checkpoint(),
+                checkpoint_sha256="d" * 64,
+                taxonomy=self.taxonomy,
+            )
+
+        weak_identity = {
+            "fault_class": "INVALID_IDENTITY",
+            "evidence_status": "VERIFIED",
+            "observed_surface": "built_cact",
+        }
+        with self.assertRaisesRegex(ValueError, "missing required observation field"):
+            self.module.build_receipt(
+                weak_identity,
+                taxonomy=self.taxonomy,
+            )
+
+    def test_cli_bound_validation_requires_checkpoint(self):
+        observation = self.module.classify_checkpoint(checkpoint())
+        receipt = self.module.build_receipt(
+            observation,
+            checkpoint(),
+            checkpoint_sha256="d" * 64,
+            taxonomy=self.taxonomy,
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            receipt_path = pathlib.Path(tmp) / "receipt.json"
+            receipt_path.write_text(
+                json.dumps(receipt, sort_keys=True, indent=2) + "\n",
+                encoding="utf-8",
+            )
+            proc = subprocess.run(
+                [
+                    sys.executable,
+                    str(SCRIPT),
+                    "--taxonomy",
+                    str(TAXONOMY),
+                    "validate-receipt",
+                    "--receipt",
+                    str(receipt_path),
+                ],
+                text=True,
+                capture_output=True,
+            )
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertIn(
+            "CHECKPOINT_REQUIRED_FOR_BOUND_VALIDATION",
+            proc.stdout + proc.stderr,
+        )
 
     def test_semantic_witness_requires_observed_comparison_and_never_decides_outcome(self):
         observation = {

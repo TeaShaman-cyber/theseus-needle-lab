@@ -1,5 +1,4 @@
 {
-  "schema_version": "needle-integration-fault-taxonomy-v1",
   "allowed_mapped_states": [
     "BLOCKED",
     "DEGRADED",
@@ -8,103 +7,263 @@
     "MODEL_OR_DOMAIN_WITNESS"
   ],
   "classes": {
-    "INVALID_IDENTITY": {
-      "kind": "infrastructure_fault",
-      "mapped_state": "BLOCKED",
-      "allowed_evidence_status": ["VERIFIED", "PARTIAL"],
-      "requires_checkpoint": false,
-      "required_observation_fields": ["observed_surface"]
-    },
-    "EXECUTION_FAILED": {
-      "kind": "infrastructure_fault",
-      "mapped_state": "BLOCKED",
-      "allowed_evidence_status": ["VERIFIED"],
-      "requires_checkpoint": true,
-      "required_observation_fields": ["observed_surface", "metric_or_check", "observed_value"]
-    },
-    "EXECUTION_INTERRUPTED": {
-      "kind": "infrastructure_fault",
-      "mapped_state": "BLOCKED",
-      "allowed_evidence_status": ["VERIFIED"],
-      "requires_checkpoint": true,
-      "required_observation_fields": ["observed_surface", "metric_or_check", "observed_value"]
-    },
-    "EXECUTION_AMBIGUOUS": {
-      "kind": "infrastructure_fault",
-      "mapped_state": "UNKNOWN",
-      "allowed_evidence_status": ["PARTIAL"],
-      "requires_checkpoint": true,
-      "required_observation_fields": ["observed_surface", "metric_or_check", "observed_value"]
-    },
-    "ARTIFACT_PROVENANCE_INCOMPLETE": {
-      "kind": "infrastructure_fault",
-      "mapped_state": "DEGRADED",
-      "allowed_evidence_status": ["PARTIAL"],
-      "requires_checkpoint": true,
-      "required_observation_fields": ["observed_surface", "metric_or_check", "observed_value"]
-    },
-    "ARTIFACT_MISSING": {
-      "kind": "infrastructure_fault",
-      "mapped_state": "BLOCKED",
-      "allowed_evidence_status": ["VERIFIED", "PARTIAL"],
-      "requires_checkpoint": true,
-      "required_observation_fields": ["observed_surface", "metric_or_check", "observed_value", "expected_or_reference_value"]
+    "ACCEPTANCE_OR_CALL_RATE_COLLAPSE": {
+      "allowed_classification_sources": [
+        "EXPLICIT_OBSERVATION"
+      ],
+      "allowed_evidence_status": [
+        "VERIFIED"
+      ],
+      "kind": "bounded_witness",
+      "mapped_state": "MODEL_OR_DOMAIN_WITNESS",
+      "required_next_evidence": "acceptance_gate_review_of_bounded_witness",
+      "required_observation_fields": [
+        "observed_surface",
+        "reference_surface",
+        "candidate_surface",
+        "metric_or_check",
+        "observed_value",
+        "expected_or_reference_value"
+      ],
+      "requires_checkpoint": true
     },
     "ARTIFACT_CORRUPT_OR_HASH_MISMATCH": {
+      "allowed_classification_sources": [
+        "EXPLICIT_OBSERVATION"
+      ],
+      "allowed_evidence_status": [
+        "VERIFIED"
+      ],
       "kind": "infrastructure_fault",
       "mapped_state": "BLOCKED",
-      "allowed_evidence_status": ["VERIFIED"],
-      "requires_checkpoint": true,
-      "required_observation_fields": ["observed_surface", "metric_or_check", "observed_value", "expected_or_reference_value"]
+      "required_next_evidence": "verified_artifact_rebuild_or_matching_hash_readback",
+      "required_observation_fields": [
+        "observed_surface",
+        "metric_or_check",
+        "observed_value",
+        "expected_or_reference_value"
+      ],
+      "requires_checkpoint": true
     },
-    "READBACK_UNAVAILABLE": {
+    "ARTIFACT_MISSING": {
+      "allowed_classification_sources": [
+        "EXPLICIT_OBSERVATION"
+      ],
+      "allowed_evidence_status": [
+        "VERIFIED"
+      ],
       "kind": "infrastructure_fault",
-      "mapped_state": "REPROBE_REQUIRED",
-      "allowed_evidence_status": ["VERIFIED", "PARTIAL"],
-      "requires_checkpoint": true,
-      "required_observation_fields": ["observed_surface", "metric_or_check"]
+      "mapped_state": "BLOCKED",
+      "required_next_evidence": "verified_artifact_identity_or_reproduction",
+      "required_observation_fields": [
+        "observed_surface",
+        "metric_or_check",
+        "observed_value",
+        "expected_or_reference_value"
+      ],
+      "requires_checkpoint": true
     },
-    "READBACK_MISMATCH": {
+    "ARTIFACT_PROVENANCE_INCOMPLETE": {
+      "allowed_classification_sources": [
+        "CHECKPOINT_DERIVED"
+      ],
+      "allowed_evidence_status": [
+        "PARTIAL"
+      ],
       "kind": "infrastructure_fault",
-      "mapped_state": "REPROBE_REQUIRED",
-      "allowed_evidence_status": ["VERIFIED"],
-      "requires_checkpoint": true,
-      "required_observation_fields": ["observed_surface", "metric_or_check", "observed_value", "expected_or_reference_value"]
+      "mapped_state": "DEGRADED",
+      "required_next_evidence": "complete_artifact_provenance_or_explicit_degraded_acceptance",
+      "required_observation_fields": [
+        "observed_surface",
+        "metric_or_check",
+        "observed_value"
+      ],
+      "requires_checkpoint": true
     },
-    "REFERENCE_BUILD_SEMANTIC_MISMATCH": {
-      "kind": "bounded_witness",
-      "mapped_state": "MODEL_OR_DOMAIN_WITNESS",
-      "allowed_evidence_status": ["VERIFIED"],
-      "requires_checkpoint": true,
-      "required_observation_fields": ["observed_surface", "reference_surface", "candidate_surface", "metric_or_check", "observed_value", "expected_or_reference_value"]
+    "EXECUTION_AMBIGUOUS": {
+      "allowed_classification_sources": [
+        "CHECKPOINT_DERIVED"
+      ],
+      "allowed_evidence_status": [
+        "PARTIAL"
+      ],
+      "kind": "infrastructure_fault",
+      "mapped_state": "UNKNOWN",
+      "required_next_evidence": "terminal_execution_checkpoint",
+      "required_observation_fields": [
+        "observed_surface",
+        "metric_or_check",
+        "observed_value"
+      ],
+      "requires_checkpoint": true
     },
-    "QUANTIZATION_EXPORT_DIVERGENCE": {
-      "kind": "bounded_witness",
-      "mapped_state": "MODEL_OR_DOMAIN_WITNESS",
-      "allowed_evidence_status": ["VERIFIED"],
-      "requires_checkpoint": true,
-      "required_observation_fields": ["observed_surface", "reference_surface", "candidate_surface", "metric_or_check", "observed_value", "expected_or_reference_value"]
+    "EXECUTION_FAILED": {
+      "allowed_classification_sources": [
+        "CHECKPOINT_DERIVED"
+      ],
+      "allowed_evidence_status": [
+        "VERIFIED"
+      ],
+      "kind": "infrastructure_fault",
+      "mapped_state": "BLOCKED",
+      "required_next_evidence": "recovery_or_new_terminal_execution_evidence",
+      "required_observation_fields": [
+        "observed_surface",
+        "metric_or_check",
+        "observed_value"
+      ],
+      "requires_checkpoint": true
+    },
+    "EXECUTION_INTERRUPTED": {
+      "allowed_classification_sources": [
+        "CHECKPOINT_DERIVED"
+      ],
+      "allowed_evidence_status": [
+        "VERIFIED"
+      ],
+      "kind": "infrastructure_fault",
+      "mapped_state": "BLOCKED",
+      "required_next_evidence": "recovery_or_new_terminal_execution_evidence",
+      "required_observation_fields": [
+        "observed_surface",
+        "metric_or_check",
+        "observed_value"
+      ],
+      "requires_checkpoint": true
     },
     "HELPER_VERIFIER_EXACTNESS_LOSS": {
+      "allowed_classification_sources": [
+        "EXPLICIT_OBSERVATION"
+      ],
+      "allowed_evidence_status": [
+        "VERIFIED"
+      ],
       "kind": "bounded_witness",
       "mapped_state": "MODEL_OR_DOMAIN_WITNESS",
-      "allowed_evidence_status": ["VERIFIED"],
-      "requires_checkpoint": true,
-      "required_observation_fields": ["observed_surface", "reference_surface", "candidate_surface", "metric_or_check", "observed_value", "expected_or_reference_value"]
+      "required_next_evidence": "acceptance_gate_review_of_bounded_witness",
+      "required_observation_fields": [
+        "observed_surface",
+        "reference_surface",
+        "candidate_surface",
+        "metric_or_check",
+        "observed_value",
+        "expected_or_reference_value"
+      ],
+      "requires_checkpoint": true
     },
-    "ACCEPTANCE_OR_CALL_RATE_COLLAPSE": {
-      "kind": "bounded_witness",
-      "mapped_state": "MODEL_OR_DOMAIN_WITNESS",
-      "allowed_evidence_status": ["VERIFIED"],
-      "requires_checkpoint": true,
-      "required_observation_fields": ["observed_surface", "reference_surface", "candidate_surface", "metric_or_check", "observed_value", "expected_or_reference_value"]
+    "INVALID_IDENTITY": {
+      "allowed_classification_sources": [
+        "EXPLICIT_OBSERVATION"
+      ],
+      "allowed_evidence_status": [
+        "VERIFIED"
+      ],
+      "kind": "infrastructure_fault",
+      "mapped_state": "BLOCKED",
+      "required_next_evidence": "verified_expected_and_observed_identity",
+      "required_observation_fields": [
+        "observed_surface",
+        "metric_or_check",
+        "observed_value",
+        "expected_or_reference_value"
+      ],
+      "requires_checkpoint": false
     },
     "PERFORMANCE_INVERSION": {
+      "allowed_classification_sources": [
+        "EXPLICIT_OBSERVATION"
+      ],
+      "allowed_evidence_status": [
+        "VERIFIED"
+      ],
       "kind": "bounded_witness",
       "mapped_state": "MODEL_OR_DOMAIN_WITNESS",
-      "allowed_evidence_status": ["VERIFIED"],
-      "requires_checkpoint": true,
-      "required_observation_fields": ["observed_surface", "reference_surface", "candidate_surface", "metric_or_check", "observed_value", "expected_or_reference_value"]
+      "required_next_evidence": "acceptance_gate_review_of_bounded_witness",
+      "required_observation_fields": [
+        "observed_surface",
+        "reference_surface",
+        "candidate_surface",
+        "metric_or_check",
+        "observed_value",
+        "expected_or_reference_value"
+      ],
+      "requires_checkpoint": true
+    },
+    "QUANTIZATION_EXPORT_DIVERGENCE": {
+      "allowed_classification_sources": [
+        "EXPLICIT_OBSERVATION"
+      ],
+      "allowed_evidence_status": [
+        "VERIFIED"
+      ],
+      "kind": "bounded_witness",
+      "mapped_state": "MODEL_OR_DOMAIN_WITNESS",
+      "required_next_evidence": "acceptance_gate_review_of_bounded_witness",
+      "required_observation_fields": [
+        "observed_surface",
+        "reference_surface",
+        "candidate_surface",
+        "metric_or_check",
+        "observed_value",
+        "expected_or_reference_value"
+      ],
+      "requires_checkpoint": true
+    },
+    "READBACK_MISMATCH": {
+      "allowed_classification_sources": [
+        "EXPLICIT_OBSERVATION"
+      ],
+      "allowed_evidence_status": [
+        "VERIFIED"
+      ],
+      "kind": "infrastructure_fault",
+      "mapped_state": "REPROBE_REQUIRED",
+      "required_next_evidence": "authoritative_readback_reconciliation",
+      "required_observation_fields": [
+        "observed_surface",
+        "metric_or_check",
+        "observed_value",
+        "expected_or_reference_value"
+      ],
+      "requires_checkpoint": true
+    },
+    "READBACK_UNAVAILABLE": {
+      "allowed_classification_sources": [
+        "EXPLICIT_OBSERVATION"
+      ],
+      "allowed_evidence_status": [
+        "VERIFIED",
+        "PARTIAL"
+      ],
+      "kind": "infrastructure_fault",
+      "mapped_state": "REPROBE_REQUIRED",
+      "required_next_evidence": "authoritative_readback_reprobe",
+      "required_observation_fields": [
+        "observed_surface",
+        "metric_or_check"
+      ],
+      "requires_checkpoint": true
+    },
+    "REFERENCE_BUILD_SEMANTIC_MISMATCH": {
+      "allowed_classification_sources": [
+        "EXPLICIT_OBSERVATION"
+      ],
+      "allowed_evidence_status": [
+        "VERIFIED"
+      ],
+      "kind": "bounded_witness",
+      "mapped_state": "MODEL_OR_DOMAIN_WITNESS",
+      "required_next_evidence": "acceptance_gate_review_of_bounded_witness",
+      "required_observation_fields": [
+        "observed_surface",
+        "reference_surface",
+        "candidate_surface",
+        "metric_or_check",
+        "observed_value",
+        "expected_or_reference_value"
+      ],
+      "requires_checkpoint": true
     }
-  }
+  },
+  "schema_version": "needle-integration-fault-taxonomy-v1"
 }
