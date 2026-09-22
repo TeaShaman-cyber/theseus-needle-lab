@@ -79,6 +79,27 @@ class ResourceTopologyBaselineTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             module.validate_fixture(candidate, trace)
 
+    def test_static_fixed_set_must_fit_hard_budget(self):
+        manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
+        trace = json.loads(TRACE.read_text(encoding="utf-8"))
+        manifest["policies"]["static_fixed"]["fixed_sets"] = ["A", "B", "C"]
+        with self.assertRaisesRegex(ValueError, "exceed fast-tier budget"):
+            module.validate_fixture(manifest, trace)
+
+    def test_static_fixed_set_must_use_known_unique_working_sets(self):
+        manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
+        trace = json.loads(TRACE.read_text(encoding="utf-8"))
+
+        duplicate = copy.deepcopy(manifest)
+        duplicate["policies"]["static_fixed"]["fixed_sets"] = ["A", "A"]
+        with self.assertRaisesRegex(ValueError, "must be unique"):
+            module.validate_fixture(duplicate, trace)
+
+        unknown = copy.deepcopy(manifest)
+        unknown["policies"]["static_fixed"]["fixed_sets"] = ["A", "UNKNOWN"]
+        with self.assertRaisesRegex(ValueError, "unknown working set"):
+            module.validate_fixture(unknown, trace)
+
     def test_missing_prefill_and_decode_emit_unavailable_metrics(self):
         manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
         trace = {
@@ -105,6 +126,34 @@ class ResourceTopologyBaselineTests(unittest.TestCase):
         )
         self.assertIsNone(metrics["quality_deviation"])
         self.assertEqual(metrics["quality_measurement_status"], "NOT_MEASURED")
+
+    def test_zero_duration_decode_is_observed_not_absent(self):
+        manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
+        for field in ("transfer_seconds_per_byte", "miss_penalty_seconds"):
+            manifest["topology"][field] = 0.0
+        for policy in manifest["policies"].values():
+            policy["controller_overhead_seconds_per_event"] = 0.0
+
+        trace = {
+            "schema_version": "theseus.needle.resource_topology_trace.v1",
+            "topology_id": manifest["topology"]["topology_id"],
+            "events": [
+                {
+                    "request_id": "R1",
+                    "phase": "decode",
+                    "working_set_id": "A",
+                    "base_latency_seconds": 0.0,
+                    "tokens": 1,
+                }
+            ],
+        }
+        module.validate_fixture(manifest, trace)
+        metrics = module.Simulator(manifest, trace, "lru").run()
+        self.assertIsNone(metrics["decode_tokens_per_second"])
+        self.assertEqual(
+            metrics["decode_throughput_measurement_status"],
+            "OBSERVED_ZERO_DURATION",
+        )
 
     def test_committed_receipt_is_byte_stable(self):
         result = subprocess.run(

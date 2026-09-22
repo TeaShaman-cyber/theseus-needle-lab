@@ -27,3 +27,12 @@ Metrics whose required phase is absent are emitted as null with an explicit
 NOT_OBSERVED status instead of synthesizing zero or dividing by zero. Simulator
 cost parameters must be finite and nonnegative; malformed manifests fail closed
 before simulation.
+
+The static fixed-set baseline is only valid when the configured fixed working
+sets are unique, known, and fit together inside the hard fast-tier budget.
+Otherwise fixture validation fails closed instead of silently evicting a member
+of the purported fixed set.
+
+A decode phase that is present but has zero modeled duration is distinguished
+from an absent decode phase: throughput is null with status
+OBSERVED_ZERO_DURATION, not NOT_OBSERVED.

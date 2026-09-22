@@ -87,6 +87,17 @@ def validate_fixture(manifest: dict[str, Any], trace: dict[str, Any]) -> None:
         if not name or int(size) <= 0 or int(size) > budget:
             raise ValueError("invalid working-set size")
 
+    fixed_sets = manifest["policies"]["static_fixed"].get("fixed_sets", [])
+    if not isinstance(fixed_sets, list) or not fixed_sets:
+        raise ValueError("static_fixed.fixed_sets must be a nonempty list")
+    if len(fixed_sets) != len(set(fixed_sets)):
+        raise ValueError("static_fixed.fixed_sets must be unique")
+    if any(name not in working_sets for name in fixed_sets):
+        raise ValueError("static_fixed.fixed_sets contains unknown working set")
+    fixed_bytes = sum(int(working_sets[name]) for name in fixed_sets)
+    if fixed_bytes > budget:
+        raise ValueError("static_fixed.fixed_sets exceed fast-tier budget")
+
     if not trace.get("events"):
         raise ValueError("empty trace")
 
@@ -128,6 +139,7 @@ class Simulator:
         self.prefill_latencies: list[float] = []
         self.decode_elapsed = 0.0
         self.decode_tokens = 0
+        self.decode_events = 0
         self.miss_penalty_total = 0.0
         self.transfer_seconds_total = 0.0
         self.controller_overhead_total = 0.0
@@ -233,6 +245,7 @@ class Simulator:
             if phase == "prefill":
                 self.prefill_latencies.append(elapsed)
             if phase == "decode":
+                self.decode_events += 1
                 self.decode_elapsed += elapsed
                 self.decode_tokens += int(event["tokens"])
 
@@ -245,11 +258,15 @@ class Simulator:
             if self.prefill_latencies
             else None
         )
-        decode_rate = (
-            round_metric(self.decode_tokens / self.decode_elapsed)
-            if self.decode_elapsed > 0
-            else None
-        )
+        if self.decode_events == 0:
+            decode_rate = None
+            decode_status = "NOT_OBSERVED"
+        elif self.decode_elapsed > 0:
+            decode_rate = round_metric(self.decode_tokens / self.decode_elapsed)
+            decode_status = "MEASURED"
+        else:
+            decode_rate = None
+            decode_status = "OBSERVED_ZERO_DURATION"
 
         return {
             "policy": self.policy,
@@ -272,9 +289,7 @@ class Simulator:
             "ttft_measurement_status": "MEASURED" if mean_ttft is not None else "NOT_OBSERVED",
             "decode_tokens": self.decode_tokens,
             "decode_tokens_per_second": decode_rate,
-            "decode_throughput_measurement_status": (
-                "MEASURED" if decode_rate is not None else "NOT_OBSERVED"
-            ),
+            "decode_throughput_measurement_status": decode_status,
             "quality_deviation": None,
             "quality_measurement_status": "NOT_MEASURED",
             "cold_warm_state": "mixed",
