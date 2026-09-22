@@ -142,6 +142,45 @@ class ExecutionTelemetryTests(unittest.TestCase):
             self.assertEqual(checkpoint["lifecycle_state"], "ARTIFACT_PROVENANCE")
             self.assertEqual(checkpoint["artifacts"][0]["path"], "artifacts/recoverable.txt")
 
+    def test_hidden_files_are_excluded_to_match_default_artifact_uploads(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            work = pathlib.Path(tmp)
+            code = (
+                "import pathlib;"
+                "pathlib.Path('artifacts').mkdir();"
+                "pathlib.Path('artifacts/visible.txt').write_text('visible');"
+                "pathlib.Path('artifacts/.hidden.txt').write_text('hidden')"
+            )
+            result = self.run_helper(work, [sys.executable, "-c", code])
+            self.assertEqual(result.returncode, 0, result.stderr)
+            checkpoint = json.loads((work / "telemetry/execution-checkpoint.json").read_text())
+            self.assertEqual(
+                [artifact["path"] for artifact in checkpoint["artifacts"]],
+                ["artifacts/visible.txt"],
+            )
+
+    def test_external_symlink_is_skipped_without_masking_command_status(self):
+        with tempfile.TemporaryDirectory() as tmp, tempfile.TemporaryDirectory() as outside_tmp:
+            work = pathlib.Path(tmp)
+            outside = pathlib.Path(outside_tmp) / "outside.txt"
+            outside.write_text("outside")
+            code = (
+                "import os,pathlib,sys;"
+                "pathlib.Path('artifacts').mkdir();"
+                "pathlib.Path('artifacts/visible.txt').write_text('visible');"
+                f"os.symlink({str(outside)!r}, 'artifacts/outside-link');"
+                "sys.exit(17)"
+            )
+            result = self.run_helper(work, [sys.executable, "-c", code])
+            self.assertEqual(result.returncode, 17)
+            checkpoint = json.loads((work / "telemetry/execution-checkpoint.json").read_text())
+            self.assertEqual(checkpoint["execution_status"], "FAILED")
+            self.assertEqual(checkpoint["command_exit_code"], 17)
+            self.assertEqual(
+                [artifact["path"] for artifact in checkpoint["artifacts"]],
+                ["artifacts/visible.txt"],
+            )
+
     def test_invalid_identity_fails_closed_before_execution(self):
         with tempfile.TemporaryDirectory() as tmp:
             work = pathlib.Path(tmp)

@@ -13,6 +13,10 @@ A failed command may still reach ARTIFACT_PROVENANCE when a useful partial
 artifact was produced before the failure. That does not turn execution into a
 PASS. It records only what can be recovered and independently read back.
 
+Artifact snapshots intentionally exclude hidden files to match the default
+actions/upload-artifact behavior, and skip symlinks instead of following them.
+Artifact scanning must not replace the wrapped command's exit status.
+
 The production launcher cadence is five minutes. Heartbeats are deliberately small
 JSONL state records, not full process telemetry. Hard runner cancellation or job
 timeout may prevent the final checkpoint and upload; such recovery remains UNKNOWN

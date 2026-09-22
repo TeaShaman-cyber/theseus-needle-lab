@@ -47,21 +47,45 @@ def validate_sha(value: str, name: str) -> None:
         raise SystemExit(f"INVALID_{name.upper()}")
 
 
-def snapshot_artifacts(roots: list[str], cwd: pathlib.Path) -> list[dict[str, Any]]:
+def _path_is_hidden(path: pathlib.Path, root: pathlib.Path) -> bool:
+    relative = path.relative_to(root.parent if root.is_file() else root)
+    return any(part.startswith(".") for part in relative.parts)
+
+
+def _validated_artifact_roots(roots: list[str], cwd: pathlib.Path) -> list[pathlib.Path]:
+    workspace = cwd.resolve()
+    validated: list[pathlib.Path] = []
+    for raw_root in roots:
+        candidate = cwd / raw_root
+        try:
+            candidate.resolve(strict=False).relative_to(workspace)
+        except ValueError as exc:
+            raise SystemExit("ARTIFACT_ROOT_OUTSIDE_WORKSPACE") from exc
+        validated.append(candidate)
+    return validated
+
+
+def snapshot_artifacts(roots: list[pathlib.Path], cwd: pathlib.Path) -> list[dict[str, Any]]:
     found: list[dict[str, Any]] = []
     workspace = cwd.resolve()
     seen: set[str] = set()
-    for raw_root in roots:
-        root = (cwd / raw_root).resolve()
-        try:
-            root.relative_to(workspace)
-        except ValueError as exc:
-            raise SystemExit("ARTIFACT_ROOT_OUTSIDE_WORKSPACE") from exc
-        if not root.exists():
+
+    for root in roots:
+        if root.is_symlink() or not root.exists():
             continue
-        candidates = [root] if root.is_file() else sorted(p for p in root.rglob("*") if p.is_file())
+
+        candidates = [root] if root.is_file() else sorted(root.rglob("*"))
         for path in candidates:
-            rel = path.resolve().relative_to(workspace).as_posix()
+            if path.is_symlink() or not path.is_file() or _path_is_hidden(path, root):
+                continue
+            try:
+                resolved = path.resolve().relative_to(workspace)
+            except ValueError:
+                # Match upload semantics without allowing an artifact symlink or
+                # other escaped path to overwrite the wrapped command's status.
+                continue
+
+            rel = resolved.as_posix()
             if rel in seen:
                 continue
             seen.add(rel)
@@ -72,6 +96,7 @@ def snapshot_artifacts(roots: list[str], cwd: pathlib.Path) -> list[dict[str, An
                     "sha256": sha256_file(path),
                 }
             )
+
     found.sort(key=lambda item: item["path"])
     return found
 
@@ -107,6 +132,7 @@ def run_command(args: argparse.Namespace) -> int:
     checkpoint = pathlib.Path(args.checkpoint)
     heartbeat = pathlib.Path(args.heartbeat)
     cwd = pathlib.Path.cwd()
+    artifact_roots = _validated_artifact_roots(args.artifact_root, cwd)
     now = utc_now()
     state: dict[str, Any] = {
         "schema_version": SCHEMA_VERSION,
@@ -142,7 +168,7 @@ def run_command(args: argparse.Namespace) -> int:
             atomic_json(checkpoint, state)
             append_heartbeat(heartbeat, heartbeat_record(state))
 
-    artifacts = snapshot_artifacts(args.artifact_root, cwd)
+    artifacts = snapshot_artifacts(artifact_roots, cwd)
     state["heartbeat_sequence"] += 1
     state["updated_at"] = utc_now()
     state["ended_at"] = state["updated_at"]
