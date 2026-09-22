@@ -1,0 +1,10 @@
+{
+  "fault_class": "ARTIFACT_MISSING",
+  "evidence_status": "VERIFIED",
+  "observed_surface": "built_cact",
+  "metric_or_check": "built_artifact_presence",
+  "observed_value": false,
+  "expected_or_reference_value": true,
+  "canary_disposition": "BLOCKED",
+  "notes": "Synthetic Needle 3 canary consumer fixture; no scientific outcome is implied."
+}
