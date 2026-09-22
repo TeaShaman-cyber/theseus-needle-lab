@@ -1,0 +1,32 @@
+{
+  "schema_version": "theseus.needle.resource_topology_fixture_manifest.v1",
+  "parent_issue": 64,
+  "interpretation_boundary": "synthetic_resource_topology_fixture_not_hardware_benchmark_or_model_quality_evidence",
+  "topology": {
+    "topology_id": "synthetic-discrete-vram-v1",
+    "memory_model": "discrete_vram",
+    "fast_tier_budget_bytes": 12582912,
+    "slow_tier_budget_bytes": 134217728,
+    "transfer_seconds_per_byte": 1e-8,
+    "miss_penalty_seconds": 0.002
+  },
+  "working_sets": {
+    "A": 6291456,
+    "B": 6291456,
+    "C": 6291456
+  },
+  "policies": {
+    "static_fixed": {
+      "fixed_sets": ["A", "B"],
+      "controller_overhead_seconds_per_event": 0.0001
+    },
+    "lru": {
+      "controller_overhead_seconds_per_event": 0.0003
+    },
+    "aggressive_prefetch": {
+      "controller_overhead_seconds_per_event": 0.0025,
+      "lookahead_events": 3
+    }
+  },
+  "native_policy_status": "NOT_EXPOSED_IN_SYNTHETIC_FIXTURE"
+}
