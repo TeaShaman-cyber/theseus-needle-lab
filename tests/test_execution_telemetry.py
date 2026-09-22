@@ -171,6 +171,49 @@ class ExecutionTelemetryTests(unittest.TestCase):
                 ["artifacts/visible.txt"],
             )
 
+    def test_hidden_artifact_root_is_excluded_to_match_default_uploads(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            work = pathlib.Path(tmp)
+            code = (
+                "import pathlib;"
+                "pathlib.Path('.artifacts').mkdir();"
+                "pathlib.Path('.artifacts/result.json').write_text('{}')"
+            )
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(SCRIPT),
+                    "run",
+                    "--experiment-sha",
+                    "a" * 40,
+                    "--launcher-sha",
+                    "b" * 40,
+                    "--run-id",
+                    "123",
+                    "--run-attempt",
+                    "1",
+                    "--stage",
+                    "train",
+                    "--checkpoint",
+                    "telemetry/execution-checkpoint.json",
+                    "--heartbeat",
+                    "telemetry/heartbeat.jsonl",
+                    "--artifact-root",
+                    ".artifacts",
+                    "--",
+                    sys.executable,
+                    "-c",
+                    code,
+                ],
+                cwd=work,
+                text=True,
+                capture_output=True,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            checkpoint = json.loads((work / "telemetry/execution-checkpoint.json").read_text())
+            self.assertEqual(checkpoint["artifact_scan_status"], "COMPLETE")
+            self.assertEqual(checkpoint["artifacts"], [])
+
     def test_external_symlink_is_skipped_without_masking_command_status(self):
         with tempfile.TemporaryDirectory() as tmp, tempfile.TemporaryDirectory() as outside_tmp:
             work = pathlib.Path(tmp)

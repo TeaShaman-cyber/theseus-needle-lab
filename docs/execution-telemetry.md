@@ -13,8 +13,9 @@ A failed command may still reach ARTIFACT_PROVENANCE when a useful partial
 artifact was produced before the failure. That does not turn execution into a
 PASS. It records only what can be recovered and independently read back.
 
-Artifact snapshots intentionally exclude hidden files to match the default
-actions/upload-artifact behavior, and skip symlinks instead of following them.
+Artifact snapshots intentionally exclude hidden files and files beneath hidden
+artifact roots to match the default actions/upload-artifact behavior, and skip
+symlinks instead of following them.
 Per-artifact stat/hash failures are recorded as partial scan evidence instead of
 replacing the wrapped command's exit status. The terminal command status is
 persisted before artifact scanning begins, so a scanner or filesystem race cannot

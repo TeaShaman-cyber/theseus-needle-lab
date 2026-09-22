@@ -48,8 +48,8 @@ def validate_sha(value: str, name: str) -> None:
         raise SystemExit(f"INVALID_{name.upper()}")
 
 
-def _path_is_hidden(path: pathlib.Path, root: pathlib.Path) -> bool:
-    relative = path.relative_to(root.parent if root.is_file() else root)
+def _path_is_hidden(path: pathlib.Path, cwd: pathlib.Path) -> bool:
+    relative = path.relative_to(cwd)
     return any(part.startswith(".") for part in relative.parts)
 
 
@@ -100,7 +100,7 @@ def snapshot_artifacts(
 
         for path in candidates:
             try:
-                if path.is_symlink() or not path.is_file() or _path_is_hidden(path, root):
+                if path.is_symlink() or not path.is_file() or _path_is_hidden(path, cwd):
                     continue
                 try:
                     resolved = path.resolve().relative_to(workspace)
