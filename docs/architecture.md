@@ -17,7 +17,7 @@ Issue / specification
   -> terminal disposition
 
 Any pre-promotion stage:
-  QA / execution / artifact provenance / witness / review
+  specification / planning / working / QA / execution / artifact provenance / witness / review
       \-- blocked / parked / superseded / abandoned ---------------> terminal disposition
 
 Promotion/readback failure:

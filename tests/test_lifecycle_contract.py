@@ -81,7 +81,7 @@ class LifecycleContractTests(unittest.TestCase):
         architecture = ARCHITECTURE.read_text(encoding="utf-8")
         self.assertIn("Any pre-promotion stage:", architecture)
         self.assertIn(
-            "QA / execution / artifact provenance / witness / review",
+            "specification / planning / working / QA / execution / artifact provenance / witness / review",
             architecture,
         )
         self.assertIn(
