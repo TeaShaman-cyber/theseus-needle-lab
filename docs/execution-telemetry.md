@@ -29,3 +29,12 @@ or REPROBE_REQUIRED.
 GitHub artifact retention is finite. An uploaded checkpoint is execution evidence,
 not durable authority by itself. Important promoted evidence still follows normal
 repository persistence and authoritative readback.
+
+Artifact hashing is accepted as complete only when device/inode/size and
+nanosecond mtime/ctime metadata remain unchanged across the hash read. Concurrent
+mutation is recorded as partial scan evidence.
+
+The terminal command checkpoint is paired with a terminal heartbeat before
+artifact scanning begins. Validation requires the final heartbeat execution,
+lifecycle, and artifact-scan states to match the checkpoint as well as its
+sequence and identity.

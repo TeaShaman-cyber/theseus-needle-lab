@@ -80,6 +80,17 @@ def _scan_error(path: pathlib.Path, cwd: pathlib.Path, error_type: str) -> dict[
     }
 
 
+def _stable_stat_identity(path: pathlib.Path) -> tuple[int, int, int, int, int]:
+    stat = path.stat()
+    return (
+        int(stat.st_dev),
+        int(stat.st_ino),
+        int(stat.st_size),
+        int(stat.st_mtime_ns),
+        int(stat.st_ctime_ns),
+    )
+
+
 def snapshot_artifacts(
     roots: list[pathlib.Path],
     cwd: pathlib.Path,
@@ -112,8 +123,13 @@ def snapshot_artifacts(
                 if rel in seen:
                     continue
 
-                size = path.stat().st_size
+                before = _stable_stat_identity(path)
                 digest = sha256_file(path)
+                after = _stable_stat_identity(path)
+                if before != after:
+                    errors.append(_scan_error(path, cwd, "CONCURRENT_MODIFICATION"))
+                    continue
+                size = after[2]
             except OSError as exc:
                 errors.append(_scan_error(path, cwd, type(exc).__name__))
                 continue
@@ -158,6 +174,7 @@ def heartbeat_record(state: dict[str, Any]) -> dict[str, Any]:
         "timestamp": state["updated_at"],
         "execution_status": state["execution_status"],
         "lifecycle_state": state["lifecycle_state"],
+        "artifact_scan_status": state["artifact_scan_status"],
     }
 
 
@@ -225,9 +242,13 @@ def run_command(args: argparse.Namespace) -> int:
     state["execution_status"] = "SUCCEEDED" if raw_return_code == 0 else "FAILED"
     state["artifact_scan_status"] = "IN_PROGRESS"
 
-    # Persist terminal command status before post-execution evidence scanning so
-    # a filesystem race cannot leave a completed command reported as RUNNING.
+    # Persist terminal command status and a matching heartbeat before
+    # post-execution evidence scanning. If the runner is interrupted mid-scan,
+    # recovery still sees a terminal command status rather than stale RUNNING
+    # heartbeat evidence.
+    state["heartbeat_sequence"] += 1
     atomic_json(checkpoint, state)
+    append_heartbeat(heartbeat, heartbeat_record(state))
 
     artifacts, scan_errors = safe_snapshot_artifacts(artifact_roots, cwd)
     state["heartbeat_sequence"] += 1
@@ -349,6 +370,11 @@ def validate_checkpoint(args: argparse.Namespace) -> int:
             for key in ("experiment_sha", "launcher_sha", "run_id", "run_attempt", "stage", "unit"):
                 if str(line[key]) != str(identity[key]):
                     raise SystemExit("HEARTBEAT_IDENTITY_MISMATCH")
+
+        final_heartbeat = lines[-1]
+        for key in ("execution_status", "lifecycle_state", "artifact_scan_status"):
+            if str(final_heartbeat.get(key)) != str(value[key]):
+                raise SystemExit("HEARTBEAT_CHECKPOINT_STATE_MISMATCH")
 
     print(
         "EXECUTION_CHECKPOINT_VALID=PASS "

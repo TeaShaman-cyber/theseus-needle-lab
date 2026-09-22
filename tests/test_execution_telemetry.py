@@ -84,8 +84,11 @@ class ExecutionTelemetryTests(unittest.TestCase):
                 json.loads(line)
                 for line in (work / "telemetry/heartbeat.jsonl").read_text().splitlines()
             ]
-            self.assertGreaterEqual(len(heartbeats), 2)
+            self.assertGreaterEqual(len(heartbeats), 3)
             self.assertEqual(heartbeats[-1]["sequence"], checkpoint["heartbeat_sequence"])
+            self.assertEqual(heartbeats[-1]["execution_status"], checkpoint["execution_status"])
+            self.assertEqual(heartbeats[-1]["lifecycle_state"], checkpoint["lifecycle_state"])
+            self.assertEqual(heartbeats[-1]["artifact_scan_status"], checkpoint["artifact_scan_status"])
 
             validated = subprocess.run(
                 [
@@ -262,6 +265,30 @@ class ExecutionTelemetryTests(unittest.TestCase):
                 [{"path": "artifacts/bad.txt", "error_type": "PermissionError"}],
             )
 
+    def test_concurrent_artifact_mutation_is_partial_scan_evidence(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            work = pathlib.Path(tmp)
+            root = work / "artifacts"
+            root.mkdir()
+            changing = root / "changing.txt"
+            changing.write_text("before")
+
+            real_hash = module.sha256_file
+
+            def mutate_after_hash(path):
+                digest = real_hash(path)
+                path.write_text("after-and-longer")
+                return digest
+
+            with mock.patch.object(module, "sha256_file", side_effect=mutate_after_hash):
+                artifacts, errors = module.snapshot_artifacts([root], work)
+
+            self.assertEqual(artifacts, [])
+            self.assertEqual(
+                errors,
+                [{"path": "artifacts/changing.txt", "error_type": "CONCURRENT_MODIFICATION"}],
+            )
+
     def test_scanner_exception_becomes_partial_evidence_not_wrapper_failure(self):
         with tempfile.TemporaryDirectory() as tmp:
             work = pathlib.Path(tmp)
@@ -276,6 +303,49 @@ class ExecutionTelemetryTests(unittest.TestCase):
             self.assertEqual(
                 errors,
                 [{"path": ".", "error_type": "SCANNER_RuntimeError"}],
+            )
+
+    def test_validator_rejects_stale_terminal_heartbeat_state(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            work = pathlib.Path(tmp)
+            code = (
+                "import pathlib;"
+                "pathlib.Path('artifacts').mkdir();"
+                "pathlib.Path('artifacts/payload.txt').write_text('payload')"
+            )
+            result = self.run_helper(work, [sys.executable, "-c", code])
+            self.assertEqual(result.returncode, 0, result.stderr)
+
+            heartbeat_path = work / "telemetry/heartbeat.jsonl"
+            lines = [json.loads(line) for line in heartbeat_path.read_text().splitlines()]
+            lines[-1]["execution_status"] = "RUNNING"
+            heartbeat_path.write_text(
+                "".join(json.dumps(line, sort_keys=True) + "\n" for line in lines)
+            )
+
+            validated = subprocess.run(
+                [
+                    sys.executable,
+                    str(SCRIPT),
+                    "validate",
+                    "--checkpoint",
+                    str(work / "telemetry/execution-checkpoint.json"),
+                    "--heartbeat",
+                    str(heartbeat_path),
+                    "--root",
+                    str(work),
+                    "--expected-execution-status",
+                    "SUCCEEDED",
+                    "--expected-lifecycle-state",
+                    "ARTIFACT_PROVENANCE",
+                ],
+                text=True,
+                capture_output=True,
+            )
+            self.assertNotEqual(validated.returncode, 0)
+            self.assertIn(
+                "HEARTBEAT_CHECKPOINT_STATE_MISMATCH",
+                validated.stderr + validated.stdout,
             )
 
     def test_invalid_identity_fails_closed_before_execution(self):
