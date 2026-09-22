@@ -4,7 +4,11 @@ on:
   pull_request:
     paths:
       - scripts/execution_telemetry.py
+      - scripts/integration_faults.py
+      - config/integration-fault-taxonomy.json
       - tests/test_execution_telemetry.py
+      - tests/test_integration_faults.py
+      - docs/integration-fault-matrix.md
       - tests/test_execution_recovery_canary.py
       - docs/execution-telemetry.md
       - .github/workflows/needle-stage-b-dispatch.yml
@@ -49,6 +53,10 @@ jobs:
         run: |
           test "$EXERCISE_OUTCOME" = failure
           echo SIMULATED_DOWNSTREAM_FAILURE=PASS
+      - name: Classify execution fault
+        shell: bash
+        run: |
+          python3 scripts/integration_faults.py classify-checkpoint             --checkpoint telemetry/execution-checkpoint.json             --output receipts/integration-fault.json
       - name: Upload recoverable execution evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -57,6 +65,7 @@ jobs:
           path: |
             telemetry/
             artifacts/
+            receipts/integration-fault.json
           if-no-files-found: error
           retention-days: 7
 
@@ -90,5 +99,7 @@ jobs:
             --expected-unit PR \
             --expected-execution-status FAILED \
             --expected-lifecycle-state ARTIFACT_PROVENANCE
+          python3 scripts/integration_faults.py validate-receipt             --receipt recovered/receipts/integration-fault.json             --checkpoint recovered/telemetry/execution-checkpoint.json
           test "$(cat recovered/artifacts/recoverable.txt)" = recovered
+          echo INTEGRATION_FAULT_READBACK_PASS
           echo RECOVERY_READBACK_PASS
