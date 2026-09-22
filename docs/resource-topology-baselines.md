@@ -6,8 +6,9 @@ a hardware benchmark and it is not model-quality evidence.
 The fixture keeps one hard fast-tier budget fixed across static, LRU, and
 aggressive-prefetch policies. The receipt reports component metrics rather than a
 single score: bytes moved, misses and miss penalty, controller overhead, cache
-churn, latency, mean TTFT, decode throughput, occupancy/headroom, and quality
-deviation.
+churn, latency, mean TTFT, decode throughput, and occupancy/headroom. Quality is
+not evaluated by this synthetic fixture, so quality deviation is explicitly null
+with status NOT_MEASURED rather than reported as zero.
 
 The aggressive-prefetch policy is a deliberate negative control. The fixture is
 constructed so it can obtain a higher demand hit rate than LRU while still paying
@@ -21,3 +22,8 @@ regression case.
 
 The committed receipt is byte-stable. The canonical repository check verifies
 that the manifest, trace, simulator, and receipt still agree.
+
+Metrics whose required phase is absent are emitted as null with an explicit
+NOT_OBSERVED status instead of synthesizing zero or dividing by zero. Simulator
+cost parameters must be finite and nonnegative; malformed manifests fail closed
+before simulation.

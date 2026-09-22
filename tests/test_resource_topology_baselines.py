@@ -1,3 +1,4 @@
+import copy
 import importlib.util
 import json
 import pathlib
@@ -29,7 +30,8 @@ class ResourceTopologyBaselineTests(unittest.TestCase):
             self.assertTrue(metrics["hard_budget_respected"])
             self.assertEqual(metrics["fast_tier_budget_bytes"], budget)
             self.assertLessEqual(metrics["peak_occupancy_bytes"], budget)
-            self.assertEqual(metrics["quality_deviation"], 0.0)
+            self.assertIsNone(metrics["quality_deviation"])
+            self.assertEqual(metrics["quality_measurement_status"], "NOT_MEASURED")
 
     def test_negative_control_proves_hit_rate_is_not_system_objective(self):
         receipt = module.build_receipt(MANIFEST, TRACE)
@@ -56,6 +58,53 @@ class ResourceTopologyBaselineTests(unittest.TestCase):
         }
         for policy, metrics in receipt["policies"].items():
             self.assertTrue(required.issubset(metrics), policy)
+
+    def test_negative_or_nonfinite_costs_fail_closed(self):
+        manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
+        trace = json.loads(TRACE.read_text(encoding="utf-8"))
+
+        cases = [
+            ("transfer_seconds_per_byte", -1e-9),
+            ("miss_penalty_seconds", float("inf")),
+        ]
+        for field, value in cases:
+            with self.subTest(field=field):
+                candidate = copy.deepcopy(manifest)
+                candidate["topology"][field] = value
+                with self.assertRaises(ValueError):
+                    module.validate_fixture(candidate, trace)
+
+        candidate = copy.deepcopy(manifest)
+        candidate["policies"]["lru"]["controller_overhead_seconds_per_event"] = -0.1
+        with self.assertRaises(ValueError):
+            module.validate_fixture(candidate, trace)
+
+    def test_missing_prefill_and_decode_emit_unavailable_metrics(self):
+        manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
+        trace = {
+            "schema_version": "theseus.needle.resource_topology_trace.v1",
+            "topology_id": manifest["topology"]["topology_id"],
+            "events": [
+                {
+                    "request_id": "R1",
+                    "phase": "request",
+                    "working_set_id": "A",
+                    "base_latency_seconds": 0.01,
+                    "tokens": 0,
+                }
+            ],
+        }
+        module.validate_fixture(manifest, trace)
+        metrics = module.Simulator(manifest, trace, "lru").run()
+        self.assertIsNone(metrics["mean_ttft_seconds"])
+        self.assertEqual(metrics["ttft_measurement_status"], "NOT_OBSERVED")
+        self.assertIsNone(metrics["decode_tokens_per_second"])
+        self.assertEqual(
+            metrics["decode_throughput_measurement_status"],
+            "NOT_OBSERVED",
+        )
+        self.assertIsNone(metrics["quality_deviation"])
+        self.assertEqual(metrics["quality_measurement_status"], "NOT_MEASURED")
 
     def test_committed_receipt_is_byte_stable(self):
         result = subprocess.run(

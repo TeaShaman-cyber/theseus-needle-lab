@@ -5,6 +5,7 @@ import argparse
 import collections
 import hashlib
 import json
+import math
 import pathlib
 from typing import Any
 
@@ -38,6 +39,16 @@ def round_metric(value: float) -> float:
     return round(float(value), 6)
 
 
+def finite_nonnegative(value: Any, name: str) -> float:
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be numeric") from exc
+    if not math.isfinite(parsed) or parsed < 0:
+        raise ValueError(f"{name} must be finite and nonnegative")
+    return parsed
+
+
 def validate_fixture(manifest: dict[str, Any], trace: dict[str, Any]) -> None:
     if manifest.get("schema_version") != "theseus.needle.resource_topology_fixture_manifest.v1":
         raise ValueError("unsupported manifest schema")
@@ -47,8 +58,29 @@ def validate_fixture(manifest: dict[str, Any], trace: dict[str, Any]) -> None:
         raise ValueError("trace topology does not match manifest")
 
     budget = int(manifest["topology"]["fast_tier_budget_bytes"])
+    slow_budget = int(manifest["topology"]["slow_tier_budget_bytes"])
     if budget <= 0:
         raise ValueError("fast tier budget must be positive")
+    if slow_budget <= 0:
+        raise ValueError("slow tier budget must be positive")
+
+    finite_nonnegative(
+        manifest["topology"]["transfer_seconds_per_byte"],
+        "transfer_seconds_per_byte",
+    )
+    finite_nonnegative(
+        manifest["topology"]["miss_penalty_seconds"],
+        "miss_penalty_seconds",
+    )
+    for policy_name, policy in manifest["policies"].items():
+        finite_nonnegative(
+            policy["controller_overhead_seconds_per_event"],
+            f"{policy_name}.controller_overhead_seconds_per_event",
+        )
+        if "lookahead_events" in policy:
+            lookahead = policy["lookahead_events"]
+            if not isinstance(lookahead, int) or isinstance(lookahead, bool) or lookahead < 0:
+                raise ValueError(f"{policy_name}.lookahead_events must be a nonnegative integer")
 
     working_sets = manifest["working_sets"]
     for name, size in working_sets.items():
@@ -63,8 +95,7 @@ def validate_fixture(manifest: dict[str, Any], trace: dict[str, Any]) -> None:
             raise ValueError("unknown working set")
         if event["phase"] not in {"prefill", "decode", "request", "synthetic"}:
             raise ValueError("unsupported phase")
-        if float(event["base_latency_seconds"]) < 0:
-            raise ValueError("negative base latency")
+        finite_nonnegative(event["base_latency_seconds"], "base_latency_seconds")
         if int(event["tokens"]) < 0:
             raise ValueError("negative token count")
 
@@ -209,6 +240,17 @@ class Simulator:
         if accesses != len(self.trace["events"]):
             raise ValueError("demand accounting mismatch")
 
+        mean_ttft = (
+            round_metric(sum(self.prefill_latencies) / len(self.prefill_latencies))
+            if self.prefill_latencies
+            else None
+        )
+        decode_rate = (
+            round_metric(self.decode_tokens / self.decode_elapsed)
+            if self.decode_elapsed > 0
+            else None
+        )
+
         return {
             "policy": self.policy,
             "hard_budget_respected": self.peak_occupancy <= self.budget,
@@ -226,10 +268,15 @@ class Simulator:
             "transfer_seconds": round_metric(self.transfer_seconds_total),
             "controller_overhead_seconds": round_metric(self.controller_overhead_total),
             "total_latency_seconds": round_metric(self.total_latency),
-            "mean_ttft_seconds": round_metric(sum(self.prefill_latencies) / len(self.prefill_latencies)),
+            "mean_ttft_seconds": mean_ttft,
+            "ttft_measurement_status": "MEASURED" if mean_ttft is not None else "NOT_OBSERVED",
             "decode_tokens": self.decode_tokens,
-            "decode_tokens_per_second": round_metric(self.decode_tokens / self.decode_elapsed),
-            "quality_deviation": 0.0,
+            "decode_tokens_per_second": decode_rate,
+            "decode_throughput_measurement_status": (
+                "MEASURED" if decode_rate is not None else "NOT_OBSERVED"
+            ),
+            "quality_deviation": None,
+            "quality_measurement_status": "NOT_MEASURED",
             "cold_warm_state": "mixed",
             "topology_id": self.topology["topology_id"],
             "memory_model": self.topology["memory_model"],

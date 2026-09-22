@@ -29,6 +29,7 @@
       "cache_or_state_evictions": 2,
       "cold_warm_state": "mixed",
       "controller_overhead_seconds": 0.03,
+      "decode_throughput_measurement_status": "MEASURED",
       "decode_tokens": 120,
       "decode_tokens_per_second": 89.496863,
       "demand_hit_rate": 0.916667,
@@ -43,10 +44,12 @@
       "peak_occupancy_bytes": 12582912,
       "policy": "aggressive_prefetch",
       "prefetch_bytes": 18874368,
-      "quality_deviation": 0.0,
+      "quality_deviation": null,
+      "quality_measurement_status": "NOT_MEASURED",
       "topology_id": "synthetic-discrete-vram-v1",
       "total_latency_seconds": 1.783658,
-      "transfer_seconds": 0.251658
+      "transfer_seconds": 0.251658,
+      "ttft_measurement_status": "MEASURED"
     },
     "lru": {
       "bytes_moved": 25165824,
@@ -54,6 +57,7 @@
       "cache_or_state_evictions": 2,
       "cold_warm_state": "mixed",
       "controller_overhead_seconds": 0.0036,
+      "decode_throughput_measurement_status": "MEASURED",
       "decode_tokens": 120,
       "decode_tokens_per_second": 99.850225,
       "demand_hit_rate": 0.666667,
@@ -68,10 +72,12 @@
       "peak_occupancy_bytes": 12582912,
       "policy": "lru",
       "prefetch_bytes": 0,
-      "quality_deviation": 0.0,
+      "quality_deviation": null,
+      "quality_measurement_status": "NOT_MEASURED",
       "topology_id": "synthetic-discrete-vram-v1",
       "total_latency_seconds": 1.763258,
-      "transfer_seconds": 0.251658
+      "transfer_seconds": 0.251658,
+      "ttft_measurement_status": "MEASURED"
     },
     "static_fixed": {
       "bytes_moved": 25165824,
@@ -79,6 +85,7 @@
       "cache_or_state_evictions": 0,
       "cold_warm_state": "mixed",
       "controller_overhead_seconds": 0.0012,
+      "decode_throughput_measurement_status": "MEASURED",
       "decode_tokens": 120,
       "decode_tokens_per_second": 94.823089,
       "demand_hit_rate": 0.666667,
@@ -93,10 +100,12 @@
       "peak_occupancy_bytes": 12582912,
       "policy": "static_fixed",
       "prefetch_bytes": 0,
-      "quality_deviation": 0.0,
+      "quality_deviation": null,
+      "quality_measurement_status": "NOT_MEASURED",
       "topology_id": "synthetic-discrete-vram-v1",
       "total_latency_seconds": 1.760858,
-      "transfer_seconds": 0.251658
+      "transfer_seconds": 0.251658,
+      "ttft_measurement_status": "MEASURED"
     }
   },
   "schema_version": "theseus.needle.resource_topology_baselines.v1"
