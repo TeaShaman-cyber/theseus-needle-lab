@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
+cd "$ROOT"
+export PYTHONPATH="$ROOT${PYTHONPATH:+:$PYTHONPATH}"
+
+printf '%s\n' '== required repository contract =='
+for path in \
+  README.md \
+  docs/architecture.md \
+  docs/experiment-lifecycle.md \
+  docs/cookbook/README.md \
+  experiments/README.md \
+  receipts/README.md \
+  .github/ISSUE_TEMPLATE/experiment.yml \
+  config/needle-watch.json; do
+  if [[ ! -s "$path" ]]; then
+    printf 'QA_CONTRACT_DRIFT: missing_or_empty=%s\n' "$path" >&2
+    exit 2
+  fi
+done
+
+printf '%s\n' '== unit and contract tests =='
+python3 -m unittest discover -s tests -v
+
+printf '%s\n' '== python syntax =='
+python3 -m compileall -q needle_watch scripts tests
+
+printf '%s\n' '== tracked JSON syntax =='
+while IFS= read -r path; do
+  python3 -m json.tool "$path" >/dev/null
+done < <(git ls-files '*.json' | sort)
+
+printf '%s\n' '== committed/tracked whitespace =='
+python3 scripts/check_tracked_whitespace.py
+
+printf '%s\n' '== local diff whitespace =='
+git diff --check
+git diff --cached --check
+
+printf '%s\n' 'DEV_CHECK_PASS'

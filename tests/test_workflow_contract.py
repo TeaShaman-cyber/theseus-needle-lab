@@ -12,7 +12,7 @@ class WorkflowContractTests(unittest.TestCase):
         self.assertIn("workflow_dispatch:", text)
         self.assertIn("queue: max", text)
         self.assertNotIn("cancel-in-progress: true", text)
-        test_index = text.index("python -m unittest discover -s tests -v")
+        test_index = text.index("tools/dev/check")
         restore_index = text.index("python scripts/restore-needle-watch-state.py")
         collect_index = text.index("python scripts/collect-needle-watch.py")
         publish_index = text.index("python scripts/publish-needle-watch.py")

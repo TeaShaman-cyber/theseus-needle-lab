@@ -19,6 +19,16 @@ Its purpose is to make Needle learning experiments observable, reproducible, and
 
 See [architecture](docs/architecture.md) and [experiment lifecycle](docs/experiment-lifecycle.md).
 
+## Canonical QA endpoint
+
+Run the deterministic repository checks with:
+
+```bash
+tools/dev/check
+```
+
+This endpoint is intentionally lightweight: repository contract files, unit/contract tests, Python syntax, tracked JSON syntax, and whitespace checks. It does **not** train or evaluate Needle models, call external providers, or turn a QA pass into scientific acceptance.
+
 ## Needle Watch discovery receipts
 
 The lab includes a small public-source discovery experiment for the A/B/C Needle Watch study in Issue #21. A scheduled GitHub Action runs deterministic, bounded collectors and publishes provenance-bearing JSON receipts under `data/`. The collector does not decide scientific importance, does not call an LLM, and does not write Notion; ChatGPT shadow tasks perform later verification and interpretation.
