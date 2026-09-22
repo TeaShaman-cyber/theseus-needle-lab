@@ -124,6 +124,24 @@ class ExecutionTelemetryTests(unittest.TestCase):
             self.assertEqual(checkpoint["lifecycle_state"], "ARTIFACT_PROVENANCE")
             self.assertEqual(checkpoint["artifacts"][0]["path"], "artifacts/recoverable.txt")
 
+    def test_signal_termination_uses_shell_standard_exit_code_and_records_signal(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            work = pathlib.Path(tmp)
+            code = (
+                "import os,pathlib,signal;"
+                "pathlib.Path('artifacts').mkdir();"
+                "pathlib.Path('artifacts/recoverable.txt').write_text('saved');"
+                "os.kill(os.getpid(), signal.SIGTERM)"
+            )
+            result = self.run_helper(work, [sys.executable, "-c", code])
+            self.assertEqual(result.returncode, 128 + 15)
+            checkpoint = json.loads((work / "telemetry/execution-checkpoint.json").read_text())
+            self.assertEqual(checkpoint["execution_status"], "FAILED")
+            self.assertEqual(checkpoint["command_signal"], 15)
+            self.assertEqual(checkpoint["command_exit_code"], 143)
+            self.assertEqual(checkpoint["lifecycle_state"], "ARTIFACT_PROVENANCE")
+            self.assertEqual(checkpoint["artifacts"][0]["path"], "artifacts/recoverable.txt")
+
     def test_invalid_identity_fails_closed_before_execution(self):
         with tempfile.TemporaryDirectory() as tmp:
             work = pathlib.Path(tmp)

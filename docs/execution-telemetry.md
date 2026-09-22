@@ -6,8 +6,8 @@ witness.
 
 The v1 checkpoint binds the exact experiment and launcher revisions, run identity,
 stage and bounded unit identity, execution status, lifecycle state, bounded
-heartbeat sequence, original exit code, and hashes of recoverable artifacts that
-actually exist.
+heartbeat sequence, shell-compatible exit code, terminating signal when applicable, and hashes of
+recoverable artifacts that actually exist.
 
 A failed command may still reach ARTIFACT_PROVENANCE when a useful partial
 artifact was produced before the failure. That does not turn execution into a

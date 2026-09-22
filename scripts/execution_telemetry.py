@@ -125,6 +125,7 @@ def run_command(args: argparse.Namespace) -> int:
         "heartbeat_interval_seconds": args.heartbeat_seconds,
         "heartbeat_sequence": 0,
         "command_exit_code": None,
+        "command_signal": None,
         "artifacts": [],
     }
     atomic_json(checkpoint, state)
@@ -145,8 +146,13 @@ def run_command(args: argparse.Namespace) -> int:
     state["heartbeat_sequence"] += 1
     state["updated_at"] = utc_now()
     state["ended_at"] = state["updated_at"]
-    state["command_exit_code"] = int(return_code)
-    state["execution_status"] = "SUCCEEDED" if return_code == 0 else "FAILED"
+    raw_return_code = int(return_code)
+    if raw_return_code < 0:
+        state["command_signal"] = -raw_return_code
+        state["command_exit_code"] = 128 + state["command_signal"]
+    else:
+        state["command_exit_code"] = raw_return_code
+    state["execution_status"] = "SUCCEEDED" if raw_return_code == 0 else "FAILED"
     state["artifacts"] = artifacts
     if artifacts:
         state["lifecycle_state"] = "ARTIFACT_PROVENANCE"
@@ -158,7 +164,7 @@ def run_command(args: argparse.Namespace) -> int:
         f"LIFECYCLE_STATE={state['lifecycle_state']} "
         f"ARTIFACTS={len(artifacts)}"
     )
-    return int(return_code)
+    return int(state["command_exit_code"])
 
 
 def load_checkpoint(path: pathlib.Path) -> dict[str, Any]:
@@ -177,6 +183,7 @@ def load_checkpoint(path: pathlib.Path) -> dict[str, Any]:
         "heartbeat_interval_seconds",
         "heartbeat_sequence",
         "command_exit_code",
+        "command_signal",
         "artifacts",
     }
     if not required.issubset(value):
