@@ -1,0 +1,18 @@
+{
+  "schema_version": "theseus.needle.resource_topology_trace.v1",
+  "topology_id": "synthetic-discrete-vram-v1",
+  "events": [
+    {"request_id": "R1", "phase": "prefill", "working_set_id": "A", "base_latency_seconds": 0.050, "tokens": 0},
+    {"request_id": "R1", "phase": "decode",  "working_set_id": "A", "base_latency_seconds": 0.200, "tokens": 20},
+    {"request_id": "R2", "phase": "prefill", "working_set_id": "B", "base_latency_seconds": 0.050, "tokens": 0},
+    {"request_id": "R2", "phase": "decode",  "working_set_id": "B", "base_latency_seconds": 0.200, "tokens": 20},
+    {"request_id": "R3", "phase": "prefill", "working_set_id": "A", "base_latency_seconds": 0.050, "tokens": 0},
+    {"request_id": "R3", "phase": "decode",  "working_set_id": "A", "base_latency_seconds": 0.200, "tokens": 20},
+    {"request_id": "R4", "phase": "prefill", "working_set_id": "C", "base_latency_seconds": 0.050, "tokens": 0},
+    {"request_id": "R4", "phase": "decode",  "working_set_id": "C", "base_latency_seconds": 0.200, "tokens": 20},
+    {"request_id": "R5", "phase": "prefill", "working_set_id": "A", "base_latency_seconds": 0.050, "tokens": 0},
+    {"request_id": "R5", "phase": "decode",  "working_set_id": "A", "base_latency_seconds": 0.200, "tokens": 20},
+    {"request_id": "R6", "phase": "prefill", "working_set_id": "B", "base_latency_seconds": 0.050, "tokens": 0},
+    {"request_id": "R6", "phase": "decode",  "working_set_id": "B", "base_latency_seconds": 0.200, "tokens": 20}
+  ]
+}
