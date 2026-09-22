@@ -85,6 +85,14 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 210
     steps:
+      - name: Stage launcher telemetry helper
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+      - name: Copy launcher telemetry helper outside the experiment checkout
+        shell: bash
+        run: cp scripts/execution_telemetry.py "$RUNNER_TEMP/execution_telemetry.py"
       - name: Check out exact approved experiment SHA
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -99,7 +107,20 @@ jobs:
           EXPERIMENT_SHA: ${{ inputs.experiment_sha }}
           LAUNCHER_SHA: ${{ github.sha }}
           REPLICA_ID: ${{ matrix.replica }}
-        run: bash scripts/run_realistic_sft_full_train.sh
+        run: >
+          python3 "$RUNNER_TEMP/execution_telemetry.py" run
+          --experiment-sha "$EXPERIMENT_SHA"
+          --launcher-sha "$LAUNCHER_SHA"
+          --run-id "$GITHUB_RUN_ID"
+          --run-attempt "$GITHUB_RUN_ATTEMPT"
+          --stage train
+          --unit "$REPLICA_ID"
+          --heartbeat-seconds 300
+          --checkpoint telemetry/execution-checkpoint.json
+          --heartbeat telemetry/heartbeat.jsonl
+          --artifact-root artifacts
+          --artifact-root results
+          -- bash scripts/run_realistic_sft_full_train.sh
       - name: Upload replica training evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -110,6 +131,7 @@ jobs:
             results/
             logs/
             metrics/
+            telemetry/
           if-no-files-found: error
           retention-days: 30
 
@@ -123,6 +145,14 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 120
     steps:
+      - name: Stage launcher telemetry helper
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+      - name: Copy launcher telemetry helper outside the experiment checkout
+        shell: bash
+        run: cp scripts/execution_telemetry.py "$RUNNER_TEMP/execution_telemetry.py"
       - name: Check out exact approved experiment SHA
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -143,7 +173,19 @@ jobs:
           LAUNCHER_SHA: ${{ github.sha }}
           REPLICA_ID: ${{ matrix.replica }}
           TRAIN_ARTIFACT_DIR: train-artifact
-        run: bash scripts/run_realistic_sft_full_eval.sh
+        run: >
+          python3 "$RUNNER_TEMP/execution_telemetry.py" run
+          --experiment-sha "$EXPERIMENT_SHA"
+          --launcher-sha "$LAUNCHER_SHA"
+          --run-id "$GITHUB_RUN_ID"
+          --run-attempt "$GITHUB_RUN_ATTEMPT"
+          --stage eval
+          --unit "$REPLICA_ID"
+          --heartbeat-seconds 300
+          --checkpoint telemetry/execution-checkpoint.json
+          --heartbeat telemetry/heartbeat.jsonl
+          --artifact-root results
+          -- bash scripts/run_realistic_sft_full_eval.sh
       - name: Upload replica evaluation evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -152,6 +194,7 @@ jobs:
           path: |
             results/
             logs/
+            telemetry/
           if-no-files-found: error
           retention-days: 30
 

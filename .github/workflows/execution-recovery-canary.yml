@@ -1,0 +1,94 @@
+name: Execution recovery canary
+
+on:
+  pull_request:
+    paths:
+      - scripts/execution_telemetry.py
+      - tests/test_execution_telemetry.py
+      - tests/test_execution_recovery_canary.py
+      - docs/execution-telemetry.md
+      - .github/workflows/needle-stage-b-dispatch.yml
+      - .github/workflows/execution-recovery-canary.yml
+
+permissions:
+  contents: read
+
+jobs:
+  produce:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out exact pull request head
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
+      - name: Exercise recoverable downstream failure
+        id: exercise
+        continue-on-error: true
+        shell: bash
+        env:
+          CANARY_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          python3 scripts/execution_telemetry.py run \
+            --experiment-sha "$CANARY_SHA" \
+            --launcher-sha "$CANARY_SHA" \
+            --run-id "$GITHUB_RUN_ID" \
+            --run-attempt "$GITHUB_RUN_ATTEMPT" \
+            --stage recovery_canary \
+            --unit PR \
+            --heartbeat-seconds 1 \
+            --checkpoint telemetry/execution-checkpoint.json \
+            --heartbeat telemetry/heartbeat.jsonl \
+            --artifact-root artifacts \
+            -- bash -c 'mkdir -p artifacts; printf recovered > artifacts/recoverable.txt; exit 17'
+      - name: Require the simulated downstream command to fail
+        shell: bash
+        env:
+          EXERCISE_OUTCOME: ${{ steps.exercise.outcome }}
+        run: |
+          test "$EXERCISE_OUTCOME" = failure
+          echo SIMULATED_DOWNSTREAM_FAILURE=PASS
+      - name: Upload recoverable execution evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: needle-execution-recovery-${{ github.run_id }}
+          path: |
+            telemetry/
+            artifacts/
+          if-no-files-found: error
+          retention-days: 7
+
+  readback:
+    needs: produce
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out exact pull request head
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
+      - name: Download recovery evidence
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: needle-execution-recovery-${{ github.run_id }}
+          path: recovered
+      - name: Validate checkpoint identity and recovered artifact
+        shell: bash
+        env:
+          CANARY_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          python3 scripts/execution_telemetry.py validate \
+            --checkpoint recovered/telemetry/execution-checkpoint.json \
+            --heartbeat recovered/telemetry/heartbeat.jsonl \
+            --root recovered \
+            --expected-experiment-sha "$CANARY_SHA" \
+            --expected-launcher-sha "$CANARY_SHA" \
+            --expected-stage recovery_canary \
+            --expected-unit PR \
+            --expected-execution-status FAILED \
+            --expected-lifecycle-state ARTIFACT_PROVENANCE
+          test "$(cat recovered/artifacts/recoverable.txt)" = recovered
+          echo RECOVERY_READBACK_PASS
