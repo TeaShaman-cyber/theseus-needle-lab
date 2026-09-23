@@ -118,3 +118,14 @@ class ShortlistMaterializationTests(unittest.TestCase):
             )
             self.assertEqual(rows,rows2)
             self.assertEqual(counts,counts2)
+
+
+class StableSqliteBindingTests(unittest.TestCase):
+    def test_nonempty_wal_fails_closed_before_inventory(self):
+        from scripts.inventory_needle3_multiprovider_corpus import SourceSpec, source_inventory
+        with tempfile.TemporaryDirectory() as td:
+            db=pathlib.Path(td)/"a.sqlite3"
+            make_db(db,"chatgpt-export",False)
+            pathlib.Path(str(db)+"-wal").write_bytes(b"uncheckpointed")
+            with self.assertRaisesRegex(ValueError,"uncheckpointed SQLite WAL"):
+                source_inventory(SourceSpec("chatgpt",db,"chatgpt-export"))

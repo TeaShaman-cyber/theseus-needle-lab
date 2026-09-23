@@ -32,6 +32,14 @@ def parse_mapping(values,label):
         out[k]=v
     return out
 
+def require_stable_sqlite_file(path):
+    wal=pathlib.Path(str(path)+"-wal")
+    if wal.exists() and wal.stat().st_size > 0:
+        raise ValueError(
+            f"uncheckpointed SQLite WAL is not supported for exact source binding: {wal}"
+        )
+
+
 def validate_schema(conn):
     tables={r[0] for r in conn.execute("select name from sqlite_master where type='table' or type='view'")}
     missing=sorted(REQUIRED_TABLES-tables)
@@ -95,6 +103,7 @@ def episode_stats(rows):
 def source_inventory(spec):
     if not spec.path.is_file():
         raise ValueError(f"missing corpus DB for {spec.name}: {spec.path}")
+    require_stable_sqlite_file(spec.path)
     conn=sqlite3.connect(f"file:{spec.path}?mode=ro",uri=True)
     conn.row_factory=sqlite3.Row
     try:
@@ -212,6 +221,7 @@ def materialize_shortlist(sources, quotas, salt):
     for spec in sources:
         if spec.name not in quotas:
             raise ValueError(f"missing quota for provider {spec.name}")
+        require_stable_sqlite_file(spec.path)
         conn=sqlite3.connect(f"file:{spec.path}?mode=ro",uri=True)
         conn.row_factory=sqlite3.Row
         try:
