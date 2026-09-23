@@ -259,6 +259,65 @@ class Needle3DeploymentCanaryTests(unittest.TestCase):
         self.assertEqual(disposition, "APPLICABILITY_REGRESSION_REPRODUCED")
         self.assertIn("lora_negative_no_call_drop", reasons)
 
+    def test_existing_base_collapse_is_not_attributed_to_lora(self):
+        expected = [case["expected"] for case in self.cases]
+        positive_indices = [
+            i for i, case in enumerate(self.cases) if case["category"] == "positive"
+        ]
+        negative_indices = [
+            i for i, case in enumerate(self.cases) if case["category"] == "negative"
+        ]
+
+        base_predictions = list(expected)
+        for index in positive_indices:
+            base_predictions[index] = "PROBE"
+
+        lora_predictions = list(base_predictions)
+        lora_predictions[negative_indices[0]] = "READY"
+
+        base = self.rows("base_reference", base_predictions)
+        lora = self.rows("lora_reference", lora_predictions)
+        built = self.rows("built_cact", lora_predictions)
+        disposition, reasons = module.decide(
+            self.manifest,
+            module.surface_metrics(base),
+            module.surface_metrics(lora),
+            module.surface_metrics(built),
+            module.pairwise_divergence(base, lora),
+            module.pairwise_divergence(lora, built),
+        )
+        self.assertEqual(disposition, "NO_CURRENT_SIGNAL")
+        self.assertNotIn("lora_positive_decision_collapse", reasons)
+
+    def test_worsened_lora_concentration_is_attributed_to_adaptation(self):
+        expected = [case["expected"] for case in self.cases]
+        positive_indices = [
+            i for i, case in enumerate(self.cases) if case["category"] == "positive"
+        ]
+
+        base_predictions = list(expected)
+        base_pattern = ["PROBE", "PROBE", "READY", "READY", "UNKNOWN", "UNKNOWN"]
+        for index, prediction in zip(positive_indices, base_pattern):
+            base_predictions[index] = prediction
+
+        lora_predictions = list(base_predictions)
+        for index in positive_indices:
+            lora_predictions[index] = "PROBE"
+
+        base = self.rows("base_reference", base_predictions)
+        lora = self.rows("lora_reference", lora_predictions)
+        built = self.rows("built_cact", lora_predictions)
+        disposition, reasons = module.decide(
+            self.manifest,
+            module.surface_metrics(base),
+            module.surface_metrics(lora),
+            module.surface_metrics(built),
+            module.pairwise_divergence(base, lora),
+            module.pairwise_divergence(lora, built),
+        )
+        self.assertEqual(disposition, "APPLICABILITY_REGRESSION_REPRODUCED")
+        self.assertIn("lora_positive_decision_collapse", reasons)
+
     def test_invalid_prediction_is_inconclusive_not_divergence(self):
         expected = [case["expected"] for case in self.cases]
         changed = list(expected)

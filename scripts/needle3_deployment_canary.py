@@ -572,6 +572,8 @@ def decide(
     if (
         lora_metrics["dominant_positive_decision_rate"]
         > thresholds["dominant_positive_decision_rate_max"]
+        and lora_metrics["dominant_positive_decision_rate"]
+        > base_metrics["dominant_positive_decision_rate"]
     ):
         applicability.append("lora_positive_decision_collapse")
     if applicability:
