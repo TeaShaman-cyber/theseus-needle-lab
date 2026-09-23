@@ -1,0 +1,65 @@
+import pathlib, sqlite3, tempfile, unittest
+from scripts.inventory_needle3_multiprovider_corpus import SourceSpec, build_inventory, source_inventory
+
+def make_db(path, adapter, with_tool, branch=False):
+    conn=sqlite3.connect(path)
+    conn.executescript("""
+    create table corpus_meta(key text primary key,value text not null);
+    create table sessions(session_id text primary key,title text not null,coverage_state text not null,coverage_reason text not null,first_message_time real,last_message_time real,first_accepted_at text,last_accepted_at text,title_source_time real,title_source_artifact_sha256 text);
+    create table artifacts(artifact_id integer primary key,sha256 text not null unique,size_bytes integer not null,source_schema text not null,source_adapter text not null,original_filename text,observed_title text not null,accepted_at text not null,coverage_state text not null,session_id text not null,ledger_sha256 text not null,observed_min_time real,observed_max_time real,observed_message_count integer not null);
+    create table payload_pages(page_id integer primary key,artifact_id integer not null,session_id text not null,capture_sequence integer not null,member_name text not null,start_cursor text,end_cursor text,has_previous_page integer not null,has_next_page integer not null,message_count integer not null,min_create_time real,max_create_time real);
+    create table messages(row_id integer primary key,session_id text not null,ordinal integer not null,message_id text,local_identity text not null,canonical_message_sha256 text not null,role text not null,content_type text not null,search_class text not null,create_time real,text text not null,provider_order integer);
+    create table message_sources(message_row_id integer not null,page_id integer not null,page_position integer not null,source_message_id text,source_object_sha256 text not null,primary key(message_row_id,page_id,page_position));
+    """)
+    conn.execute("insert into corpus_meta values('schema_version','session-search-corpus-v1')")
+    sid="s1~branch-a" if branch else "s1"
+    conn.execute("insert into sessions(session_id,title,coverage_state,coverage_reason) values(?,?,?,?)",(sid,"fixture","COMPLETE_EXPOSED_CONVERSATION","fixture"))
+    n=4 if with_tool else 3
+    conn.execute("insert into artifacts(artifact_id,sha256,size_bytes,source_schema,source_adapter,original_filename,observed_title,accepted_at,coverage_state,session_id,ledger_sha256,observed_message_count) values(1,?,?,?,?,?,?,?,?,?,?,?)",("a"*64,1,"fixture",adapter,"fixture.zip","fixture","2026-09-23T00:00:00Z","COMPLETE_EXPOSED_CONVERSATION",sid,"b"*64,n))
+    conn.execute("insert into payload_pages(page_id,artifact_id,session_id,capture_sequence,member_name,has_previous_page,has_next_page,message_count) values(1,1,?,0,'page',0,0,?)",(sid,n))
+    rows=[
+      (1,sid,0,"m1","l1","1"*64,"user","text","dialogue","ask"),
+      (2,sid,1,"m2","l2","2"*64,"assistant","thoughts","hidden","secret"),
+      (3,sid,2,"m3","l3","3"*64,"assistant","text","dialogue","answer")]
+    if with_tool:
+        rows.append((4,sid,3,"m4","l4","4"*64,"tool","execution_output","evidence","result"))
+    conn.executemany("insert into messages(row_id,session_id,ordinal,message_id,local_identity,canonical_message_sha256,role,content_type,search_class,text) values(?,?,?,?,?,?,?,?,?,?)",rows)
+    for pos,row in enumerate(rows):
+        conn.execute("insert into message_sources values(?,?,?,?,?)",(row[0],1,pos,row[3],f"src-{row[0]}"))
+    conn.commit(); conn.close()
+
+class Tests(unittest.TestCase):
+    def test_observable_episode_and_hidden_boundary(self):
+        with tempfile.TemporaryDirectory() as td:
+            p=pathlib.Path(td)/"a.sqlite3"
+            make_db(p,"chatgpt-export",True,True)
+            r,_,_=source_inventory(SourceSpec("chatgpt",p,"chatgpt-export"))
+            self.assertEqual(r["messages"]["selected"],4)
+            self.assertEqual(r["messages"]["hidden_excluded_from_projection"],1)
+            self.assertEqual(r["candidate_episodes"]["eligible_user_turn_episodes"],1)
+            self.assertEqual(r["candidate_episodes"]["episodes_with_observed_tool_evidence"],1)
+            self.assertEqual(r["sessions"]["branch_session_ids"],1)
+            self.assertEqual(r["candidate_episodes"]["tool_observability"],"EXPOSED")
+
+    def test_no_tool_evidence_does_not_become_no_call(self):
+        with tempfile.TemporaryDirectory() as td:
+            td=pathlib.Path(td)
+            a=td/"a.sqlite3"; b=td/"b.sqlite3"
+            make_db(a,"chatgpt-export",False)
+            make_db(b,"xai-export",False)
+            held=td/"held.jsonl"; held.write_text('{"case_id":"x"}\n')
+            inv=build_inventory([SourceSpec("chatgpt",a,"chatgpt-export"),SourceSpec("xai",b,"xai-export")],[held])
+            self.assertEqual(inv["decision_label_inventory"]["state"],"NOT_ADJUDICATED")
+            self.assertIsNone(inv["decision_label_inventory"]["NO_CALL"])
+            self.assertFalse(inv["projection_policy"]["no_observed_tool_evidence_means_no_call"])
+            self.assertFalse(inv["next_gate"]["training_authorized"])
+
+    def test_adapter_filter_fails_closed(self):
+        with tempfile.TemporaryDirectory() as td:
+            p=pathlib.Path(td)/"a.sqlite3"
+            make_db(p,"deepseek-export",False)
+            with self.assertRaisesRegex(ValueError,"selected zero messages"):
+                source_inventory(SourceSpec("chatgpt",p,"chatgpt-export"))
+
+if __name__=="__main__":
+    unittest.main()

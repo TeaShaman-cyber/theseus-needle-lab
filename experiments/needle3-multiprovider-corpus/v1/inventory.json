@@ -1,0 +1,327 @@
+{
+  "authority": "INVENTORY_ONLY_NO_TRAINING_AUTHORIZATION",
+  "candidate_pool": {
+    "eligible_user_turn_episodes_across_sources": 63146,
+    "status": "PRE_ADJUDICATION"
+  },
+  "cross_provider_overlap": {
+    "canonical_message_hashes": [
+      {
+        "left": "chatgpt",
+        "right": "deepseek",
+        "shared": 79
+      },
+      {
+        "left": "chatgpt",
+        "right": "xai",
+        "shared": 26
+      },
+      {
+        "left": "deepseek",
+        "right": "xai",
+        "shared": 31
+      }
+    ],
+    "episode_signatures": [
+      {
+        "left": "chatgpt",
+        "right": "deepseek",
+        "shared": 0
+      },
+      {
+        "left": "chatgpt",
+        "right": "xai",
+        "shared": 0
+      },
+      {
+        "left": "deepseek",
+        "right": "xai",
+        "shared": 0
+      }
+    ]
+  },
+  "decision_label_inventory": {
+    "NO_CALL": null,
+    "PROBE": null,
+    "READY": null,
+    "UNKNOWN": null,
+    "reason": "historical provider actions are evidence, not authoritative PROBE/READY/UNKNOWN/NO_CALL labels",
+    "state": "NOT_ADJUDICATED"
+  },
+  "leakage_boundary": {
+    "bound_heldout_files": [
+      {
+        "bytes": 9867,
+        "path": "experiments/needle3-deployment-canary/v1/cases.jsonl",
+        "sha256": "bc809cabd88c3e24a51d5267ef229f7302f1c1006883428d0afea77c428119a7"
+      }
+    ],
+    "semantic_near_duplicate_screening": "REQUIRED_BEFORE_DATASET_PROJECTION",
+    "split_unit": "session_plus_semantic_family"
+  },
+  "next_gate": {
+    "required": [
+      "deterministic_candidate_projection_contract",
+      "privacy_publicability_review",
+      "semantic_family_adjudication",
+      "PROBE_READY_UNKNOWN_NO_CALL_label_adjudication",
+      "provider_and_family_balanced_split",
+      "near_duplicate_leakage_check"
+    ],
+    "training_authorized": false
+  },
+  "privacy": {
+    "committed_inventory": "METADATA_ONLY_NO_RAW_TEXT",
+    "projected_examples": "NOT_YET_CLASSIFIED",
+    "public_dataset_authorized": false,
+    "raw_sources": "PRIVATE_HISTORICAL_INTERACTION"
+  },
+  "projection_policy": {
+    "allowed_observable_inputs": [
+      "user_text_dialogue",
+      "assistant_text_dialogue",
+      "tool_evidence",
+      "observable_trace_metadata"
+    ],
+    "excluded_from_training_projection": [
+      "hidden_thoughts",
+      "reasoning_recap",
+      "system_messages",
+      "model_editable_context",
+      "user_editable_context"
+    ],
+    "no_observed_tool_evidence_means_no_call": false,
+    "provider_is_authority": false,
+    "raw_corpus_is_ground_truth": false
+  },
+  "purpose": "issue_26_realistic_sft_preflight_only",
+  "schema_version": "theseus.needle3.multiprovider_corpus_inventory.v1",
+  "sources": [
+    {
+      "artifacts": {
+        "by_adapter": {
+          "chatgpt-export": {
+            "artifacts": 303,
+            "observed_messages": 139293
+          }
+        },
+        "count": 303
+      },
+      "candidate_episodes": {
+        "duplicate_episode_instances": 20241,
+        "eligible_user_turn_episodes": 29084,
+        "episodes_with_trace": 1242,
+        "episodes_without_observed_tool_evidence": 29084,
+        "observed_tool_evidence_fraction": {
+          "denominator": 29084,
+          "numerator": 0
+        },
+        "tool_observability": "NOT_EXPOSED_OR_ABSENT",
+        "unique_episode_signatures": 8843
+      },
+      "database": {
+        "bytes": 537780224,
+        "schema_version": "session-search-corpus-v1",
+        "sha256": "35000c43031d10fce0df8a1c96aa3d52e8f34b0d967831073e681c38473bda03"
+      },
+      "messages": {
+        "duplicate_hash_instances": 99189,
+        "hidden_excluded_from_projection": 62040,
+        "observable_dialogue_text": 74769,
+        "selected": 139293,
+        "shape": [
+          {
+            "content_type": "reasoning_recap",
+            "count": 12160,
+            "role": "assistant",
+            "search_class": "hidden"
+          },
+          {
+            "content_type": "text",
+            "count": 45298,
+            "role": "assistant",
+            "search_class": "dialogue"
+          },
+          {
+            "content_type": "thoughts",
+            "count": 49880,
+            "role": "assistant",
+            "search_class": "hidden"
+          },
+          {
+            "content_type": "chatgpt_multimodal_trace",
+            "count": 2474,
+            "role": "unknown",
+            "search_class": "trace"
+          },
+          {
+            "content_type": "text",
+            "count": 29471,
+            "role": "user",
+            "search_class": "dialogue"
+          },
+          {
+            "content_type": "user_editable_context",
+            "count": 10,
+            "role": "user",
+            "search_class": "trace"
+          }
+        ],
+        "tool_evidence": 0,
+        "trace": 2484,
+        "unique_canonical_hashes": 40104
+      },
+      "provider": "chatgpt",
+      "sessions": {
+        "branch_roots": 53,
+        "branch_session_ids": 151,
+        "coverage": {
+          "PARTIAL_SESSION_SLICE": 303
+        },
+        "selected": 303
+      },
+      "source_adapter_filter": "chatgpt-export"
+    },
+    {
+      "artifacts": {
+        "by_adapter": {
+          "deepseek-export": {
+            "artifacts": 43,
+            "observed_messages": 64662
+          }
+        },
+        "count": 43
+      },
+      "candidate_episodes": {
+        "duplicate_episode_instances": 751,
+        "eligible_user_turn_episodes": 28044,
+        "episodes_with_observed_tool_evidence": 201,
+        "episodes_with_trace": 5629,
+        "episodes_without_observed_tool_evidence": 27843,
+        "observed_tool_evidence_fraction": {
+          "denominator": 28044,
+          "numerator": 201
+        },
+        "tool_observability": "EXPOSED",
+        "unique_episode_signatures": 27293
+      },
+      "database": {
+        "bytes": 198139904,
+        "schema_version": "session-search-corpus-v1",
+        "sha256": "0b4f5838c5039f81dc59be6764206cbefe89809a8c053eb4c704f9a9d630b76d"
+      },
+      "messages": {
+        "duplicate_hash_instances": 4411,
+        "hidden_excluded_from_projection": 0,
+        "observable_dialogue_text": 56469,
+        "selected": 64662,
+        "shape": [
+          {
+            "content_type": "text",
+            "count": 28145,
+            "role": "assistant",
+            "search_class": "dialogue"
+          },
+          {
+            "content_type": "text",
+            "count": 259,
+            "role": "tool",
+            "search_class": "evidence"
+          },
+          {
+            "content_type": "text",
+            "count": 7934,
+            "role": "unknown",
+            "search_class": "trace"
+          },
+          {
+            "content_type": "text",
+            "count": 28324,
+            "role": "user",
+            "search_class": "dialogue"
+          }
+        ],
+        "tool_evidence": 259,
+        "trace": 7934,
+        "unique_canonical_hashes": 60251
+      },
+      "provider": "deepseek",
+      "sessions": {
+        "branch_roots": 0,
+        "branch_session_ids": 0,
+        "coverage": {
+          "COMPLETE_EXPOSED_CONVERSATION": 43
+        },
+        "selected": 43
+      },
+      "source_adapter_filter": "deepseek-export"
+    },
+    {
+      "artifacts": {
+        "by_adapter": {
+          "xai-export": {
+            "artifacts": 60,
+            "observed_messages": 17790
+          }
+        },
+        "count": 60
+      },
+      "candidate_episodes": {
+        "duplicate_episode_instances": 3402,
+        "eligible_user_turn_episodes": 6018,
+        "episodes_with_trace": 252,
+        "episodes_without_observed_tool_evidence": 6018,
+        "observed_tool_evidence_fraction": {
+          "denominator": 6018,
+          "numerator": 0
+        },
+        "tool_observability": "NOT_EXPOSED_OR_ABSENT",
+        "unique_episode_signatures": 2616
+      },
+      "database": {
+        "bytes": 68976640,
+        "schema_version": "session-search-corpus-v1",
+        "sha256": "fdfef0992b1828af9f6c5877a6c47abb1dc33c1aeb36f8f22fb8df8cae4b7d3a"
+      },
+      "messages": {
+        "duplicate_hash_instances": 11723,
+        "hidden_excluded_from_projection": 0,
+        "observable_dialogue_text": 12057,
+        "selected": 17790,
+        "shape": [
+          {
+            "content_type": "text",
+            "count": 6018,
+            "role": "assistant",
+            "search_class": "dialogue"
+          },
+          {
+            "content_type": "text",
+            "count": 5733,
+            "role": "unknown",
+            "search_class": "trace"
+          },
+          {
+            "content_type": "text",
+            "count": 6039,
+            "role": "user",
+            "search_class": "dialogue"
+          }
+        ],
+        "tool_evidence": 0,
+        "trace": 5733,
+        "unique_canonical_hashes": 6067
+      },
+      "provider": "xai",
+      "sessions": {
+        "branch_roots": 5,
+        "branch_session_ids": 34,
+        "coverage": {
+          "COMPLETE_EXPOSED_CONVERSATION": 59
+        },
+        "selected": 59
+      },
+      "source_adapter_filter": "xai-export"
+    }
+  ]
+}
