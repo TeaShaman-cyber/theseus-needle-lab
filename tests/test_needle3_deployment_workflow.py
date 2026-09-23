@@ -36,6 +36,9 @@ class Needle3DeploymentWorkflowContractTests(unittest.TestCase):
     def test_release_and_training_contract_are_pinned(self):
         text = self.text
         self.assertIn("cactus-needle==3.0.4", text)
+        self.assertIn('python-version: "3.12.14"', text)
+        self.assertIn("--require-hashes", text)
+        self.assertIn("requirements.lock.txt", text)
         self.assertIn("verify-wheel", text)
         self.assertIn("cactus_needle-3.0.4-py3-none-any.whl", text)
         self.assertIn("--epochs 2", text)
@@ -45,6 +48,7 @@ class Needle3DeploymentWorkflowContractTests(unittest.TestCase):
         self.assertIn("--max-len 512", text)
         self.assertIn("--val-split 0", text)
         self.assertIn("--seed 0", text)
+        self.assertNotIn('numpy jax jaxlib "flax>=0.10.2" optax safetensors sentencepiece', text)
         self.assertNotIn("NEEDLE_API_KEY", text)
 
     def test_heavy_stages_use_combined_execution_and_resource_telemetry(self):

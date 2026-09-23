@@ -46,7 +46,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "3.12.14"
 
       - name: Repository QA gate
         run: tools/dev/check
@@ -63,10 +63,9 @@ jobs:
           set -euo pipefail
           bash scripts/run_needle3_canary_stage.sh setup             --artifact-root _inputs             --track _inputs             -- bash -lc '
               set -euo pipefail
-              python3 -m pip install --upgrade pip
               python3 -m pip download --no-deps --only-binary=:all: cactus-needle==3.0.4 -d _inputs
               python3 scripts/needle3_deployment_canary.py verify-wheel                 --wheel _inputs/cactus_needle-3.0.4-py3-none-any.whl
-              python3 -m pip install                 _inputs/cactus_needle-3.0.4-py3-none-any.whl                 numpy jax jaxlib "flax>=0.10.2" optax safetensors sentencepiece
+              python3 -m pip install --only-binary=:all: --require-hashes                 -r experiments/needle3-deployment-canary/v1/requirements.lock.txt
               python3 -c "import importlib.metadata; observed=importlib.metadata.version(\"cactus-needle\"); assert observed==\"3.0.4\", observed; print(\"PACKAGE_VERSION_PASS=\"+observed)"
               python3 --version > _canary/environment/python-version.txt
               python3 -m pip freeze > _canary/environment/pip-freeze.txt
