@@ -15,6 +15,13 @@ spec.loader.exec_module(module)
 
 
 class Needle3W4ReplayTests(unittest.TestCase):
+    def test_branch_workflow_binds_launcher_identity_for_stage_wrapper(self):
+        text = (ROOT / ".github" / "workflows" / "needle3-deployment-canary.yml").read_text()
+        start = text.index("  w4_replay:")
+        end = text.index("  w4_readback:")
+        section = text[start:end]
+        self.assertIn("LAUNCHER_SHA: ${{ github.workflow_sha }}", section)
+
     def test_diagnostic_exact_match(self):
         self.assertEqual(
             module.diagnostic_label(

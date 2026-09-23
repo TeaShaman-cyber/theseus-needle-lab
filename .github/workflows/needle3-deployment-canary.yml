@@ -184,6 +184,7 @@ jobs:
       actions: read
     env:
       EXPERIMENT_SHA: ${{ inputs.experiment_sha }}
+      LAUNCHER_SHA: ${{ github.workflow_sha }}
       SOURCE_RUN_ID: "35839240524"
       SOURCE_RUN_ATTEMPT: "1"
       SOURCE_EXPERIMENT_SHA: "24367fca1873281c909c5177fec9a4e999b75595"
