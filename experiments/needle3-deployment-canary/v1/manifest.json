@@ -1,0 +1,106 @@
+{
+  "allowed_final_dispositions": [
+    "NO_CURRENT_SIGNAL",
+    "DEPLOYMENT_DIVERGENCE_REPRODUCED",
+    "APPLICABILITY_REGRESSION_REPRODUCED",
+    "INCONCLUSIVE",
+    "BLOCKED",
+    "REPROBE_REQUIRED"
+  ],
+  "fault_taxonomy_issue": 66,
+  "fixture": {
+    "negative_rows": 6,
+    "path": "experiments/needle3-deployment-canary/v1/cases.jsonl",
+    "positive_decisions": [
+      "PROBE",
+      "READY",
+      "UNKNOWN"
+    ],
+    "positive_rows": 6,
+    "rows": 12,
+    "sha256": "bc809cabd88c3e24a51d5267ef229f7302f1c1006883428d0afea77c428119a7"
+  },
+  "historical_fixture_source": {
+    "experiment_commit": "7a5f75c4e1ad249803e5bc4e4b805223e436356f",
+    "projection_path": "experiments/needle-realistic-sft/data/heldout.eval.jsonl",
+    "projection_sha256": "dd01e8e36f0c65578eb632283c468d9de6cd01d93ba10029de25334d8e698ceb",
+    "semantic_source_path": "experiments/needle-realistic-sft/source/semantic-cases.jsonl",
+    "semantic_source_sha256": "59966580914c01fff124cc9f35dfbe75abc32f88059fcf7c1c9925684f56f8ad",
+    "training_projection_path": "experiments/needle-realistic-sft/data/train.needle.jsonl",
+    "training_projection_sha256": "af701b3e2b5d977601a4b026d6ccdf1f46831ae00c9783facf761c579115bf74"
+  },
+  "interpretation_boundary": "small_current_upstream_deployment_equivalence_canary_not_general_model_quality",
+  "parent_issue": 65,
+  "published_runtime_assets": {
+    "base_checkpoint": {
+      "path": "checkpoints/needle3.safetensors",
+      "sha256": "c234c70dccc7a9115e7c41ac2e41d3655fea3b85c245dd898b46179fb90c6c0c",
+      "size_bytes": 242047978
+    },
+    "engine": {
+      "binary_member": "needle/libneedle3.so",
+      "binary_sha256": "978fce130aac08af506b5fe8bb2950da58e9479d0de69d972d9bd69db953568d",
+      "binary_size_bytes": 1294696,
+      "platform_tag": "manylinux2014_x86_64",
+      "version": "3.0.1",
+      "wheel_path": "python/cactus_needle-3.0.1-py3-none-manylinux2014_x86_64.whl",
+      "wheel_sha256": "05770ef9a85686583968ea15f62f9ad44217e078efdaa99559d3208bb8a369b0",
+      "wheel_size_bytes": 536871
+    },
+    "published_base_cact": {
+      "path": "needle3.cact",
+      "sha256": "c9d915eca282ed42d1a09b143b592adb4cc6744ffe2d294adf5cfc5548170c38",
+      "size_bytes": 35335380
+    },
+    "repository": "Cactus-Compute/needle3",
+    "repository_revision": "b274efcb211a9eef48c9a88da4b43bd569696a39"
+  },
+  "research_parent_issue": 61,
+  "schema_version": "theseus.needle3.deployment_canary_manifest.v1",
+  "surfaces": [
+    "base_reference",
+    "lora_reference",
+    "built_cact"
+  ],
+  "thresholds": {
+    "applicability_negative_no_call_drop": 2,
+    "applicability_route_call_drop": 2,
+    "deployment_negative_no_call_drop": 2,
+    "deployment_pairwise_mismatch_count": 2,
+    "deployment_positive_correct_drop": 2,
+    "dominant_positive_decision_rate_max": 0.8
+  },
+  "training_fixture": {
+    "decision_counts": {
+      "NO_CALL": 12,
+      "PROBE": 12,
+      "READY": 12,
+      "UNKNOWN": 12
+    },
+    "path": "experiments/needle3-deployment-canary/v1/train.jsonl",
+    "purpose": "small_load_bearing_local_lora_canary_not_stage_c_retraining",
+    "rows": 48,
+    "sha256": "41159ea8dcacd76f537b2c9371135e067c80bfa4e32bc4ef0e2e546779ce496e",
+    "training_config": {
+      "batch_size": 8,
+      "epochs": 2,
+      "lora_alpha": 16.0,
+      "lora_rank": 8,
+      "lr": 0.0001,
+      "max_len": 512,
+      "seed": 0,
+      "val_split": 0.0
+    }
+  },
+  "upstream_snapshot": {
+    "package_name": "cactus-needle",
+    "package_version": "3.0.4",
+    "release_parent_source_commit": "f189b23ebf34b98bcc8f9ee819249425c6623a32",
+    "release_tag": "v3.0.4",
+    "release_tag_commit": "49f6759ae70ac24c479baf70f966fc9c787bf9ac",
+    "source_commit": "f189b23ebf34b98bcc8f9ee819249425c6623a32",
+    "source_repository": "cactus-compute/needle",
+    "wheel_filename": "cactus_needle-3.0.4-py3-none-any.whl",
+    "wheel_sha256": "0825b85dc7ebd7dfff98caaacc2baa6e805c3560d0646470b46bd93743056b26"
+  }
+}
