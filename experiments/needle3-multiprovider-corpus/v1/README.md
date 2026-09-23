@@ -51,3 +51,15 @@ The current Needle 3 deployment-canary heldout file is SHA-bound in inventory.js
 and must remain excluded from training. Historical Stage B heldout families also
 remain conceptually excluded even though that closed branch is not copied into
 this current-main successor.
+
+## Source lifecycle boundary
+
+Session Search is used here as a one-shot export/materialization source, not as
+a runtime dependency of the Needle experiment.
+
+Intended boundary: historical corpora / Session Search -> one-shot metadata
+projection -> frozen shortlist + bound manifest -> Needle experiment.
+
+After shortlist materialization, later Session Search ingest, indexing, release,
+or runtime drift must not change the identity of this experiment. A refreshed
+corpus requires a new explicitly versioned snapshot/materialization.

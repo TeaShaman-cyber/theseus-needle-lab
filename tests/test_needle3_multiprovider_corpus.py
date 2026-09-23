@@ -84,6 +84,17 @@ class CandidateSelectionContractTests(unittest.TestCase):
         self.assertFalse(contract["labels"]["historical_provider_action_is_ground_truth"])
         self.assertEqual(contract["privacy"]["shortlist_output"], "METADATA_ONLY_NO_RAW_TEXT")
         self.assertFalse(contract["next_gate"]["training_authorized"])
+        self.assertEqual(
+            contract["source_lifecycle"]["session_search_role"],
+            "ONE_SHOT_EXPORT_SOURCE",
+        )
+        self.assertFalse(
+            contract["source_lifecycle"]["live_session_search_runtime_required_after_materialization"]
+        )
+        self.assertEqual(
+            contract["source_lifecycle"]["post_materialization_authority"],
+            "FROZEN_SHORTLIST_AND_BOUND_MANIFEST",
+        )
 
 
 class ShortlistMaterializationTests(unittest.TestCase):

@@ -47,6 +47,12 @@
   "purpose": "issue_26_pre_adjudication_shortlist",
   "schema_version": "theseus.needle3.multiprovider_candidate_selection.v1",
   "selection_unit": "observable_user_turn_episode",
+  "source_lifecycle": {
+    "live_session_search_runtime_required_after_materialization": false,
+    "post_materialization_authority": "FROZEN_SHORTLIST_AND_BOUND_MANIFEST",
+    "session_search_role": "ONE_SHOT_EXPORT_SOURCE",
+    "source_drift_after_materialization_changes_existing_experiment": false
+  },
   "tool_evidence": {
     "absence_of_tool_evidence_means_no_call": false,
     "observed_tool_evidence_is_metadata_not_authority": true,
