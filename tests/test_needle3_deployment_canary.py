@@ -120,6 +120,36 @@ class Needle3DeploymentCanaryTests(unittest.TestCase):
         empty_call = {"type": "call", "function_calls": []}
         self.assertEqual(module.classify_response(empty_call), "INVALID")
 
+    def test_reference_parser_rejects_multiple_tool_call_blocks(self):
+        value = module.reference_text_to_response(
+            '<tool_call>[{"name":"route","arguments":{"decision":"READY"}}]</tool_call>'
+            '<tool_call>[{"name":"route","arguments":{"decision":"PROBE"}}]</tool_call>'
+        )
+        self.assertEqual(module.classify_response(value), "INVALID")
+        self.assertEqual(
+            value["parse_error"],
+            "multiple_or_unbalanced_tool_call_blocks",
+        )
+
+    def test_reference_parser_rejects_second_empty_tool_call_block(self):
+        value = module.reference_text_to_response(
+            '<tool_call>[{"name":"route","arguments":{"decision":"READY"}}]</tool_call>'
+            '<tool_call>[]</tool_call>'
+        )
+        self.assertEqual(module.classify_response(value), "INVALID")
+        self.assertEqual(
+            value["parse_error"],
+            "multiple_or_unbalanced_tool_call_blocks",
+        )
+
+    def test_reference_parser_rejects_orphan_tool_call_delimiter(self):
+        value = module.reference_text_to_response("answer</tool_call>")
+        self.assertEqual(module.classify_response(value), "INVALID")
+        self.assertEqual(
+            value["parse_error"],
+            "multiple_or_unbalanced_tool_call_blocks",
+        )
+
     def test_surface_rows_bind_exact_case_input(self):
         rows = self.rows("base_reference")
         module.validate_surface_rows(self.cases, rows, "base_reference")

@@ -356,17 +356,31 @@ def classify_response(response: dict[str, Any]) -> str:
 def reference_text_to_response(text: str) -> dict[str, Any]:
     start = "<tool_call>"
     end = "</tool_call>"
-    if start not in text:
+    start_count = text.count(start)
+    end_count = text.count(end)
+
+    if start_count == 0 and end_count == 0:
         return {"type": "text", "function_calls": [], "reference_text": text}
-    after = text.split(start, 1)[1]
-    if end not in after:
+
+    if start_count != 1 or end_count != 1:
+        return {
+            "type": "invalid",
+            "function_calls": [],
+            "reference_text": text,
+            "parse_error": "multiple_or_unbalanced_tool_call_blocks",
+        }
+
+    start_index = text.find(start)
+    end_index = text.find(end, start_index + len(start))
+    if end_index < 0:
         return {
             "type": "invalid",
             "function_calls": [],
             "reference_text": text,
             "parse_error": "unterminated_tool_call",
         }
-    payload = after.split(end, 1)[0].strip()
+
+    payload = text[start_index + len(start):end_index].strip()
     try:
         calls = json.loads(payload)
     except json.JSONDecodeError:
