@@ -132,14 +132,45 @@ class ShortlistMaterializationTests(unittest.TestCase):
 
 
 class StableSqliteBindingTests(unittest.TestCase):
-    def test_nonempty_wal_fails_closed_before_inventory(self):
+    def test_nonempty_wal_is_captured_by_stable_backup(self):
         from scripts.inventory_needle3_multiprovider_corpus import SourceSpec, source_inventory
         with tempfile.TemporaryDirectory() as td:
             db=pathlib.Path(td)/"a.sqlite3"
             make_db(db,"chatgpt-export",False)
-            pathlib.Path(str(db)+"-wal").write_bytes(b"uncheckpointed")
-            with self.assertRaisesRegex(ValueError,"uncheckpointed SQLite WAL"):
-                source_inventory(SourceSpec("chatgpt",db,"chatgpt-export"))
+            writer=sqlite3.connect(db)
+            try:
+                writer.execute("pragma journal_mode=WAL")
+                writer.execute("insert into corpus_meta values('fixture_commit','visible_in_wal')")
+                writer.commit()
+                wal=pathlib.Path(str(db)+"-wal")
+                self.assertTrue(wal.is_file())
+                self.assertGreater(wal.stat().st_size,0)
+                report,_,_=source_inventory(SourceSpec("chatgpt",db,"chatgpt-export"))
+            finally:
+                writer.close()
+            self.assertEqual(report["database"]["binding_mode"],"STABLE_SQLITE_BACKUP")
+            self.assertEqual(len(report["database"]["sha256"]),64)
+
+    def test_snapshot_is_immutable_after_source_commit(self):
+        from scripts.inventory_needle3_multiprovider_corpus import sha256_file, stable_sqlite_snapshot
+        with tempfile.TemporaryDirectory() as td:
+            db=pathlib.Path(td)/"a.sqlite3"
+            make_db(db,"chatgpt-export",False)
+            with stable_sqlite_snapshot(db) as snapshot:
+                before=sha256_file(snapshot)
+                writer=sqlite3.connect(db)
+                try:
+                    writer.execute("insert into corpus_meta values('after_snapshot','new_source_state')")
+                    writer.commit()
+                finally:
+                    writer.close()
+                self.assertEqual(sha256_file(snapshot),before)
+                snap=sqlite3.connect(snapshot)
+                try:
+                    row=snap.execute("select value from corpus_meta where key='after_snapshot'").fetchone()
+                finally:
+                    snap.close()
+                self.assertIsNone(row)
 
 
 class ProjectionSignatureTests(unittest.TestCase):

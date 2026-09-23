@@ -1,5 +1,5 @@
 from __future__ import annotations
-import argparse, collections, hashlib, json, pathlib, sqlite3
+import argparse, collections, contextlib, hashlib, json, pathlib, sqlite3, tempfile
 from dataclasses import dataclass
 
 SCHEMA = "theseus.needle3.multiprovider_corpus_inventory.v1"
@@ -32,12 +32,21 @@ def parse_mapping(values,label):
         out[k]=v
     return out
 
-def require_stable_sqlite_file(path):
-    wal=pathlib.Path(str(path)+"-wal")
-    if wal.exists() and wal.stat().st_size > 0:
-        raise ValueError(
-            f"uncheckpointed SQLite WAL is not supported for exact source binding: {wal}"
-        )
+@contextlib.contextmanager
+def stable_sqlite_snapshot(path):
+    if not path.is_file():
+        raise ValueError(f"missing corpus DB: {path}")
+    with tempfile.TemporaryDirectory(prefix="needle3-sqlite-snapshot-") as td:
+        snapshot=pathlib.Path(td)/"snapshot.sqlite3"
+        source=sqlite3.connect(f"file:{path}?mode=ro",uri=True)
+        target=sqlite3.connect(snapshot)
+        try:
+            source.backup(target)
+            target.commit()
+        finally:
+            target.close()
+            source.close()
+        yield snapshot
 
 
 def validate_schema(conn):
@@ -115,40 +124,40 @@ def episode_stats(rows):
 def source_inventory(spec):
     if not spec.path.is_file():
         raise ValueError(f"missing corpus DB for {spec.name}: {spec.path}")
-    require_stable_sqlite_file(spec.path)
-    conn=sqlite3.connect(f"file:{spec.path}?mode=ro",uri=True)
-    conn.row_factory=sqlite3.Row
-    try:
-        schema=validate_schema(conn)
-        rows=selected_rows(conn,spec.adapter)
-        if not rows:
-            raise ValueError(f"source {spec.name} selected zero messages")
-        sessions={str(r["session_id"]) for r in rows}
-        hashes=[str(r["canonical_message_sha256"]) for r in rows if r["canonical_message_sha256"]]
-        uniq_hashes=set(hashes)
-        shape=collections.Counter((str(r["role"]),str(r["content_type"]),str(r["search_class"])) for r in rows)
-        coverage=collections.Counter(str(state) for sid,state in conn.execute("select session_id,coverage_state from sessions") if str(sid) in sessions)
-        branch={s for s in sessions if "~branch-" in s}
-        obs=sum(n for (role,ctype,sclass),n in shape.items() if role in {"user","assistant"} and ctype=="text" and sclass=="dialogue")
-        tool=sum(n for (role,_c,sclass),n in shape.items() if role=="tool" and sclass=="evidence")
-        hidden=sum(n for (_r,_c,sclass),n in shape.items() if sclass=="hidden")
-        trace=sum(n for (_r,_c,sclass),n in shape.items() if sclass=="trace")
-        eps,epsigs=episode_stats(rows)
-        eligible=int(eps.get("eligible_user_turn_episodes",0))
-        tool_eps=int(eps.get("episodes_with_observed_tool_evidence",0))
-        report={
-          "provider":spec.name,
-          "source_adapter_filter":spec.adapter,
-          "database":{"bytes":spec.path.stat().st_size,"sha256":sha256_file(spec.path),"schema_version":schema},
-          "artifacts":artifact_stats(conn,spec.adapter),
-          "sessions":{"selected":len(sessions),"coverage":dict(sorted(coverage.items())),"branch_session_ids":len(branch),"branch_roots":len({s.split("~branch-",1)[0] for s in branch})},
-          "messages":{"selected":len(rows),"unique_canonical_hashes":len(uniq_hashes),"duplicate_hash_instances":len(hashes)-len(uniq_hashes),"observable_dialogue_text":obs,"tool_evidence":tool,"trace":trace,"hidden_excluded_from_projection":hidden,
-                      "shape":[{"role":k[0],"content_type":k[1],"search_class":k[2],"count":n} for k,n in sorted(shape.items())]},
-          "candidate_episodes":{**eps,"observed_tool_evidence_fraction":{"numerator":tool_eps,"denominator":eligible} if eligible else None,"tool_observability":"EXPOSED" if tool>0 else "NOT_EXPOSED_OR_ABSENT"}
-        }
-        return report,uniq_hashes,epsigs
-    finally:
-        conn.close()
+    with stable_sqlite_snapshot(spec.path) as snapshot:
+        conn=sqlite3.connect(f"file:{snapshot}?mode=ro",uri=True)
+        conn.row_factory=sqlite3.Row
+        try:
+            schema=validate_schema(conn)
+            rows=selected_rows(conn,spec.adapter)
+            if not rows:
+                raise ValueError(f"source {spec.name} selected zero messages")
+            sessions={str(r["session_id"]) for r in rows}
+            hashes=[str(r["canonical_message_sha256"]) for r in rows if r["canonical_message_sha256"]]
+            uniq_hashes=set(hashes)
+            shape=collections.Counter((str(r["role"]),str(r["content_type"]),str(r["search_class"])) for r in rows)
+            coverage=collections.Counter(str(state) for sid,state in conn.execute("select session_id,coverage_state from sessions") if str(sid) in sessions)
+            branch={s for s in sessions if "~branch-" in s}
+            obs=sum(n for (role,ctype,sclass),n in shape.items() if role in {"user","assistant"} and ctype=="text" and sclass=="dialogue")
+            tool=sum(n for (role,_c,sclass),n in shape.items() if role=="tool" and sclass=="evidence")
+            hidden=sum(n for (_r,_c,sclass),n in shape.items() if sclass=="hidden")
+            trace=sum(n for (_r,_c,sclass),n in shape.items() if sclass=="trace")
+            eps,epsigs=episode_stats(rows)
+            eligible=int(eps.get("eligible_user_turn_episodes",0))
+            tool_eps=int(eps.get("episodes_with_observed_tool_evidence",0))
+            report={
+              "provider":spec.name,
+              "source_adapter_filter":spec.adapter,
+              "database":{"binding_mode":"STABLE_SQLITE_BACKUP","bytes":snapshot.stat().st_size,"sha256":sha256_file(snapshot),"schema_version":schema},
+              "artifacts":artifact_stats(conn,spec.adapter),
+              "sessions":{"selected":len(sessions),"coverage":dict(sorted(coverage.items())),"branch_session_ids":len(branch),"branch_roots":len({s.split("~branch-",1)[0] for s in branch})},
+              "messages":{"selected":len(rows),"unique_canonical_hashes":len(uniq_hashes),"duplicate_hash_instances":len(hashes)-len(uniq_hashes),"observable_dialogue_text":obs,"tool_evidence":tool,"trace":trace,"hidden_excluded_from_projection":hidden,
+                          "shape":[{"role":k[0],"content_type":k[1],"search_class":k[2],"count":n} for k,n in sorted(shape.items())]},
+              "candidate_episodes":{**eps,"observed_tool_evidence_fraction":{"numerator":tool_eps,"denominator":eligible} if eligible else None,"tool_observability":"EXPOSED" if tool>0 else "NOT_EXPOSED_OR_ABSENT"}
+            }
+            return report,uniq_hashes,epsigs
+        finally:
+            conn.close()
 
 def overlap_matrix(sets):
     names=sorted(sets); out=[]
@@ -234,14 +243,14 @@ def materialize_shortlist(sources, quotas, salt):
     for spec in sources:
         if spec.name not in quotas:
             raise ValueError(f"missing quota for provider {spec.name}")
-        require_stable_sqlite_file(spec.path)
-        conn=sqlite3.connect(f"file:{spec.path}?mode=ro",uri=True)
-        conn.row_factory=sqlite3.Row
-        try:
-            validate_schema(conn)
-            rows=selected_rows(conn,spec.adapter)
-        finally:
-            conn.close()
+        with stable_sqlite_snapshot(spec.path) as snapshot:
+            conn=sqlite3.connect(f"file:{snapshot}?mode=ro",uri=True)
+            conn.row_factory=sqlite3.Row
+            try:
+                validate_schema(conn)
+                rows=selected_rows(conn,spec.adapter)
+            finally:
+                conn.close()
         records=episode_records(rows,spec.name,salt)
         quota=int(quotas[spec.name])
         if quota < 1:
