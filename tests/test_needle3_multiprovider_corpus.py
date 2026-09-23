@@ -161,8 +161,8 @@ class StableSqliteBindingTests(unittest.TestCase):
                 report,_,_=source_inventory(SourceSpec("chatgpt",db,"chatgpt-export"))
             finally:
                 writer.close()
-            self.assertEqual(report["database"]["binding_mode"],"STABLE_SQLITE_BACKUP")
             self.assertEqual(len(report["database"]["sha256"]),64)
+            self.assertNotIn("binding_mode",report["database"])
 
     def test_snapshot_is_immutable_after_source_commit(self):
         from scripts.inventory_needle3_multiprovider_corpus import sha256_file, stable_sqlite_snapshot

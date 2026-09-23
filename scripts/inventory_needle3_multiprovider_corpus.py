@@ -152,7 +152,7 @@ def source_inventory(spec):
             report={
               "provider":spec.name,
               "source_adapter_filter":spec.adapter,
-              "database":{"binding_mode":"STABLE_SQLITE_BACKUP","bytes":snapshot.stat().st_size,"sha256":sha256_file(snapshot),"schema_version":schema},
+              "database":{"bytes":snapshot.stat().st_size,"sha256":sha256_file(snapshot),"schema_version":schema},
               "artifacts":artifact_stats(conn,spec.adapter),
               "sessions":{"selected":len(sessions),"coverage":dict(sorted(coverage.items())),"branch_session_ids":len(branch),"branch_roots":len({s.split("~branch-",1)[0] for s in branch})},
               "messages":{"selected":len(rows),"unique_canonical_hashes":len(uniq_hashes),"duplicate_hash_instances":len(hashes)-len(uniq_hashes),"observable_dialogue_text":obs,"tool_evidence":tool,"trace":trace,"hidden_excluded_from_projection":hidden,
