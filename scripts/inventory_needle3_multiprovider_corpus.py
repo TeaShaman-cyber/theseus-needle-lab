@@ -170,7 +170,20 @@ def overlap_matrix(sets):
             out.append({"left":left,"right":right,"shared":len(sets[left]&sets[right])})
     return out
 
+def validate_distinct_source_slices(sources):
+    seen={}
+    for spec in sources:
+        key=(spec.path.resolve(),spec.adapter)
+        previous=seen.get(key)
+        if previous is not None:
+            raise ValueError(
+                f"duplicate source database slice: {previous} and {spec.name} "
+                f"share {key[0]} adapter={spec.adapter!r}"
+            )
+        seen[key]=spec.name
+
 def build_inventory(sources,heldout_files):
+    validate_distinct_source_slices(sources)
     reports=[]; msets={}; esets={}
     for s in sources:
         report,m,e=source_inventory(s)

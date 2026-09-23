@@ -75,6 +75,20 @@ class Tests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError,"unsupported corpus schema_version"):
                 source_inventory(SourceSpec("chatgpt",p,"chatgpt-export"))
 
+    def test_duplicate_database_adapter_slice_fails_closed(self):
+        with tempfile.TemporaryDirectory() as td:
+            td=pathlib.Path(td)
+            db=td/"shared.sqlite3"
+            alias=td/"alias.sqlite3"
+            make_db(db,"chatgpt-export",False)
+            alias.symlink_to(db)
+            sources=[
+                SourceSpec("chatgpt",db,"chatgpt-export"),
+                SourceSpec("other-name",alias,"chatgpt-export"),
+            ]
+            with self.assertRaisesRegex(ValueError,"duplicate source database slice"):
+                build_inventory(sources,[])
+
 if __name__=="__main__":
     unittest.main()
 
