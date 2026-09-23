@@ -3,6 +3,7 @@ import argparse, collections, contextlib, hashlib, json, pathlib, sqlite3, tempf
 from dataclasses import dataclass
 
 SCHEMA = "theseus.needle3.multiprovider_corpus_inventory.v1"
+SUPPORTED_CORPUS_SCHEMA = "session-search-corpus-v1"
 REQUIRED_TABLES = {"artifacts","corpus_meta","message_sources","messages","payload_pages","sessions"}
 
 @dataclass(frozen=True)
@@ -57,7 +58,10 @@ def validate_schema(conn):
     row=conn.execute("select value from corpus_meta where key='schema_version'").fetchone()
     if row is None:
         raise ValueError("missing corpus schema_version")
-    return str(row[0])
+    schema=str(row[0])
+    if schema != SUPPORTED_CORPUS_SCHEMA:
+        raise ValueError(f"unsupported corpus schema_version: {schema}")
+    return schema
 
 def selected_rows(conn,adapter):
     if adapter is None:

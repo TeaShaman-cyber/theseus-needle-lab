@@ -62,6 +62,19 @@ class Tests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError,"selected zero messages"):
                 source_inventory(SourceSpec("chatgpt",p,"chatgpt-export"))
 
+    def test_unsupported_corpus_schema_fails_closed(self):
+        with tempfile.TemporaryDirectory() as td:
+            p=pathlib.Path(td)/"a.sqlite3"
+            make_db(p,"chatgpt-export",False)
+            conn=sqlite3.connect(p)
+            try:
+                conn.execute("update corpus_meta set value='session-search-corpus-v2' where key='schema_version'")
+                conn.commit()
+            finally:
+                conn.close()
+            with self.assertRaisesRegex(ValueError,"unsupported corpus schema_version"):
+                source_inventory(SourceSpec("chatgpt",p,"chatgpt-export"))
+
 if __name__=="__main__":
     unittest.main()
 
