@@ -337,10 +337,16 @@ def validate_manifest(manifest: dict[str, Any], manifest_path: pathlib.Path) -> 
 def classify_response(response: dict[str, Any]) -> str:
     calls = response.get("function_calls") or []
     response_type = response.get("type")
+
     if response_type == "invalid":
         return "INVALID"
-    if response_type != "call":
+
+    if response_type == "text":
         return "NO_CALL" if not calls else "INVALID"
+
+    if response_type != "call":
+        return "INVALID"
+
     if not calls or len(calls) != 1:
         return "INVALID"
     call = calls[0]

@@ -120,6 +120,30 @@ class Needle3DeploymentCanaryTests(unittest.TestCase):
         empty_call = {"type": "call", "function_calls": []}
         self.assertEqual(module.classify_response(empty_call), "INVALID")
 
+    def test_response_classifier_rejects_missing_or_unknown_types(self):
+        self.assertEqual(module.classify_response({}), "INVALID")
+        self.assertEqual(
+            module.classify_response({"type": "error", "function_calls": []}),
+            "INVALID",
+        )
+
+    def test_response_classifier_only_allows_explicit_text_as_no_call(self):
+        self.assertEqual(
+            module.classify_response({"type": "text", "function_calls": []}),
+            "NO_CALL",
+        )
+        self.assertEqual(
+            module.classify_response(
+                {
+                    "type": "text",
+                    "function_calls": [
+                        {"name": "route", "arguments": {"decision": "READY"}}
+                    ],
+                }
+            ),
+            "INVALID",
+        )
+
     def test_reference_parser_rejects_multiple_tool_call_blocks(self):
         value = module.reference_text_to_response(
             '<tool_call>[{"name":"route","arguments":{"decision":"READY"}}]</tool_call>'
