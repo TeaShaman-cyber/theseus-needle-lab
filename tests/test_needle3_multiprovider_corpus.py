@@ -93,6 +93,10 @@ class CandidateSelectionContractTests(unittest.TestCase):
             "deepseek": 300,
             "xai": 300,
         })
+        self.assertEqual(
+            contract["deduplication"]["representative_tiebreak"],
+            "LEXICOGRAPHIC_MIN_SESSION_ID_THEN_START_ORDINAL_THEN_END_ORDINAL",
+        )
         self.assertEqual(contract["labels"]["state"], "NOT_ADJUDICATED")
         self.assertFalse(contract["labels"]["historical_provider_action_is_ground_truth"])
         self.assertEqual(contract["privacy"]["shortlist_output"], "METADATA_ONLY_NO_RAW_TEXT")
@@ -108,6 +112,30 @@ class CandidateSelectionContractTests(unittest.TestCase):
             contract["source_lifecycle"]["post_materialization_authority"],
             "FROZEN_SHORTLIST_AND_BOUND_MANIFEST",
         )
+
+
+class DuplicateRepresentativeTests(unittest.TestCase):
+    def test_duplicate_signature_uses_lexicographic_representative(self):
+        from scripts.inventory_needle3_multiprovider_corpus import episode_records
+        def row(session_id,ordinal,role,digest):
+            return {
+                "session_id":session_id,
+                "ordinal":ordinal,
+                "role":role,
+                "content_type":"text",
+                "search_class":"dialogue",
+                "canonical_message_sha256":digest,
+            }
+        rows=[
+            row("z-session",0,"user","1"*64),
+            row("z-session",1,"assistant","2"*64),
+            row("a-session",0,"user","1"*64),
+            row("a-session",1,"assistant","2"*64),
+        ]
+        records=episode_records(rows,"chatgpt","fixture-salt")
+        self.assertEqual(len(records),1)
+        self.assertEqual(records[0]["session_id"],"a-session")
+        self.assertEqual(records[0]["episode_start_ordinal"],0)
 
 
 class ShortlistMaterializationTests(unittest.TestCase):

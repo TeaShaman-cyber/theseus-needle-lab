@@ -2,6 +2,7 @@
   "deduplication": {
     "cross_provider_exact_episode_signature": "KEEP_PROVIDER_DISTINCT",
     "exact_episode_signature": "KEEP_ONE_PER_PROVIDER",
+    "representative_tiebreak": "LEXICOGRAPHIC_MIN_SESSION_ID_THEN_START_ORDINAL_THEN_END_ORDINAL",
     "semantic_near_duplicate_screening": "REQUIRED_AFTER_SHORTLIST_BEFORE_SPLIT"
   },
   "deterministic_sampling": {

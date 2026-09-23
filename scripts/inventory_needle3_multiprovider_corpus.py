@@ -208,7 +208,7 @@ def episode_records(rows, provider, salt):
     by=collections.defaultdict(list)
     for r in rows:
         by[str(r["session_id"])].append(r)
-    records=[]; seen=set()
+    candidates=collections.defaultdict(list)
     for session_id,sr in sorted(by.items()):
         starts=[i for i,r in enumerate(sr)
                 if r["role"]=="user" and r["search_class"]=="dialogue" and r["content_type"]=="text"]
@@ -220,18 +220,13 @@ def episode_records(rows, provider, salt):
             observable=[r for r in win if r["search_class"]!="hidden"]
             payload=signature_payload(win)
             signature=hashlib.sha256(payload).hexdigest()
-            if signature in seen:
-                continue
-            seen.add(signature)
             tools=[r for r in win if r["role"]=="tool" and r["search_class"]=="evidence"]
-            rank_input=f"{provider}\n{session_id}\n{signature}\n{salt}".encode()
-            records.append({
+            candidates[signature].append({
                 "provider":provider,
                 "session_id":session_id,
                 "episode_start_ordinal":int(win[0]["ordinal"]),
                 "episode_end_ordinal":int(win[-1]["ordinal"]),
                 "episode_signature":signature,
-                "rank_sha256":hashlib.sha256(rank_input).hexdigest(),
                 "observed_tool_evidence":bool(tools),
                 "observed_execution_output":any(r["content_type"]=="execution_output" for r in tools),
                 "observed_trace":any(r["search_class"]=="trace" for r in win),
@@ -239,6 +234,16 @@ def episode_records(rows, provider, salt):
                 "decision_label":None,
                 "label_state":"NOT_ADJUDICATED",
             })
+    records=[]
+    for signature,instances in candidates.items():
+        record=min(
+            instances,
+            key=lambda r:(r["session_id"],r["episode_start_ordinal"],r["episode_end_ordinal"]),
+        )
+        rank_input=f"{provider}\n{record['session_id']}\n{signature}\n{salt}".encode()
+        record=dict(record)
+        record["rank_sha256"]=hashlib.sha256(rank_input).hexdigest()
+        records.append(record)
     return sorted(records,key=lambda r:(r["rank_sha256"],r["session_id"],r["episode_start_ordinal"]))
 
 
