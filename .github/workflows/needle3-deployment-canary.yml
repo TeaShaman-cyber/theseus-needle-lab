@@ -17,6 +17,7 @@ concurrency:
 
 jobs:
   produce:
+    if: ${{ github.ref_name != 'experiment/needle3-w4-reference-65' }}
     runs-on: ubuntu-latest
     timeout-minutes: 90
     env:
@@ -173,6 +174,175 @@ jobs:
             _outputs/tuned.cact
           if-no-files-found: warn
           retention-days: 14
+
+  w4_replay:
+    if: ${{ github.ref_name == 'experiment/needle3-w4-reference-65' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      actions: read
+    env:
+      EXPERIMENT_SHA: ${{ inputs.experiment_sha }}
+      SOURCE_RUN_ID: "35839240524"
+      SOURCE_RUN_ATTEMPT: "1"
+      SOURCE_EXPERIMENT_SHA: "24367fca1873281c909c5177fec9a4e999b75595"
+      SOURCE_ARTIFACT_NAME: "needle3-deployment-canary-35839240524-1"
+      SOURCE_ARTIFACT_DIGEST: "sha256:5c91f93ee3c0f822de6a8cdb0794e92e03e9ce606f2f9365a763577745e2d7d5"
+      PYTHONUNBUFFERED: "1"
+      JAX_PLATFORM_NAME: cpu
+      XLA_PYTHON_CLIENT_PREALLOCATE: "false"
+
+    steps:
+      - name: Checkout exact replay revision
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.experiment_sha }}
+          fetch-depth: 1
+
+      - name: Verify exact replay revision
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$EXPERIMENT_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$EXPERIMENT_SHA"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12.14"
+
+      - name: Repository QA gate
+        run: tools/dev/check
+
+      - name: Download exact source canary evidence
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p _source _inputs _w4
+          meta="$(gh api "repos/${{ github.repository }}/actions/runs/$SOURCE_RUN_ID/artifacts")"
+          digest="$(jq -r --arg name "$SOURCE_ARTIFACT_NAME" '.artifacts[] | select(.name==$name and (.expired|not)) | .digest' <<<"$meta")"
+          test "$digest" = "$SOURCE_ARTIFACT_DIGEST"
+          gh run download "$SOURCE_RUN_ID" --repo "${{ github.repository }}" --name "$SOURCE_ARTIFACT_NAME" --dir _source
+          test -f _source/_outputs/canary_lora.safetensors
+          test -f _source/_canary/results/lora_reference.jsonl
+          test -f _source/_canary/results/built_cact.jsonl
+          test -f _source/_canary/provenance/lora_reference.json
+
+      - name: Install exact Needle 3.0.4 environment
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m pip download --no-deps --only-binary=:all: cactus-needle==3.0.4 -d _inputs
+          python3 scripts/needle3_deployment_canary.py verify-wheel --wheel _inputs/cactus_needle-3.0.4-py3-none-any.whl
+          python3 -m pip install --only-binary=:all: --require-hashes -r experiments/needle3-deployment-canary/v1/requirements.lock.txt
+
+      - name: Download and verify exact base checkpoint
+        shell: bash
+        run: |
+          set -euo pipefail
+          needle download needle3.safetensors --out _inputs
+          python3 scripts/needle3_deployment_canary.py verify-base-checkpoint \
+            --checkpoint _inputs/checkpoints/needle3.safetensors \
+            --output _w4/base-checkpoint-identity.json
+
+      - name: Verify source adapter identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          expected="$(jq -r '.lora_adapter_sha256' _source/_canary/provenance/lora_reference.json)"
+          observed="$(sha256sum _source/_outputs/canary_lora.safetensors | awk '{print $1}')"
+          test "$observed" = "$expected"
+          echo "SOURCE_ADAPTER_IDENTITY_PASS=$observed"
+
+      - name: Evaluate W4 merged-LoRA JAX reference
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash scripts/run_needle3_canary_stage.sh lora_w4_reference \
+            --artifact-root _w4/lora_w4_reference.jsonl \
+            --track _w4 \
+            -- python3 scripts/needle3_w4_replay.py run-w4 \
+              --checkpoint _inputs/checkpoints/needle3.safetensors \
+              --lora _source/_outputs/canary_lora.safetensors \
+              --max-new-tokens 128 \
+              --output _w4/lora_w4_reference.jsonl
+
+      - name: Compare float W4 and built predictions
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/needle3_w4_replay.py compare \
+            --float-results _source/_canary/results/lora_reference.jsonl \
+            --w4-results _w4/lora_w4_reference.jsonl \
+            --built-results _source/_canary/results/built_cact.jsonl \
+            --source-provenance _source/_canary/provenance/lora_reference.json \
+            --lora _source/_outputs/canary_lora.safetensors \
+            --checkpoint _inputs/checkpoints/needle3.safetensors \
+            --source-run-id "$SOURCE_RUN_ID" \
+            --source-run-attempt "$SOURCE_RUN_ATTEMPT" \
+            --source-experiment-sha "$SOURCE_EXPERIMENT_SHA" \
+            --replay-experiment-sha "$EXPERIMENT_SHA" \
+            --output _w4/receipt.json
+
+      - name: Print W4 replay result
+        run: jq '{diagnostic,float_lora_vs_w4_lora,w4_lora_vs_built_cact,float_lora_vs_built_cact,metrics}' _w4/receipt.json
+
+      - name: Upload W4 replay evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: needle3-w4-replay-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            _w4/
+            _source/_canary/results/lora_reference.jsonl
+            _source/_canary/results/built_cact.jsonl
+            _source/_canary/provenance/lora_reference.json
+            _source/_outputs/canary_lora.safetensors
+            _inputs/checkpoints/needle3.safetensors
+          retention-days: 14
+
+  w4_readback:
+    needs: w4_replay
+    if: ${{ always() && needs.w4_replay.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      EXPERIMENT_SHA: ${{ inputs.experiment_sha }}
+      SOURCE_RUN_ID: "35839240524"
+      SOURCE_RUN_ATTEMPT: "1"
+      SOURCE_EXPERIMENT_SHA: "24367fca1873281c909c5177fec9a4e999b75595"
+
+    steps:
+      - name: Checkout exact replay revision
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.experiment_sha }}
+          fetch-depth: 1
+
+      - name: Download exact W4 replay evidence
+        uses: actions/download-artifact@v4
+        with:
+          name: needle3-w4-replay-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .
+
+      - name: Rebuild and validate W4 replay receipt
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/needle3_w4_replay.py validate-receipt \
+            --float-results _source/_canary/results/lora_reference.jsonl \
+            --w4-results _w4/lora_w4_reference.jsonl \
+            --built-results _source/_canary/results/built_cact.jsonl \
+            --source-provenance _source/_canary/provenance/lora_reference.json \
+            --lora _source/_outputs/canary_lora.safetensors \
+            --checkpoint _inputs/checkpoints/needle3.safetensors \
+            --source-run-id "$SOURCE_RUN_ID" \
+            --source-run-attempt "$SOURCE_RUN_ATTEMPT" \
+            --source-experiment-sha "$SOURCE_EXPERIMENT_SHA" \
+            --replay-experiment-sha "$EXPERIMENT_SHA" \
+            --output _w4/receipt.json
 
   readback:
     needs: produce
