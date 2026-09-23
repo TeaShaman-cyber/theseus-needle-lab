@@ -89,6 +89,20 @@ class Tests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError,"duplicate source database slice"):
                 build_inventory(sources,[])
 
+    def test_missing_source_adapter_fails_closed(self):
+        with tempfile.TemporaryDirectory() as td:
+            td=pathlib.Path(td)
+            a=td/"a.sqlite3"
+            b=td/"b.sqlite3"
+            make_db(a,"chatgpt-export",False)
+            make_db(b,"xai-export",False)
+            sources=[
+                SourceSpec("chatgpt",a,None),
+                SourceSpec("xai",b,"xai-export"),
+            ]
+            with self.assertRaisesRegex(ValueError,"missing explicit source adapter for chatgpt"):
+                build_inventory(sources,[])
+
 if __name__=="__main__":
     unittest.main()
 

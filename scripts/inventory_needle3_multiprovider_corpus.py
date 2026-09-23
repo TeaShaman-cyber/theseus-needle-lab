@@ -173,6 +173,8 @@ def overlap_matrix(sets):
 def validate_distinct_source_slices(sources):
     seen={}
     for spec in sources:
+        if not spec.adapter:
+            raise ValueError(f"missing explicit source adapter for {spec.name}")
         key=(spec.path.resolve(),spec.adapter)
         previous=seen.get(key)
         if previous is not None:
