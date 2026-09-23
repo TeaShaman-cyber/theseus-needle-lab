@@ -79,11 +79,17 @@ jobs:
           set -euo pipefail
           bash scripts/run_needle3_canary_stage.sh download_checkpoint             --artifact-root _inputs/checkpoints             --track _inputs/checkpoints             -- needle download needle3.safetensors --out _inputs
 
+      - name: Verify frozen base checkpoint identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash scripts/run_needle3_canary_stage.sh verify_base_checkpoint             --artifact-root _canary/environment/base-checkpoint-identity.json             --track _canary/environment             -- python3 scripts/needle3_deployment_canary.py verify-base-checkpoint               --checkpoint _inputs/checkpoints/needle3.safetensors               --output _canary/environment/base-checkpoint-identity.json
+
       - name: Resolve exact runtime engine
         shell: bash
         run: |
           set -euo pipefail
-          bash scripts/run_needle3_canary_stage.sh resolve_engine             --artifact-root _canary/environment             --track "$HOME/.cache/cactus-needle"             -- python3 scripts/needle3_deployment_canary.py resolve-engine               --output _canary/environment/engine-path.txt
+          bash scripts/run_needle3_canary_stage.sh resolve_engine             --artifact-root _canary/environment             --track "$HOME/.cache/cactus-needle"             -- python3 scripts/needle3_deployment_canary.py resolve-engine               --output _canary/environment/engine-path.txt               --identity-output _canary/environment/engine-identity.json
 
       - name: Evaluate base reference
         shell: bash
@@ -109,6 +115,12 @@ jobs:
           set -euo pipefail
           bash scripts/run_needle3_canary_stage.sh build             --artifact-root _outputs/tuned.cact             --track _outputs             --track "$HOME/.cache/cactus-needle"             -- needle build _inputs/checkpoints/needle3.safetensors               --lora _outputs/canary_lora.safetensors               --out _outputs/tuned.cact
 
+      - name: Verify pinned published base cact used by build
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash scripts/run_needle3_canary_stage.sh verify_base_cact             --artifact-root _canary/environment/base-cact-identity.json             --track _canary/environment             --track "$HOME/.cache/cactus-needle"             -- python3 scripts/needle3_deployment_canary.py resolve-published-base-cact               --output _canary/environment/base-cact-path.txt               --identity-output _canary/environment/base-cact-identity.json
+
       - name: Emit typed missing-artifact evidence if build did not produce cact
         if: ${{ always() }}
         shell: bash
@@ -130,11 +142,12 @@ jobs:
         run: |
           set -euo pipefail
           engine="$(cat _canary/environment/engine-path.txt)"
+          base_cact="$(cat _canary/environment/base-cact-path.txt)"
           bash scripts/run_needle3_canary_stage.sh provenance             --artifact-root _canary/provenance             --track _canary/provenance             -- bash -lc "
               set -euo pipefail
               python3 scripts/needle3_deployment_canary.py make-provenance                 --surface base_reference                 --package-wheel _inputs/cactus_needle-3.0.4-py3-none-any.whl                 --base-checkpoint _inputs/checkpoints/needle3.safetensors                 --output _canary/provenance/base_reference.json
               python3 scripts/needle3_deployment_canary.py make-provenance                 --surface lora_reference                 --package-wheel _inputs/cactus_needle-3.0.4-py3-none-any.whl                 --base-checkpoint _inputs/checkpoints/needle3.safetensors                 --lora-adapter _outputs/canary_lora.safetensors                 --output _canary/provenance/lora_reference.json
-              python3 scripts/needle3_deployment_canary.py make-provenance                 --surface built_cact                 --package-wheel _inputs/cactus_needle-3.0.4-py3-none-any.whl                 --base-checkpoint _inputs/checkpoints/needle3.safetensors                 --lora-adapter _outputs/canary_lora.safetensors                 --built-cact _outputs/tuned.cact                 --engine-binary '$engine'                 --output _canary/provenance/built_cact.json
+              python3 scripts/needle3_deployment_canary.py make-provenance                 --surface built_cact                 --package-wheel _inputs/cactus_needle-3.0.4-py3-none-any.whl                 --base-checkpoint _inputs/checkpoints/needle3.safetensors                 --lora-adapter _outputs/canary_lora.safetensors                 --built-cact _outputs/tuned.cact                 --engine-binary '$engine'                 --published-base-cact '$base_cact'                 --output _canary/provenance/built_cact.json
             "
 
       - name: Aggregate bounded canary receipt
@@ -195,7 +208,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for stage in resolve_engine base_reference train lora_reference build built_cact provenance aggregate; do
+          for stage in verify_base_checkpoint resolve_engine base_reference train lora_reference build verify_base_cact built_cact provenance aggregate; do
             python3 scripts/execution_telemetry.py validate               --checkpoint "_evidence/telemetry/$stage/checkpoint.json"               --heartbeat "_evidence/telemetry/$stage/heartbeat.jsonl"               --root .               --expected-execution-status SUCCEEDED               --expected-lifecycle-state ARTIFACT_PROVENANCE
           done
           echo NEEDLE3_STAGE_READBACK_PASS

@@ -31,6 +31,30 @@
   },
   "interpretation_boundary": "small_current_upstream_deployment_equivalence_canary_not_general_model_quality",
   "parent_issue": 65,
+  "published_runtime_assets": {
+    "base_checkpoint": {
+      "path": "checkpoints/needle3.safetensors",
+      "sha256": "c234c70dccc7a9115e7c41ac2e41d3655fea3b85c245dd898b46179fb90c6c0c",
+      "size_bytes": 242047978
+    },
+    "engine": {
+      "binary_member": "needle/libneedle3.so",
+      "binary_sha256": "978fce130aac08af506b5fe8bb2950da58e9479d0de69d972d9bd69db953568d",
+      "binary_size_bytes": 1294696,
+      "platform_tag": "manylinux2014_x86_64",
+      "version": "3.0.1",
+      "wheel_path": "python/cactus_needle-3.0.1-py3-none-manylinux2014_x86_64.whl",
+      "wheel_sha256": "05770ef9a85686583968ea15f62f9ad44217e078efdaa99559d3208bb8a369b0",
+      "wheel_size_bytes": 536871
+    },
+    "published_base_cact": {
+      "path": "needle3.cact",
+      "sha256": "c9d915eca282ed42d1a09b143b592adb4cc6744ffe2d294adf5cfc5548170c38",
+      "size_bytes": 35335380
+    },
+    "repository": "Cactus-Compute/needle3",
+    "repository_revision": "b274efcb211a9eef48c9a88da4b43bd569696a39"
+  },
   "research_parent_issue": 61,
   "schema_version": "theseus.needle3.deployment_canary_manifest.v1",
   "surfaces": [

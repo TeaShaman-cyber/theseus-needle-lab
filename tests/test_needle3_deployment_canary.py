@@ -41,8 +41,10 @@ class Needle3DeploymentCanaryTests(unittest.TestCase):
         responses = [(response(pred), float(i + 1)) for i, pred in enumerate(predictions)]
         return module._result_rows(self.cases, surface, responses)
 
-    def provenance(self, surface, *, base="a" * 64, adapter="b" * 64):
+    def provenance(self, surface, *, adapter="b" * 64):
         snap = self.manifest["upstream_snapshot"]
+        assets = self.manifest["published_runtime_assets"]
+        checkpoint = assets["base_checkpoint"]
         value = {
             "schema_version": "theseus.needle3.surface_provenance.v1",
             "surface": surface,
@@ -53,13 +55,25 @@ class Needle3DeploymentCanaryTests(unittest.TestCase):
             "wheel_filename": snap["wheel_filename"],
             "wheel_sha256": snap["wheel_sha256"],
             "fixture_sha256": self.manifest["fixture"]["sha256"],
-            "base_checkpoint_sha256": base,
+            "base_checkpoint_sha256": checkpoint["sha256"],
+            "base_checkpoint_size_bytes": checkpoint["size_bytes"],
         }
         if surface in {"lora_reference", "built_cact"}:
             value["lora_adapter_sha256"] = adapter
         if surface == "built_cact":
-            value["built_cact_sha256"] = "c" * 64
-            value["engine_binary_sha256"] = "d" * 64
+            engine = assets["engine"]
+            base_cact = assets["published_base_cact"]
+            value.update(
+                {
+                    "built_cact_sha256": "c" * 64,
+                    "engine_version": engine["version"],
+                    "engine_platform_tag": engine["platform_tag"],
+                    "engine_binary_sha256": engine["binary_sha256"],
+                    "engine_binary_size_bytes": engine["binary_size_bytes"],
+                    "published_base_cact_sha256": base_cact["sha256"],
+                    "published_base_cact_size_bytes": base_cact["size_bytes"],
+                }
+            )
         return value
 
     def test_frozen_fixture_geometry_and_no_call_negatives(self):
@@ -224,6 +238,34 @@ class Needle3DeploymentCanaryTests(unittest.TestCase):
             with self.assertRaisesRegex(SystemExit, "WHEEL_FILENAME_MISMATCH"):
                 module._verify_wheel(args)
 
+    def test_exact_file_identity_rejects_size_or_hash_drift(self):
+        with tempfile.TemporaryDirectory(dir=ROOT) as tmp:
+            path = pathlib.Path(tmp) / "asset.bin"
+            path.write_bytes(b"anchored-bytes")
+            expected_sha = module.sha256_file(path)
+            identity = module.verify_file_identity(
+                path,
+                expected_sha256=expected_sha,
+                expected_size=len(b"anchored-bytes"),
+                label="test asset",
+            )
+            self.assertEqual(identity["sha256"], expected_sha)
+
+            with self.assertRaisesRegex(ValueError, "size mismatch"):
+                module.verify_file_identity(
+                    path,
+                    expected_sha256=expected_sha,
+                    expected_size=1,
+                    label="test asset",
+                )
+            with self.assertRaisesRegex(ValueError, "SHA-256 mismatch"):
+                module.verify_file_identity(
+                    path,
+                    expected_sha256="0" * 64,
+                    expected_size=len(b"anchored-bytes"),
+                    label="test asset",
+                )
+
     def test_engine_resolution_uses_exact_runtime_path_and_fails_if_missing(self):
         with tempfile.TemporaryDirectory(dir=ROOT) as tmp:
             engine = pathlib.Path(tmp) / "libneedle3.so"
@@ -279,7 +321,7 @@ class Needle3DeploymentCanaryTests(unittest.TestCase):
             built["lora_adapter_sha256"] = "b" * 64
             built["base_checkpoint_sha256"] = "f" * 64
             module.write_json(provenance_paths["built_cact"], built)
-            with self.assertRaisesRegex(ValueError, "base checkpoint mismatch"):
+            with self.assertRaisesRegex(ValueError, "frozen runtime asset"):
                 module.build_receipt(MANIFEST, result_paths, provenance_paths)
 
     def test_full_receipt_binds_surface_results_and_provenance(self):

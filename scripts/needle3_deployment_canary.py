@@ -100,6 +100,32 @@ def write_jsonl(path: pathlib.Path, rows: list[dict[str, Any]]) -> None:
     )
 
 
+def verify_file_identity(
+    path: pathlib.Path,
+    *,
+    expected_sha256: str,
+    expected_size: int,
+    label: str,
+) -> dict[str, Any]:
+    if not path.is_file():
+        raise ValueError(f"{label} missing")
+    size = path.stat().st_size
+    if size != expected_size:
+        raise ValueError(
+            f"{label} size mismatch: expected {expected_size}, observed {size}"
+        )
+    digest = sha256_file(path)
+    if digest != expected_sha256:
+        raise ValueError(
+            f"{label} SHA-256 mismatch: expected {expected_sha256}, observed {digest}"
+        )
+    return {
+        "path": path.resolve().as_posix(),
+        "size_bytes": size,
+        "sha256": digest,
+    }
+
+
 def validate_manifest(manifest: dict[str, Any], manifest_path: pathlib.Path) -> list[dict[str, Any]]:
     if manifest.get("schema_version") != "theseus.needle3.deployment_canary_manifest.v1":
         raise ValueError("unsupported canary manifest schema")
@@ -116,6 +142,51 @@ def validate_manifest(manifest: dict[str, Any], manifest_path: pathlib.Path) -> 
         raise ValueError("release tag parent does not match source commit")
     if not SHA64_RE.fullmatch(str(snapshot.get("wheel_sha256", ""))):
         raise ValueError("invalid package wheel SHA-256")
+
+    assets = manifest.get("published_runtime_assets")
+    if not isinstance(assets, dict):
+        raise ValueError("published runtime assets missing")
+    if assets.get("repository") != "Cactus-Compute/needle3":
+        raise ValueError("unexpected published runtime asset repository")
+    if not SHA40_RE.fullmatch(str(assets.get("repository_revision", ""))):
+        raise ValueError("invalid published runtime repository revision")
+    for key in ("base_checkpoint", "published_base_cact"):
+        value = assets.get(key)
+        if not isinstance(value, dict):
+            raise ValueError(f"published runtime asset missing: {key}")
+        if not isinstance(value.get("path"), str) or not value["path"]:
+            raise ValueError(f"published runtime asset path missing: {key}")
+        if not SHA64_RE.fullmatch(str(value.get("sha256", ""))):
+            raise ValueError(f"published runtime asset SHA-256 invalid: {key}")
+        if (
+            not isinstance(value.get("size_bytes"), int)
+            or isinstance(value["size_bytes"], bool)
+            or value["size_bytes"] <= 0
+        ):
+            raise ValueError(f"published runtime asset size invalid: {key}")
+
+    engine = assets.get("engine")
+    if not isinstance(engine, dict):
+        raise ValueError("published runtime engine metadata missing")
+    expected_engine = {
+        "version": "3.0.1",
+        "platform_tag": "manylinux2014_x86_64",
+        "wheel_path": "python/cactus_needle-3.0.1-py3-none-manylinux2014_x86_64.whl",
+        "binary_member": "needle/libneedle3.so",
+    }
+    for key, expected_value in expected_engine.items():
+        if engine.get(key) != expected_value:
+            raise ValueError(f"published runtime engine metadata mismatch: {key}")
+    for key in ("wheel_sha256", "binary_sha256"):
+        if not SHA64_RE.fullmatch(str(engine.get(key, ""))):
+            raise ValueError(f"published runtime engine digest invalid: {key}")
+    for key in ("wheel_size_bytes", "binary_size_bytes"):
+        if (
+            not isinstance(engine.get(key), int)
+            or isinstance(engine[key], bool)
+            or engine[key] <= 0
+        ):
+            raise ValueError(f"published runtime engine size invalid: {key}")
 
     fixture = manifest.get("fixture")
     if not isinstance(fixture, dict):
@@ -511,16 +582,34 @@ def validate_provenance(
             raise ValueError(f"surface upstream provenance mismatch: {key}")
     if provenance.get("fixture_sha256") != manifest["fixture"]["sha256"]:
         raise ValueError("surface fixture provenance mismatch")
-    if not SHA64_RE.fullmatch(str(provenance.get("base_checkpoint_sha256", ""))):
-        raise ValueError("base checkpoint SHA-256 missing")
+    assets = manifest["published_runtime_assets"]
+    expected_checkpoint = assets["base_checkpoint"]
+    if provenance.get("base_checkpoint_sha256") != expected_checkpoint["sha256"]:
+        raise ValueError("base checkpoint SHA-256 does not match frozen runtime asset")
+    if provenance.get("base_checkpoint_size_bytes") != expected_checkpoint["size_bytes"]:
+        raise ValueError("base checkpoint size does not match frozen runtime asset")
     if surface == "lora_reference" and not SHA64_RE.fullmatch(
         str(provenance.get("lora_adapter_sha256", ""))
     ):
         raise ValueError("LoRA adapter SHA-256 missing")
     if surface == "built_cact":
-        for key in ("lora_adapter_sha256", "built_cact_sha256", "engine_binary_sha256"):
+        for key in ("lora_adapter_sha256", "built_cact_sha256"):
             if not SHA64_RE.fullmatch(str(provenance.get(key, ""))):
                 raise ValueError(f"built surface provenance missing: {key}")
+        engine = assets["engine"]
+        if provenance.get("engine_version") != engine["version"]:
+            raise ValueError("built surface engine version mismatch")
+        if provenance.get("engine_platform_tag") != engine["platform_tag"]:
+            raise ValueError("built surface engine platform mismatch")
+        if provenance.get("engine_binary_sha256") != engine["binary_sha256"]:
+            raise ValueError("built surface engine binary mismatch")
+        if provenance.get("engine_binary_size_bytes") != engine["binary_size_bytes"]:
+            raise ValueError("built surface engine size mismatch")
+        base_cact = assets["published_base_cact"]
+        if provenance.get("published_base_cact_sha256") != base_cact["sha256"]:
+            raise ValueError("published base cact SHA-256 mismatch")
+        if provenance.get("published_base_cact_size_bytes") != base_cact["size_bytes"]:
+            raise ValueError("published base cact size mismatch")
 
 
 def make_provenance(
@@ -532,6 +621,7 @@ def make_provenance(
     lora_adapter: pathlib.Path | None = None,
     built_cact: pathlib.Path | None = None,
     engine_binary: pathlib.Path | None = None,
+    published_base_cact: pathlib.Path | None = None,
 ) -> dict[str, Any]:
     if surface not in SURFACES:
         raise ValueError("invalid surface")
@@ -541,8 +631,13 @@ def make_provenance(
     wheel_hash = sha256_file(package_wheel)
     if wheel_hash != snapshot["wheel_sha256"]:
         raise ValueError("package wheel SHA-256 mismatch")
-    if not base_checkpoint.is_file():
-        raise ValueError("base checkpoint missing")
+    checkpoint_expected = manifest["published_runtime_assets"]["base_checkpoint"]
+    checkpoint_identity = verify_file_identity(
+        base_checkpoint,
+        expected_sha256=checkpoint_expected["sha256"],
+        expected_size=checkpoint_expected["size_bytes"],
+        label="base checkpoint",
+    )
 
     out = {
         "schema_version": "theseus.needle3.surface_provenance.v1",
@@ -554,7 +649,8 @@ def make_provenance(
         "wheel_filename": snapshot["wheel_filename"],
         "wheel_sha256": wheel_hash,
         "fixture_sha256": manifest["fixture"]["sha256"],
-        "base_checkpoint_sha256": sha256_file(base_checkpoint),
+        "base_checkpoint_sha256": checkpoint_identity["sha256"],
+        "base_checkpoint_size_bytes": checkpoint_identity["size_bytes"],
     }
     if surface in {"lora_reference", "built_cact"}:
         if lora_adapter is None or not lora_adapter.is_file():
@@ -563,10 +659,31 @@ def make_provenance(
     if surface == "built_cact":
         if built_cact is None or not built_cact.is_file():
             raise ValueError("built .cact missing")
-        if engine_binary is None or not engine_binary.is_file():
+        if engine_binary is None:
             raise ValueError("engine binary missing")
+        if published_base_cact is None:
+            raise ValueError("published base cact missing")
+        engine_expected = manifest["published_runtime_assets"]["engine"]
+        engine_identity = verify_file_identity(
+            engine_binary,
+            expected_sha256=engine_expected["binary_sha256"],
+            expected_size=engine_expected["binary_size_bytes"],
+            label="runtime engine",
+        )
+        base_cact_expected = manifest["published_runtime_assets"]["published_base_cact"]
+        base_cact_identity = verify_file_identity(
+            published_base_cact,
+            expected_sha256=base_cact_expected["sha256"],
+            expected_size=base_cact_expected["size_bytes"],
+            label="published base cact",
+        )
         out["built_cact_sha256"] = sha256_file(built_cact)
-        out["engine_binary_sha256"] = sha256_file(engine_binary)
+        out["engine_version"] = engine_expected["version"]
+        out["engine_platform_tag"] = engine_expected["platform_tag"]
+        out["engine_binary_sha256"] = engine_identity["sha256"]
+        out["engine_binary_size_bytes"] = engine_identity["size_bytes"]
+        out["published_base_cact_sha256"] = base_cact_identity["sha256"]
+        out["published_base_cact_size_bytes"] = base_cact_identity["size_bytes"]
     return out
 
 
@@ -761,6 +878,34 @@ def resolve_engine_path(needle_module: Any) -> pathlib.Path:
     return path
 
 
+def _verify_base_checkpoint(args: argparse.Namespace) -> int:
+    manifest = load_json(args.manifest)
+    validate_manifest(manifest, args.manifest)
+    expected = manifest["published_runtime_assets"]["base_checkpoint"]
+    identity = verify_file_identity(
+        args.checkpoint,
+        expected_sha256=expected["sha256"],
+        expected_size=expected["size_bytes"],
+        label="base checkpoint",
+    )
+    if args.output is not None:
+        write_json(
+            args.output,
+            {
+                "schema_version": "theseus.needle3.published_asset_identity.v1",
+                "asset": "base_checkpoint",
+                "repository": manifest["published_runtime_assets"]["repository"],
+                "repository_revision": manifest["published_runtime_assets"]["repository_revision"],
+                **identity,
+            },
+        )
+    print(
+        "NEEDLE3_BASE_CHECKPOINT_VERIFIED=PASS "
+        f"SHA256={identity['sha256']} SIZE={identity['size_bytes']}"
+    )
+    return 0
+
+
 def _verify_wheel(args: argparse.Namespace) -> int:
     manifest = load_json(args.manifest)
     validate_manifest(manifest, args.manifest)
@@ -782,14 +927,86 @@ def _resolve_engine(args: argparse.Namespace) -> int:
     validate_manifest(manifest, args.manifest)
     verify_installed_package(manifest)
     import needle
+    from needle.agent import fetch
 
+    expected = manifest["published_runtime_assets"]["engine"]
+    observed_tag = fetch._platform_tag()
+    if observed_tag != expected["platform_tag"]:
+        raise RuntimeError(
+            f"runtime engine platform mismatch: expected {expected['platform_tag']}, observed {observed_tag}"
+        )
+    if fetch.engine_version(3) != expected["version"]:
+        raise RuntimeError("runtime engine version mismatch")
     path = resolve_engine_path(needle)
+    identity = verify_file_identity(
+        path,
+        expected_sha256=expected["binary_sha256"],
+        expected_size=expected["binary_size_bytes"],
+        label="runtime engine",
+    )
     if args.output is not None:
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(path.as_posix() + "\n", encoding="utf-8")
-    print(path.as_posix())
+    if args.identity_output is not None:
+        write_json(
+            args.identity_output,
+            {
+                "schema_version": "theseus.needle3.published_asset_identity.v1",
+                "asset": "runtime_engine",
+                "repository": manifest["published_runtime_assets"]["repository"],
+                "repository_revision": manifest["published_runtime_assets"]["repository_revision"],
+                "engine_version": expected["version"],
+                "platform_tag": observed_tag,
+                **identity,
+            },
+        )
+    print(
+        "NEEDLE3_RUNTIME_ENGINE_VERIFIED=PASS "
+        f"PLATFORM={observed_tag} SHA256={identity['sha256']} SIZE={identity['size_bytes']}"
+    )
     return 0
 
+
+def resolve_published_base_cact_path() -> pathlib.Path:
+    from needle.agent import fetch
+
+    return (
+        pathlib.Path(fetch.cache_dir(3))
+        / fetch.base_weights(3)
+    ).expanduser().resolve()
+
+
+def _resolve_published_base_cact(args: argparse.Namespace) -> int:
+    manifest = load_json(args.manifest)
+    validate_manifest(manifest, args.manifest)
+    verify_installed_package(manifest)
+    expected = manifest["published_runtime_assets"]["published_base_cact"]
+    path = resolve_published_base_cact_path()
+    identity = verify_file_identity(
+        path,
+        expected_sha256=expected["sha256"],
+        expected_size=expected["size_bytes"],
+        label="published base cact",
+    )
+    if args.output is not None:
+        args.output.parent.mkdir(parents=True, exist_ok=True)
+        args.output.write_text(path.as_posix() + "\n", encoding="utf-8")
+    if args.identity_output is not None:
+        write_json(
+            args.identity_output,
+            {
+                "schema_version": "theseus.needle3.published_asset_identity.v1",
+                "asset": "published_base_cact",
+                "repository": manifest["published_runtime_assets"]["repository"],
+                "repository_revision": manifest["published_runtime_assets"]["repository_revision"],
+                **identity,
+            },
+        )
+    print(
+        "NEEDLE3_BASE_CACT_VERIFIED=PASS "
+        f"SHA256={identity['sha256']} SIZE={identity['size_bytes']}"
+    )
+    return 0
 
 def _make_provenance(args: argparse.Namespace) -> int:
     manifest = load_json(args.manifest)
@@ -802,6 +1019,7 @@ def _make_provenance(args: argparse.Namespace) -> int:
         lora_adapter=args.lora_adapter,
         built_cact=args.built_cact,
         engine_binary=args.engine_binary,
+        published_base_cact=args.published_base_cact,
     )
     write_json(args.output, value)
     print(
@@ -887,13 +1105,24 @@ def parser() -> argparse.ArgumentParser:
     built.add_argument("--output", type=pathlib.Path, required=True)
     built.set_defaults(func=_run_built)
 
+    verify_checkpoint = sub.add_parser("verify-base-checkpoint")
+    verify_checkpoint.add_argument("--checkpoint", type=pathlib.Path, required=True)
+    verify_checkpoint.add_argument("--output", type=pathlib.Path)
+    verify_checkpoint.set_defaults(func=_verify_base_checkpoint)
+
     verify_wheel = sub.add_parser("verify-wheel")
     verify_wheel.add_argument("--wheel", type=pathlib.Path, required=True)
     verify_wheel.set_defaults(func=_verify_wheel)
 
     resolve_engine = sub.add_parser("resolve-engine")
     resolve_engine.add_argument("--output", type=pathlib.Path)
+    resolve_engine.add_argument("--identity-output", type=pathlib.Path)
     resolve_engine.set_defaults(func=_resolve_engine)
+
+    resolve_base_cact = sub.add_parser("resolve-published-base-cact")
+    resolve_base_cact.add_argument("--output", type=pathlib.Path)
+    resolve_base_cact.add_argument("--identity-output", type=pathlib.Path)
+    resolve_base_cact.set_defaults(func=_resolve_published_base_cact)
 
     provenance = sub.add_parser("make-provenance")
     provenance.add_argument("--surface", choices=SURFACES, required=True)
@@ -902,6 +1131,7 @@ def parser() -> argparse.ArgumentParser:
     provenance.add_argument("--lora-adapter", type=pathlib.Path)
     provenance.add_argument("--built-cact", type=pathlib.Path)
     provenance.add_argument("--engine-binary", type=pathlib.Path)
+    provenance.add_argument("--published-base-cact", type=pathlib.Path)
     provenance.add_argument("--output", type=pathlib.Path, required=True)
     provenance.set_defaults(func=_make_provenance)
 
