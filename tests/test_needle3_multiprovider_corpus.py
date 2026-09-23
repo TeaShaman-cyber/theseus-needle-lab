@@ -140,3 +140,27 @@ class StableSqliteBindingTests(unittest.TestCase):
             pathlib.Path(str(db)+"-wal").write_bytes(b"uncheckpointed")
             with self.assertRaisesRegex(ValueError,"uncheckpointed SQLite WAL"):
                 source_inventory(SourceSpec("chatgpt",db,"chatgpt-export"))
+
+
+class ProjectionSignatureTests(unittest.TestCase):
+    def test_trace_only_context_does_not_change_episode_signature(self):
+        from scripts.inventory_needle3_multiprovider_corpus import episode_records
+        def row(ordinal, role, content_type, search_class, digest):
+            return {
+                "session_id":"s1",
+                "ordinal":ordinal,
+                "role":role,
+                "content_type":content_type,
+                "search_class":search_class,
+                "canonical_message_sha256":digest,
+            }
+        base=[
+            row(0,"user","text","dialogue","1"*64),
+            row(1,"assistant","text","dialogue","2"*64),
+        ]
+        with_trace=base+[row(2,"unknown","user_editable_context","trace","3"*64)]
+        a=episode_records(base,"chatgpt","salt")
+        b=episode_records(with_trace,"chatgpt","salt")
+        self.assertEqual(a[0]["episode_signature"],b[0]["episode_signature"])
+        self.assertFalse(a[0]["observed_trace"])
+        self.assertTrue(b[0]["observed_trace"])

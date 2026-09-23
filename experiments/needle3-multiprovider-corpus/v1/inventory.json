@@ -83,6 +83,11 @@
       "tool_evidence",
       "observable_trace_metadata"
     ],
+    "episode_signature_inputs": [
+      "user_text_dialogue",
+      "assistant_text_dialogue",
+      "tool_evidence"
+    ],
     "excluded_from_training_projection": [
       "hidden_thoughts",
       "reasoning_recap",
@@ -267,7 +272,7 @@
         "count": 60
       },
       "candidate_episodes": {
-        "duplicate_episode_instances": 3402,
+        "duplicate_episode_instances": 3405,
         "eligible_user_turn_episodes": 6018,
         "episodes_with_trace": 252,
         "episodes_without_observed_tool_evidence": 6018,
@@ -276,7 +281,7 @@
           "numerator": 0
         },
         "tool_observability": "NOT_EXPOSED_OR_ABSENT",
-        "unique_episode_signatures": 2616
+        "unique_episode_signatures": 2613
       },
       "database": {
         "bytes": 68976640,

@@ -12,7 +12,7 @@
   },
   "inventory_binding": {
     "path": "experiments/needle3-multiprovider-corpus/v1/inventory.json",
-    "sha256": "5d115d0c17440423954c5db91e24f1554626bc1b3b4f748fdf69e5c0cb890a82"
+    "sha256": "1e3b7e912e0cb7a1aa4e7e60ad3d4d5992e5002cdad80b08a5097c74717bf7b1"
   },
   "labels": {
     "allowed_future_labels": [

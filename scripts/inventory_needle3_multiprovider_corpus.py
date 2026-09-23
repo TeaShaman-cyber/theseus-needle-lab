@@ -71,6 +71,18 @@ def artifact_stats(conn,adapter):
         rows=conn.execute("select source_adapter,count(*),coalesce(sum(observed_message_count),0) from artifacts where source_adapter=? group by source_adapter order by source_adapter",(adapter,)).fetchall()
     return {"count":sum(int(r[1]) for r in rows),"by_adapter":{str(r[0]):{"artifacts":int(r[1]),"observed_messages":int(r[2])} for r in rows}}
 
+def signature_eligible_row(row):
+    if row["role"] in {"user","assistant"} and row["content_type"]=="text" and row["search_class"]=="dialogue":
+        return True
+    if row["role"]=="tool" and row["search_class"]=="evidence":
+        return True
+    return False
+
+
+def signature_payload(rows):
+    return "\n".join(str(r["canonical_message_sha256"]) for r in rows if signature_eligible_row(r)).encode()
+
+
 def episode_stats(rows):
     by=collections.defaultdict(list)
     for r in rows:
@@ -93,7 +105,7 @@ def episode_stats(rows):
                 totals["episodes_with_execution_output"]+=1
             if any(r["search_class"]=="trace" for r in win):
                 totals["episodes_with_trace"]+=1
-            payload="\n".join(str(r["canonical_message_sha256"]) for r in win if r["search_class"]!="hidden").encode()
+            payload=signature_payload(win)
             sigs.append(hashlib.sha256(payload).hexdigest())
     uniq=set(sigs)
     totals["unique_episode_signatures"]=len(uniq)
@@ -164,6 +176,7 @@ def build_inventory(sources,heldout_files):
       "cross_provider_overlap":{"canonical_message_hashes":overlap_matrix(msets),"episode_signatures":overlap_matrix(esets)},
       "projection_policy":{
         "allowed_observable_inputs":["user_text_dialogue","assistant_text_dialogue","tool_evidence","observable_trace_metadata"],
+        "episode_signature_inputs":["user_text_dialogue","assistant_text_dialogue","tool_evidence"],
         "excluded_from_training_projection":["hidden_thoughts","reasoning_recap","system_messages","model_editable_context","user_editable_context"],
         "raw_corpus_is_ground_truth":False,
         "provider_is_authority":False,
@@ -192,7 +205,7 @@ def episode_records(rows, provider, salt):
             if not any(r["role"]=="assistant" and r["search_class"]=="dialogue" and r["content_type"]=="text" for r in win):
                 continue
             observable=[r for r in win if r["search_class"]!="hidden"]
-            payload="\n".join(str(r["canonical_message_sha256"]) for r in observable).encode()
+            payload=signature_payload(win)
             signature=hashlib.sha256(payload).hexdigest()
             if signature in seen:
                 continue
