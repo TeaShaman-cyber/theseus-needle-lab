@@ -49,6 +49,14 @@ Cross-source exact episode-signature overlap is zero in this inventory.
 Canonical-message hashes have small cross-source overlap, so later projection
 must still deduplicate and screen semantic near-duplicates.
 
+The frozen provider source boundary is recorded in `frozen-source-manifest.json`.
+It contains only accepted portable-artifact SHA-256 values, sizes, adapter names,
+provider totals, and the exact Session Search runtime revision used to validate
+the boundary; it contains no private message text or private filesystem paths.
+The selection contract SHA-binds this manifest separately from the diagnostic
+SQLite inventory. Derived SQLite projections are reproducible views, not source
+authority.
+
 The current Needle 3 deployment-canary heldout file is SHA-bound in inventory.json
 and must remain excluded from training. Historical Stage B heldout families also
 remain conceptually excluded even though that closed branch is not copied into

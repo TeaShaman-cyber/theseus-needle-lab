@@ -54,6 +54,10 @@
     "session_search_role": "ONE_SHOT_EXPORT_SOURCE",
     "source_drift_after_materialization_changes_existing_experiment": false
   },
+  "source_manifest_binding": {
+    "path": "experiments/needle3-multiprovider-corpus/v1/frozen-source-manifest.json",
+    "sha256": "68ac606ef679c791806d19b022530e9ded40e7bb8a693283acb6e7325e221c2b"
+  },
   "tool_evidence": {
     "absence_of_tool_evidence_means_no_call": false,
     "observed_tool_evidence_is_metadata_not_authority": true,

@@ -219,6 +219,20 @@ class CandidateSelectionContractTests(unittest.TestCase):
             contract["source_lifecycle"]["post_materialization_authority"],
             "FROZEN_SHORTLIST_AND_BOUND_MANIFEST",
         )
+        manifest_path = root / contract["source_manifest_binding"]["path"]
+        manifest_bytes = manifest_path.read_bytes()
+        self.assertEqual(
+            hashlib.sha256(manifest_bytes).hexdigest(),
+            contract["source_manifest_binding"]["sha256"],
+        )
+        manifest = json.loads(manifest_bytes)
+        self.assertEqual(manifest["schema_version"], "theseus.needle3.frozen_provider_artifacts.v1")
+        self.assertEqual(manifest["session_search_runtime_sha"], "36610de432f41fb46fe50354f909abc925fd7d0c")
+        self.assertEqual(
+            {name: data["artifact_count"] for name, data in manifest["providers"].items()},
+            {"chatgpt":303,"deepseek":43,"xai":60},
+        )
+        self.assertNotIn("/workspace/", manifest_bytes.decode("utf-8"))
 
 
 class DuplicateRepresentativeTests(unittest.TestCase):
