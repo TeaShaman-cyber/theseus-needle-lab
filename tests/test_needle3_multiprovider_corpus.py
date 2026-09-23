@@ -124,10 +124,13 @@ class ShortlistMaterializationTests(unittest.TestCase):
                 path=td/f"{provider}.sqlite3"
                 make_db(path,adapter,tool)
                 sources.append(SourceSpec(provider,path,adapter))
+            inventory=build_inventory(sources,[])
+            bound={source["provider"]:source["database"]["sha256"] for source in inventory["sources"]}
             rows,counts=materialize_shortlist(
                 sources,
                 {"chatgpt":1,"deepseek":1,"xai":1},
                 "fixture-salt",
+                bound,
             )
             self.assertEqual(counts,{"chatgpt":1,"deepseek":1,"xai":1})
             self.assertEqual(len(rows),3)
@@ -139,9 +142,35 @@ class ShortlistMaterializationTests(unittest.TestCase):
                 sources,
                 {"chatgpt":1,"deepseek":1,"xai":1},
                 "fixture-salt",
+                bound,
             )
             self.assertEqual(rows,rows2)
             self.assertEqual(counts,counts2)
+
+    def test_materialization_rejects_source_drift_after_inventory(self):
+        from scripts.inventory_needle3_multiprovider_corpus import SourceSpec, materialize_shortlist
+        with tempfile.TemporaryDirectory() as td:
+            td=pathlib.Path(td)
+            sources=[]
+            for provider,adapter in (("chatgpt","chatgpt-export"),("deepseek","deepseek-export"),("xai","xai-export")):
+                path=td/f"{provider}.sqlite3"
+                make_db(path,adapter,False)
+                sources.append(SourceSpec(provider,path,adapter))
+            inventory=build_inventory(sources,[])
+            bound={source["provider"]:source["database"]["sha256"] for source in inventory["sources"]}
+            conn=sqlite3.connect(sources[0].path)
+            try:
+                conn.execute("insert into corpus_meta values('after_inventory','drift')")
+                conn.commit()
+            finally:
+                conn.close()
+            with self.assertRaisesRegex(ValueError,"source snapshot binding mismatch for chatgpt"):
+                materialize_shortlist(
+                    sources,
+                    {"chatgpt":1,"deepseek":1,"xai":1},
+                    "fixture-salt",
+                    bound,
+                )
 
 
 class StableSqliteBindingTests(unittest.TestCase):

@@ -242,12 +242,18 @@ def episode_records(rows, provider, salt):
     return sorted(records,key=lambda r:(r["rank_sha256"],r["session_id"],r["episode_start_ordinal"]))
 
 
-def materialize_shortlist(sources, quotas, salt):
+def materialize_shortlist(sources, quotas, salt, bound_source_sha256):
     out=[]; counts={}
     for spec in sources:
         if spec.name not in quotas:
             raise ValueError(f"missing quota for provider {spec.name}")
+        expected_sha256=bound_source_sha256.get(spec.name)
+        if not expected_sha256:
+            raise ValueError(f"missing inventory-bound source digest for {spec.name}")
         with stable_sqlite_snapshot(spec.path) as snapshot:
+            observed_sha256=sha256_file(snapshot)
+            if observed_sha256 != expected_sha256:
+                raise ValueError(f"source snapshot binding mismatch for {spec.name}")
             conn=sqlite3.connect(f"file:{snapshot}?mode=ro",uri=True)
             conn.row_factory=sqlite3.Row
             try:
@@ -300,10 +306,15 @@ def main():
         contract=json.loads(a.shortlist_contract.read_text())
         if sha256_file(a.output) != contract["inventory_binding"]["sha256"]:
             raise ValueError("inventory binding mismatch")
+        bound_source_sha256={
+            source["provider"]:source["database"]["sha256"]
+            for source in inv["sources"]
+        }
         rows,counts=materialize_shortlist(
             sources,
             contract["provider_quotas"],
             contract["deterministic_sampling"]["contract_salt"],
+            bound_source_sha256,
         )
         write_jsonl(a.shortlist_output,rows)
         print(f"NEEDLE3_MULTIPROVIDER_SHORTLIST_PASS rows={len(rows)} providers={json.dumps(counts,sort_keys=True,separators=(',',':'))}")
