@@ -1,5 +1,6 @@
 import json
 import pathlib, sqlite3, tempfile, unittest
+from unittest import mock
 from scripts.inventory_needle3_multiprovider_corpus import SourceSpec, build_inventory, source_inventory
 
 def make_db(path, adapter, with_tool, branch=False):
@@ -105,6 +106,67 @@ class Tests(unittest.TestCase):
 
 if __name__=="__main__":
     unittest.main()
+
+
+class BindingAndContractGuardTests(unittest.TestCase):
+    def test_absolute_heldout_path_is_not_serialized(self):
+        with tempfile.TemporaryDirectory() as td:
+            td=pathlib.Path(td)
+            a=td/"a.sqlite3"; b=td/"b.sqlite3"
+            make_db(a,"chatgpt-export",False); make_db(b,"xai-export",False)
+            held=td/"private-heldout.jsonl"; held.write_text('{"case_id":"x"}\n')
+            inv=build_inventory([
+                SourceSpec("chatgpt",a,"chatgpt-export"),
+                SourceSpec("xai",b,"xai-export"),
+            ],[held.resolve()])
+            binding=inv["leakage_boundary"]["bound_heldout_files"][0]
+            self.assertEqual(binding["path"],"private-heldout.jsonl")
+            self.assertFalse(pathlib.Path(binding["path"]).is_absolute())
+
+    def test_selection_contract_semantics_fail_closed(self):
+        from scripts.inventory_needle3_multiprovider_corpus import validate_selection_contract
+        root=pathlib.Path(__file__).resolve().parents[1]
+        contract=json.loads((root/"experiments/needle3-multiprovider-corpus/v1/candidate-selection-contract.json").read_text())
+        contract["deterministic_sampling"]["method"]="future_method"
+        with self.assertRaisesRegex(ValueError,"unsupported shortlist selection method"):
+            validate_selection_contract(contract)
+
+    def test_binding_mismatch_does_not_replace_existing_inventory(self):
+        from scripts.inventory_needle3_multiprovider_corpus import main
+        with tempfile.TemporaryDirectory() as td:
+            td=pathlib.Path(td)
+            a=td/"a.sqlite3"; b=td/"b.sqlite3"
+            make_db(a,"chatgpt-export",False); make_db(b,"xai-export",False)
+            output=td/"inventory.json"; output.write_text("sentinel\n")
+            shortlist=td/"shortlist.jsonl"
+            contract={
+                "schema_version":"theseus.needle3.multiprovider_candidate_selection.v1",
+                "deterministic_sampling":{
+                    "method":"sha256_rank",
+                    "rank_input":"provider + session_id + episode_signature + contract_salt",
+                    "contract_salt":"fixture-salt",
+                },
+                "deduplication":{
+                    "cross_provider_exact_episode_signature":"KEEP_PROVIDER_DISTINCT",
+                    "exact_episode_signature":"KEEP_ONE_PER_PROVIDER",
+                    "representative_tiebreak":"LEXICOGRAPHIC_MIN_SESSION_ID_THEN_START_ORDINAL_THEN_END_ORDINAL",
+                    "semantic_near_duplicate_screening":"REQUIRED_AFTER_SHORTLIST_BEFORE_SPLIT",
+                },
+                "inventory_binding":{"sha256":"0"*64},
+                "provider_quotas":{"chatgpt":1,"xai":1},
+            }
+            contract_path=td/"contract.json"; contract_path.write_text(json.dumps(contract))
+            argv=[
+                "inventory",
+                "--source",f"chatgpt={a}","--source",f"xai={b}",
+                "--source-adapter","chatgpt=chatgpt-export","--source-adapter","xai=xai-export",
+                "--output",str(output),"--shortlist-contract",str(contract_path),"--shortlist-output",str(shortlist),
+            ]
+            with mock.patch("sys.argv",argv):
+                with self.assertRaisesRegex(ValueError,"inventory binding mismatch"):
+                    main()
+            self.assertEqual(output.read_text(),"sentinel\n")
+            self.assertFalse(shortlist.exists())
 
 class CandidateSelectionContractTests(unittest.TestCase):
     def test_candidate_selection_contract_is_balanced_metadata_only_and_non_authoritative(self):

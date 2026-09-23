@@ -4,6 +4,15 @@ from dataclasses import dataclass
 
 SCHEMA = "theseus.needle3.multiprovider_corpus_inventory.v1"
 SUPPORTED_CORPUS_SCHEMA = "session-search-corpus-v1"
+SUPPORTED_SELECTION_SCHEMA = "theseus.needle3.multiprovider_candidate_selection.v1"
+SUPPORTED_SELECTION_METHOD = "sha256_rank"
+SUPPORTED_RANK_INPUT = "provider + session_id + episode_signature + contract_salt"
+SUPPORTED_DEDUPLICATION = {
+    "cross_provider_exact_episode_signature":"KEEP_PROVIDER_DISTINCT",
+    "exact_episode_signature":"KEEP_ONE_PER_PROVIDER",
+    "representative_tiebreak":"LEXICOGRAPHIC_MIN_SESSION_ID_THEN_START_ORDINAL_THEN_END_ORDINAL",
+    "semantic_near_duplicate_screening":"REQUIRED_AFTER_SHORTLIST_BEFORE_SPLIT",
+}
 REQUIRED_TABLES = {"artifacts","corpus_meta","message_sources","messages","payload_pages","sessions"}
 
 @dataclass(frozen=True)
@@ -194,7 +203,8 @@ def build_inventory(sources,heldout_files):
     for p in heldout_files:
         if not p.is_file():
             raise ValueError(f"missing heldout binding: {p}")
-        held.append({"path":p.as_posix(),"bytes":p.stat().st_size,"sha256":sha256_file(p)})
+        display_path=p.name if p.is_absolute() else p.as_posix()
+        held.append({"path":display_path,"bytes":p.stat().st_size,"sha256":sha256_file(p)})
     total=sum(int(r["candidate_episodes"].get("eligible_user_turn_episodes",0)) for r in reports)
     return {
       "schema_version":SCHEMA,
@@ -293,6 +303,17 @@ def materialize_shortlist(sources, quotas, salt, bound_source_sha256):
     return sorted(out,key=lambda r:(r["provider"],r["rank_sha256"])),counts
 
 
+def validate_selection_contract(contract):
+    if contract.get("schema_version") != SUPPORTED_SELECTION_SCHEMA:
+        raise ValueError("unsupported shortlist contract schema_version")
+    deterministic=contract.get("deterministic_sampling",{})
+    if deterministic.get("method") != SUPPORTED_SELECTION_METHOD:
+        raise ValueError("unsupported shortlist selection method")
+    if deterministic.get("rank_input") != SUPPORTED_RANK_INPUT:
+        raise ValueError("unsupported shortlist rank_input")
+    if contract.get("deduplication") != SUPPORTED_DEDUPLICATION:
+        raise ValueError("unsupported shortlist deduplication policy")
+
 def write_jsonl(path, rows):
     path.parent.mkdir(parents=True,exist_ok=True)
     with path.open("w",encoding="utf-8",newline="\n") as handle:
@@ -317,27 +338,32 @@ def main():
     if len(sources)<2:
         raise ValueError("at least two providers are required")
     inv=build_inventory(sources,a.heldout_file)
-    a.output.parent.mkdir(parents=True,exist_ok=True)
-    a.output.write_text(json.dumps(inv,indent=2,sort_keys=True)+"\n",encoding="utf-8")
-    print(f"NEEDLE3_MULTIPROVIDER_INVENTORY_PASS sources={len(sources)} episodes={inv['candidate_pool']['eligible_user_turn_episodes_across_sources']}")
+    inv_text=json.dumps(inv,indent=2,sort_keys=True)+"\n"
     if bool(a.shortlist_contract) != bool(a.shortlist_output):
         raise ValueError("--shortlist-contract and --shortlist-output must be supplied together")
+    shortlist_rows=None; shortlist_counts=None
     if a.shortlist_contract:
         contract=json.loads(a.shortlist_contract.read_text())
-        if sha256_file(a.output) != contract["inventory_binding"]["sha256"]:
+        validate_selection_contract(contract)
+        observed_inventory_sha256=hashlib.sha256(inv_text.encode("utf-8")).hexdigest()
+        if observed_inventory_sha256 != contract["inventory_binding"]["sha256"]:
             raise ValueError("inventory binding mismatch")
         bound_source_sha256={
             source["provider"]:source["database"]["sha256"]
             for source in inv["sources"]
         }
-        rows,counts=materialize_shortlist(
+        shortlist_rows,shortlist_counts=materialize_shortlist(
             sources,
             contract["provider_quotas"],
             contract["deterministic_sampling"]["contract_salt"],
             bound_source_sha256,
         )
-        write_jsonl(a.shortlist_output,rows)
-        print(f"NEEDLE3_MULTIPROVIDER_SHORTLIST_PASS rows={len(rows)} providers={json.dumps(counts,sort_keys=True,separators=(',',':'))}")
+    a.output.parent.mkdir(parents=True,exist_ok=True)
+    a.output.write_text(inv_text,encoding="utf-8")
+    print(f"NEEDLE3_MULTIPROVIDER_INVENTORY_PASS sources={len(sources)} episodes={inv['candidate_pool']['eligible_user_turn_episodes_across_sources']}")
+    if shortlist_rows is not None:
+        write_jsonl(a.shortlist_output,shortlist_rows)
+        print(f"NEEDLE3_MULTIPROVIDER_SHORTLIST_PASS rows={len(shortlist_rows)} providers={json.dumps(shortlist_counts,sort_keys=True,separators=(',',':'))}")
     return 0
 
 if __name__=="__main__":
