@@ -168,12 +168,83 @@ def build_inventory(sources,heldout_files):
       "next_gate":{"required":["deterministic_candidate_projection_contract","privacy_publicability_review","semantic_family_adjudication","PROBE_READY_UNKNOWN_NO_CALL_label_adjudication","provider_and_family_balanced_split","near_duplicate_leakage_check"],"training_authorized":False}
     }
 
+
+def episode_records(rows, provider, salt):
+    by=collections.defaultdict(list)
+    for r in rows:
+        by[str(r["session_id"])].append(r)
+    records=[]; seen=set()
+    for session_id,sr in sorted(by.items()):
+        starts=[i for i,r in enumerate(sr)
+                if r["role"]=="user" and r["search_class"]=="dialogue" and r["content_type"]=="text"]
+        for pos,start in enumerate(starts):
+            end=starts[pos+1] if pos+1<len(starts) else len(sr)
+            win=sr[start:end]
+            if not any(r["role"]=="assistant" and r["search_class"]=="dialogue" and r["content_type"]=="text" for r in win):
+                continue
+            observable=[r for r in win if r["search_class"]!="hidden"]
+            payload="\n".join(str(r["canonical_message_sha256"]) for r in observable).encode()
+            signature=hashlib.sha256(payload).hexdigest()
+            if signature in seen:
+                continue
+            seen.add(signature)
+            tools=[r for r in win if r["role"]=="tool" and r["search_class"]=="evidence"]
+            rank_input=f"{provider}\n{session_id}\n{signature}\n{salt}".encode()
+            records.append({
+                "provider":provider,
+                "session_id":session_id,
+                "episode_start_ordinal":int(win[0]["ordinal"]),
+                "episode_end_ordinal":int(win[-1]["ordinal"]),
+                "episode_signature":signature,
+                "rank_sha256":hashlib.sha256(rank_input).hexdigest(),
+                "observed_tool_evidence":bool(tools),
+                "observed_execution_output":any(r["content_type"]=="execution_output" for r in tools),
+                "observed_trace":any(r["search_class"]=="trace" for r in win),
+                "observable_message_count":len(observable),
+                "decision_label":None,
+                "label_state":"NOT_ADJUDICATED",
+            })
+    return sorted(records,key=lambda r:(r["rank_sha256"],r["session_id"],r["episode_start_ordinal"]))
+
+
+def materialize_shortlist(sources, quotas, salt):
+    out=[]; counts={}
+    for spec in sources:
+        if spec.name not in quotas:
+            raise ValueError(f"missing quota for provider {spec.name}")
+        conn=sqlite3.connect(f"file:{spec.path}?mode=ro",uri=True)
+        conn.row_factory=sqlite3.Row
+        try:
+            validate_schema(conn)
+            rows=selected_rows(conn,spec.adapter)
+        finally:
+            conn.close()
+        records=episode_records(rows,spec.name,salt)
+        quota=int(quotas[spec.name])
+        if quota < 1:
+            raise ValueError(f"quota must be positive for {spec.name}")
+        if len(records) < quota:
+            raise ValueError(f"insufficient unique episodes for {spec.name}: {len(records)} < {quota}")
+        chosen=records[:quota]
+        counts[spec.name]=len(chosen)
+        out.extend(chosen)
+    return sorted(out,key=lambda r:(r["provider"],r["rank_sha256"])),counts
+
+
+def write_jsonl(path, rows):
+    path.parent.mkdir(parents=True,exist_ok=True)
+    with path.open("w",encoding="utf-8",newline="\n") as handle:
+        for row in rows:
+            handle.write(json.dumps(row,sort_keys=True,separators=(",",":"))+"\n")
+
 def main():
     p=argparse.ArgumentParser()
     p.add_argument("--source",action="append",default=[])
     p.add_argument("--source-adapter",action="append",default=[])
     p.add_argument("--heldout-file",action="append",default=[],type=pathlib.Path)
     p.add_argument("--output",required=True,type=pathlib.Path)
+    p.add_argument("--shortlist-contract",type=pathlib.Path)
+    p.add_argument("--shortlist-output",type=pathlib.Path)
     a=p.parse_args()
     paths=parse_mapping(a.source,"--source")
     adapters=parse_mapping(a.source_adapter,"--source-adapter")
@@ -187,6 +258,19 @@ def main():
     a.output.parent.mkdir(parents=True,exist_ok=True)
     a.output.write_text(json.dumps(inv,indent=2,sort_keys=True)+"\n",encoding="utf-8")
     print(f"NEEDLE3_MULTIPROVIDER_INVENTORY_PASS sources={len(sources)} episodes={inv['candidate_pool']['eligible_user_turn_episodes_across_sources']}")
+    if bool(a.shortlist_contract) != bool(a.shortlist_output):
+        raise ValueError("--shortlist-contract and --shortlist-output must be supplied together")
+    if a.shortlist_contract:
+        contract=json.loads(a.shortlist_contract.read_text())
+        if sha256_file(a.output) != contract["inventory_binding"]["sha256"]:
+            raise ValueError("inventory binding mismatch")
+        rows,counts=materialize_shortlist(
+            sources,
+            contract["provider_quotas"],
+            contract["deterministic_sampling"]["contract_salt"],
+        )
+        write_jsonl(a.shortlist_output,rows)
+        print(f"NEEDLE3_MULTIPROVIDER_SHORTLIST_PASS rows={len(rows)} providers={json.dumps(counts,sort_keys=True,separators=(',',':'))}")
     return 0
 
 if __name__=="__main__":

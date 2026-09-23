@@ -84,3 +84,37 @@ class CandidateSelectionContractTests(unittest.TestCase):
         self.assertFalse(contract["labels"]["historical_provider_action_is_ground_truth"])
         self.assertEqual(contract["privacy"]["shortlist_output"], "METADATA_ONLY_NO_RAW_TEXT")
         self.assertFalse(contract["next_gate"]["training_authorized"])
+
+
+class ShortlistMaterializationTests(unittest.TestCase):
+    def test_materialized_shortlist_is_deterministic_metadata_only_and_balanced(self):
+        from scripts.inventory_needle3_multiprovider_corpus import SourceSpec, materialize_shortlist
+        with tempfile.TemporaryDirectory() as td:
+            td=pathlib.Path(td)
+            sources=[]
+            for provider,adapter,tool in (
+                ("chatgpt","chatgpt-export",False),
+                ("deepseek","deepseek-export",True),
+                ("xai","xai-export",False),
+            ):
+                path=td/f"{provider}.sqlite3"
+                make_db(path,adapter,tool)
+                sources.append(SourceSpec(provider,path,adapter))
+            rows,counts=materialize_shortlist(
+                sources,
+                {"chatgpt":1,"deepseek":1,"xai":1},
+                "fixture-salt",
+            )
+            self.assertEqual(counts,{"chatgpt":1,"deepseek":1,"xai":1})
+            self.assertEqual(len(rows),3)
+            self.assertTrue(all(row["decision_label"] is None for row in rows))
+            self.assertTrue(all(row["label_state"]=="NOT_ADJUDICATED" for row in rows))
+            forbidden={"text","query","answer","content"}
+            self.assertTrue(all(not (forbidden & set(row)) for row in rows))
+            rows2,counts2=materialize_shortlist(
+                sources,
+                {"chatgpt":1,"deepseek":1,"xai":1},
+                "fixture-salt",
+            )
+            self.assertEqual(rows,rows2)
+            self.assertEqual(counts,counts2)
