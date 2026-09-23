@@ -55,6 +55,9 @@ class Tests(unittest.TestCase):
             self.assertIsNone(inv["decision_label_inventory"]["NO_CALL"])
             self.assertFalse(inv["projection_policy"]["no_observed_tool_evidence_means_no_call"])
             self.assertFalse(inv["next_gate"]["training_authorized"])
+            self.assertEqual(inv["candidate_pool"]["raw_eligible_user_turn_episode_instances_across_sources"],2)
+            self.assertEqual(inv["candidate_pool"]["deduplicated_eligible_user_turn_episodes_across_sources"],2)
+            self.assertEqual(inv["candidate_pool"]["duplicate_episode_instances_within_provider_across_sources"],0)
 
     def test_adapter_filter_fails_closed(self):
         with tempfile.TemporaryDirectory() as td:
@@ -104,6 +107,18 @@ class Tests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError,"missing explicit source adapter for chatgpt"):
                 build_inventory(sources,[])
 
+    def test_missing_heldout_binding_fails_closed(self):
+        with tempfile.TemporaryDirectory() as td:
+            td=pathlib.Path(td)
+            a=td/"a.sqlite3"; b=td/"b.sqlite3"
+            make_db(a,"chatgpt-export",False); make_db(b,"xai-export",False)
+            sources=[
+                SourceSpec("chatgpt",a,"chatgpt-export"),
+                SourceSpec("xai",b,"xai-export"),
+            ]
+            with self.assertRaisesRegex(ValueError,"at least one heldout binding is required"):
+                build_inventory(sources,[])
+
 if __name__=="__main__":
     unittest.main()
 
@@ -139,6 +154,7 @@ class BindingAndContractGuardTests(unittest.TestCase):
             make_db(a,"chatgpt-export",False); make_db(b,"xai-export",False)
             output=td/"inventory.json"; output.write_text("sentinel\n")
             shortlist=td/"shortlist.jsonl"
+            heldout=td/"heldout.jsonl"; heldout.write_text('{"case_id":"heldout"}\n')
             contract={
                 "schema_version":"theseus.needle3.multiprovider_candidate_selection.v1",
                 "deterministic_sampling":{
@@ -160,6 +176,7 @@ class BindingAndContractGuardTests(unittest.TestCase):
                 "inventory",
                 "--source",f"chatgpt={a}","--source",f"xai={b}",
                 "--source-adapter","chatgpt=chatgpt-export","--source-adapter","xai=xai-export",
+                "--heldout-file",str(heldout),
                 "--output",str(output),"--shortlist-contract",str(contract_path),"--shortlist-output",str(shortlist),
             ]
             with mock.patch("sys.argv",argv):
@@ -242,7 +259,9 @@ class ShortlistMaterializationTests(unittest.TestCase):
                 path=td/f"{provider}.sqlite3"
                 make_db(path,adapter,tool)
                 sources.append(SourceSpec(provider,path,adapter))
-            inventory=build_inventory(sources,[])
+            heldout=td/"heldout.jsonl"
+            heldout.write_text('{"case_id":"heldout"}\n')
+            inventory=build_inventory(sources,[heldout])
             bound={source["provider"]:source["database"]["sha256"] for source in inventory["sources"]}
             rows,counts=materialize_shortlist(
                 sources,
@@ -274,7 +293,9 @@ class ShortlistMaterializationTests(unittest.TestCase):
                 path=td/f"{provider}.sqlite3"
                 make_db(path,adapter,False)
                 sources.append(SourceSpec(provider,path,adapter))
-            inventory=build_inventory(sources,[])
+            heldout=td/"heldout.jsonl"
+            heldout.write_text('{"case_id":"heldout"}\n')
+            inventory=build_inventory(sources,[heldout])
             bound={source["provider"]:source["database"]["sha256"] for source in inventory["sources"]}
             conn=sqlite3.connect(sources[0].path)
             try:

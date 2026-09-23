@@ -36,7 +36,9 @@ Exact metadata inventory:
 - ChatGPT export slice: 303 sessions, 139,293 selected messages, 29,084 eligible user-turn episodes;
 - DeepSeek export: 43 sessions, 64,662 selected messages, 28,044 eligible user-turn episodes;
 - xAI/Grok export: 59 selected sessions, 17,790 selected messages, 6,018 eligible user-turn episodes;
-- total pre-adjudication episode pool: 63,146.
+- raw pre-adjudication episode instances: 63,146;
+- deduplicated within-provider episode pool: 38,749;
+- within-provider duplicate episode instances removed by exact signature: 24,397.
 
 The pure ChatGPT and xAI export adapters expose no tool-role evidence rows in this
 corpus schema. DeepSeek exposes 259 tool evidence messages and 201 user-turn

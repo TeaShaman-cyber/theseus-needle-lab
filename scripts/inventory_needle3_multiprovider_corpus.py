@@ -195,6 +195,8 @@ def validate_distinct_source_slices(sources):
 
 def build_inventory(sources,heldout_files):
     validate_distinct_source_slices(sources)
+    if not heldout_files:
+        raise ValueError("at least one heldout binding is required")
     reports=[]; msets={}; esets={}
     for s in sources:
         report,m,e=source_inventory(s)
@@ -205,7 +207,11 @@ def build_inventory(sources,heldout_files):
             raise ValueError(f"missing heldout binding: {p}")
         display_path=p.name if p.is_absolute() else p.as_posix()
         held.append({"path":display_path,"bytes":p.stat().st_size,"sha256":sha256_file(p)})
-    total=sum(int(r["candidate_episodes"].get("eligible_user_turn_episodes",0)) for r in reports)
+    raw_total=sum(int(r["candidate_episodes"].get("eligible_user_turn_episodes",0)) for r in reports)
+    deduplicated_total=sum(int(r["candidate_episodes"].get("unique_episode_signatures",0)) for r in reports)
+    duplicate_instances=sum(int(r["candidate_episodes"].get("duplicate_episode_instances",0)) for r in reports)
+    if raw_total != deduplicated_total + duplicate_instances:
+        raise ValueError("candidate pool accounting mismatch")
     return {
       "schema_version":SCHEMA,
       "purpose":"issue_26_realistic_sft_preflight_only",
@@ -224,7 +230,11 @@ def build_inventory(sources,heldout_files):
         "reason":"historical provider actions are evidence, not authoritative PROBE/READY/UNKNOWN/NO_CALL labels"},
       "leakage_boundary":{"bound_heldout_files":held,"semantic_near_duplicate_screening":"REQUIRED_BEFORE_DATASET_PROJECTION","split_unit":"session_plus_semantic_family"},
       "privacy":{"raw_sources":"PRIVATE_HISTORICAL_INTERACTION","committed_inventory":"METADATA_ONLY_NO_RAW_TEXT","projected_examples":"NOT_YET_CLASSIFIED","public_dataset_authorized":False},
-      "candidate_pool":{"eligible_user_turn_episodes_across_sources":total,"status":"PRE_ADJUDICATION"},
+      "candidate_pool":{
+        "raw_eligible_user_turn_episode_instances_across_sources":raw_total,
+        "deduplicated_eligible_user_turn_episodes_across_sources":deduplicated_total,
+        "duplicate_episode_instances_within_provider_across_sources":duplicate_instances,
+        "status":"PRE_ADJUDICATION"},
       "next_gate":{"required":["deterministic_candidate_projection_contract","privacy_publicability_review","semantic_family_adjudication","PROBE_READY_UNKNOWN_NO_CALL_label_adjudication","provider_and_family_balanced_split","near_duplicate_leakage_check"],"training_authorized":False}
     }
 
@@ -360,7 +370,12 @@ def main():
         )
     a.output.parent.mkdir(parents=True,exist_ok=True)
     a.output.write_text(inv_text,encoding="utf-8")
-    print(f"NEEDLE3_MULTIPROVIDER_INVENTORY_PASS sources={len(sources)} episodes={inv['candidate_pool']['eligible_user_turn_episodes_across_sources']}")
+    print(
+        "NEEDLE3_MULTIPROVIDER_INVENTORY_PASS "
+        f"sources={len(sources)} "
+        f"episodes_raw={inv['candidate_pool']['raw_eligible_user_turn_episode_instances_across_sources']} "
+        f"episodes_deduplicated={inv['candidate_pool']['deduplicated_eligible_user_turn_episodes_across_sources']}"
+    )
     if shortlist_rows is not None:
         write_jsonl(a.shortlist_output,shortlist_rows)
         print(f"NEEDLE3_MULTIPROVIDER_SHORTLIST_PASS rows={len(shortlist_rows)} providers={json.dumps(shortlist_counts,sort_keys=True,separators=(',',':'))}")

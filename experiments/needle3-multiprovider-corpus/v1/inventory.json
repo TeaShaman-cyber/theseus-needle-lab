@@ -1,7 +1,9 @@
 {
   "authority": "INVENTORY_ONLY_NO_TRAINING_AUTHORIZATION",
   "candidate_pool": {
-    "eligible_user_turn_episodes_across_sources": 63146,
+    "deduplicated_eligible_user_turn_episodes_across_sources": 38749,
+    "duplicate_episode_instances_within_provider_across_sources": 24397,
+    "raw_eligible_user_turn_episode_instances_across_sources": 63146,
     "status": "PRE_ADJUDICATION"
   },
   "cross_provider_overlap": {
