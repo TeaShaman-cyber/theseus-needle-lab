@@ -1,3 +1,4 @@
+import json
 import pathlib, sqlite3, tempfile, unittest
 from scripts.inventory_needle3_multiprovider_corpus import SourceSpec, build_inventory, source_inventory
 
@@ -63,3 +64,23 @@ class Tests(unittest.TestCase):
 
 if __name__=="__main__":
     unittest.main()
+
+class CandidateSelectionContractTests(unittest.TestCase):
+    def test_candidate_selection_contract_is_balanced_metadata_only_and_non_authoritative(self):
+        root = pathlib.Path(__file__).resolve().parents[1]
+        contract = json.loads(
+            (root / "experiments/needle3-multiprovider-corpus/v1/candidate-selection-contract.json").read_text()
+        )
+        inventory = root / contract["inventory_binding"]["path"]
+        import hashlib
+        observed = hashlib.sha256(inventory.read_bytes()).hexdigest()
+        self.assertEqual(observed, contract["inventory_binding"]["sha256"])
+        self.assertEqual(contract["provider_quotas"], {
+            "chatgpt": 300,
+            "deepseek": 300,
+            "xai": 300,
+        })
+        self.assertEqual(contract["labels"]["state"], "NOT_ADJUDICATED")
+        self.assertFalse(contract["labels"]["historical_provider_action_is_ground_truth"])
+        self.assertEqual(contract["privacy"]["shortlist_output"], "METADATA_ONLY_NO_RAW_TEXT")
+        self.assertFalse(contract["next_gate"]["training_authorized"])
