@@ -1,3 +1,5 @@
+import subprocess
+import sys
 import unittest
 from pathlib import Path
 
@@ -29,6 +31,18 @@ class TypedDecisionRunnerContractTests(unittest.TestCase):
 
 
 class SemIfReleaseConsumerContractTests(unittest.TestCase):
+    def test_release_consumer_entrypoint_loads_before_runtime_work(self):
+        proc = subprocess.run(
+            [sys.executable, str(ROOT / "scripts" / "prepare_semif_release_runtime.py"), "--help"],
+            cwd=ROOT,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+        )
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertIn("--runtime-dir", proc.stdout)
+
     def test_registry_binds_public_release_and_original_producer(self):
         registry=bench.load_registry(ROOT/'experiments'/'typed-decision-benchmark'/'v1'/'candidates.json')
         ident=registry['candidates']['semif_qwen3_0_6b_q8']['runtime_identity']

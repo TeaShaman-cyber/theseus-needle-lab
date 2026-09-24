@@ -7,7 +7,7 @@ import importlib.util
 import json
 import shutil
 import subprocess
-time
+import time
 import urllib.request
 from pathlib import Path
 
