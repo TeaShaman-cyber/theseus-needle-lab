@@ -88,9 +88,15 @@ class FrozenSourceSelectionTests(unittest.TestCase):
                 validate_session_search_runtime(runtime, manifest, observed_head="b" * 40)
 
             self.assertEqual(
-                validate_session_search_runtime(runtime, manifest, observed_head="a" * 40),
+                validate_session_search_runtime(
+                    runtime, manifest, observed_head="a" * 40, observed_status=""
+                ),
                 "a" * 40,
             )
+            with self.assertRaisesRegex(RuntimeError, "SESSION_SEARCH_RUNTIME_DIRTY"):
+                validate_session_search_runtime(
+                    runtime, manifest, observed_head="a" * 40, observed_status=" M session_search/corpus_store.py"
+                )
 
     def test_frozen_manifest_missing_or_mismatched_artifact_fails_closed(self):
         with tempfile.TemporaryDirectory() as td:
@@ -123,14 +129,23 @@ class MaterializerGuardTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, "TMP_CORPUS_PREEXISTS"):
                 prepare_tmp_corpus(tmp)
 
-    def test_tmp_and_publish_trees_must_be_disjoint(self):
+    def test_tmp_and_publish_namespace_must_be_disjoint(self):
         with tempfile.TemporaryDirectory() as td:
             root = pathlib.Path(td)
             tmp = root / "tmp"
-            with self.assertRaisesRegex(RuntimeError, "TMP_PUBLISH_PATH_OVERLAP"):
+            with self.assertRaisesRegex(RuntimeError, "MATERIALIZATION_PATH_COLLISION"):
                 validate_materialization_paths(tmp, tmp / "publish")
-            with self.assertRaisesRegex(RuntimeError, "TMP_PUBLISH_PATH_OVERLAP"):
+            with self.assertRaisesRegex(RuntimeError, "MATERIALIZATION_PATH_COLLISION"):
                 validate_materialization_paths(tmp / "child", tmp)
+
+            publish = root / "foo"
+            receipt = root / "foo.receipt.json"
+            receipt_tmp = root / "foo.receipt.json.tmp"
+            lock = root / ".foo.runner.lock"
+            for reserved in (receipt, receipt_tmp, lock):
+                with self.subTest(reserved=reserved.name):
+                    with self.assertRaisesRegex(RuntimeError, "MATERIALIZATION_PATH_COLLISION"):
+                        validate_materialization_paths(reserved, publish)
 
     def test_atomic_publish_verifies_staging_before_install(self):
         with tempfile.TemporaryDirectory() as td:

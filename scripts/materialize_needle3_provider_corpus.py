@@ -109,6 +109,7 @@ def validate_session_search_runtime(
     frozen_manifest: pathlib.Path | dict,
     *,
     observed_head: str | None = None,
+    observed_status: str | None = None,
 ) -> str:
     manifest = _manifest_data(frozen_manifest)
     expected = manifest.get("session_search_runtime_sha")
@@ -119,6 +120,15 @@ def validate_session_search_runtime(
     ).strip()
     if head != expected:
         raise RuntimeError(f"SESSION_SEARCH_RUNTIME_SHA_MISMATCH:expected={expected}:observed={head}")
+    status = observed_status
+    if status is None:
+        status = subprocess.check_output(
+            ["git", "status", "--porcelain=v1", "--untracked-files=all"],
+            cwd=session_search_root,
+            text=True,
+        )
+    if status.strip():
+        raise RuntimeError("SESSION_SEARCH_RUNTIME_DIRTY")
     return head
 
 
@@ -128,11 +138,31 @@ def import_session_search(root: pathlib.Path):
     return ingest_many, verify_corpus
 
 
-def validate_materialization_paths(tmp_corpus: pathlib.Path, publish_corpus: pathlib.Path) -> None:
-    tmp = tmp_corpus.resolve(strict=False)
-    publish = publish_corpus.resolve(strict=False)
-    if tmp == publish or tmp in publish.parents or publish in tmp.parents:
-        raise RuntimeError("TMP_PUBLISH_PATH_OVERLAP")
+def publication_paths(publish_corpus: pathlib.Path) -> dict[str, pathlib.Path]:
+    parent = publish_corpus.parent
+    receipt = parent / f"{publish_corpus.name}.receipt.json"
+    return {
+        "publish": publish_corpus,
+        "receipt": receipt,
+        "receipt_tmp": receipt.with_suffix(receipt.suffix + ".tmp"),
+        "lock": parent / f".{publish_corpus.name}.runner.lock",
+    }
+
+
+def _paths_overlap(left: pathlib.Path, right: pathlib.Path) -> bool:
+    left = left.resolve(strict=False)
+    right = right.resolve(strict=False)
+    return left == right or left in right.parents or right in left.parents
+
+
+def validate_materialization_paths(
+    tmp_corpus: pathlib.Path, publish_corpus: pathlib.Path
+) -> dict[str, pathlib.Path]:
+    paths = publication_paths(publish_corpus)
+    for name, reserved in paths.items():
+        if _paths_overlap(tmp_corpus, reserved):
+            raise RuntimeError(f"MATERIALIZATION_PATH_COLLISION:tmp:{name}")
+    return paths
 
 
 def prepare_tmp_corpus(path: pathlib.Path) -> None:
@@ -181,11 +211,11 @@ def main() -> int:
     p.add_argument("--frozen-manifest", required=True, type=pathlib.Path)
     args = p.parse_args()
 
-    validate_materialization_paths(args.tmp_corpus, args.publish_corpus)
+    paths = validate_materialization_paths(args.tmp_corpus, args.publish_corpus)
     manifest_bytes, manifest, manifest_sha256 = load_frozen_manifest(args.frozen_manifest)
     del manifest_bytes  # digest and parsed value remain bound to the same single read
 
-    lock_path = args.publish_corpus.parent / f".{args.publish_corpus.name}.runner.lock"
+    lock_path = paths["lock"]
     lock_path.parent.mkdir(parents=True, exist_ok=True)
     with lock_path.open("a+b") as lock_file:
         try:
@@ -230,8 +260,8 @@ def main() -> int:
             "verification": published_verify,
             "frozen_manifest_sha256": manifest_sha256,
         }
-        receipt_path = args.publish_corpus.parent / f"{args.publish_corpus.name}.receipt.json"
-        tmp_receipt = receipt_path.with_suffix(receipt_path.suffix + ".tmp")
+        receipt_path = paths["receipt"]
+        tmp_receipt = paths["receipt_tmp"]
         tmp_receipt.write_bytes(stable_json(receipt) + b"\n")
         os.replace(tmp_receipt, receipt_path)
         if json.loads(receipt_path.read_text(encoding="utf-8")) != receipt:
