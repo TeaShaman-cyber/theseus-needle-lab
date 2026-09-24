@@ -1,0 +1,60 @@
+{
+  "contract": "theseus.typed-decision.v1",
+  "mappings": {
+    "needle_issue_26_routing": {
+      "confidence": {
+        "model_reported_numeric": {
+          "calibrated": false,
+          "kind": "MODEL_REPORTED"
+        },
+        "scoring_or_authority_use": false,
+        "tuned_confidence_none": {
+          "calibrated": false,
+          "kind": "UNAVAILABLE",
+          "value": null
+        }
+      },
+      "historical_labels": {
+        "INVALID": {
+          "decision": null,
+          "error_code": "INVALID_MODEL_OUTPUT",
+          "outcome": "ERROR"
+        },
+        "NO_CALL": {
+          "decision": null,
+          "outcome": "NO_CALL"
+        },
+        "PROBE": {
+          "decision": "PROBE",
+          "outcome": "DECISION"
+        },
+        "READY": {
+          "decision": "READY",
+          "outcome": "DECISION"
+        },
+        "UNKNOWN": {
+          "decision": "UNKNOWN",
+          "outcome": "DECISION"
+        }
+      },
+      "historical_source_commit": "b16dbbb06e3bade0d2e12c3322164006981e6097",
+      "source_issue": 26,
+      "status": "MACHINE_OUTPUT_MAPPED"
+    },
+    "needle_issue_5_drift_sentinel": {
+      "historical_meaning": {
+        "auto_mutation_authorized": false,
+        "drift_signal_proposal": {
+          "outcome": "SIGNAL"
+        },
+        "no_drift_or_abstain": {
+          "outcome": "NO_SIGNAL"
+        }
+      },
+      "note": "Current main and issue history contain no versioned machine output envelope for issue 5; this records compatibility semantics only and does not claim migration of a historical receipt.",
+      "source_issue": 5,
+      "status": "SEMANTIC_ONLY_NO_VERSIONED_MACHINE_OUTPUT"
+    }
+  },
+  "schema": "theseus.typed-decision-legacy-mapping.v1"
+}
