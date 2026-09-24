@@ -1,0 +1,59 @@
+{
+  "acceptance_authority": false,
+  "baseline": {
+    "path": "experiments/typed-decision-benchmark/v1/baseline-constant-unknown.v1.txt",
+    "sha256": "831858cc16b17f7eb49326549d37d9453cdba45cc4cb220b434b6a92213623a0"
+  },
+  "benchmark_id": "theseus-routing-benchmark-v1",
+  "candidate_registry": {
+    "path": "experiments/typed-decision-benchmark/v1/candidates.json",
+    "sha256": "208fb823906a5adfceccb1251f40c90d25890b46cc2c4a726561a8c4b96653a4"
+  },
+  "contract": {
+    "path": "contracts/typed-decision/v1.schema.json",
+    "sha256": "1e95c3794c5006a6ced877e6de73a958d3b30fc2280353e0682f0f50dfc5939d"
+  },
+  "included_candidates": [
+    "baseline_constant_unknown",
+    "needle3_base",
+    "semif_qwen3_0_6b_q8",
+    "kev_0_8b"
+  ],
+  "issue": 56,
+  "legacy_compat_suite": {
+    "path": "experiments/typed-decision-benchmark/v1/legacy-compat-24.jsonl",
+    "role": "CONTINUITY_ONLY_NOT_PRIMARY_SELECTION",
+    "rows": 24,
+    "sha256": "05992ce1354cf7b4090eeabf23363e4bb455673c93cfed768814b8ecb1118034"
+  },
+  "lifecycle": "WORKING",
+  "metrics": [
+    "exact_accuracy",
+    "confusion_matrix",
+    "unknown_precision",
+    "unknown_recall",
+    "false_ready_rate",
+    "false_probe_rate",
+    "negative_control_no_call_rate",
+    "contract_error_rate",
+    "escalation_frequency",
+    "mean_latency_ms",
+    "multiclass_brier_when_probabilities_available"
+  ],
+  "primary_suite": {
+    "evidence_class": "PUBLIC_SYNTHETIC_LABELS_VISIBLE_NOT_BLINDED",
+    "label_counts": {
+      "NO_CALL": 6,
+      "PROBE": 6,
+      "READY": 6,
+      "UNKNOWN": 6
+    },
+    "path": "experiments/typed-decision-benchmark/v1/primary-24.jsonl",
+    "rows": 24,
+    "sha256": "1cef5f9702d7dc2f4e418e604be69fc084327df57f4fd017129ecf9fcd87e8de"
+  },
+  "qa_executes_models": false,
+  "schema": "theseus.typed-decision-benchmark-manifest.v1",
+  "task": "EVIDENCE_ROUTING",
+  "visible_label_policy": "BOUNDED_PUBLIC_SYNTHETIC_ONLY"
+}

@@ -1,0 +1,170 @@
+{
+  "candidates": {
+    "baseline_constant_unknown": {
+      "adapter": {
+        "kind": "CONSTANT_UNKNOWN",
+        "no_call_encoding": "EXPLICIT_CLASS",
+        "revision": "baseline-constant-unknown.v1"
+      },
+      "execution_scope": "LOCAL_REPRODUCIBLE",
+      "model_identity": {
+        "kind": "CONSTANT_UNKNOWN",
+        "spec_sha256": "831858cc16b17f7eb49326549d37d9453cdba45cc4cb220b434b6a92213623a0"
+      },
+      "runtime_identity": {
+        "python": "3.12",
+        "surface": "PYTHON_STDLIB"
+      },
+      "status": "BENCHMARK_READY"
+    },
+    "jev_system_one": {
+      "adapter": {
+        "kind": "SYSTEM_ONE_PROVIDER",
+        "no_call_encoding": "EXPLICIT_CLASS",
+        "revision": "e1d4cc938204b22fc5a3c3aca7044072fe3f712d"
+      },
+      "execution_scope": "EXTERNAL_PROVIDER",
+      "model_identity": {
+        "status": "PROVIDER_CONTROLLED"
+      },
+      "runtime_identity": {
+        "status": "ACCESS_REQUIRED"
+      },
+      "status": "ACCESS_REQUIRED"
+    },
+    "kev_0_8b": {
+      "adapter": {
+        "kind": "KEV_FOUR_CHOICE",
+        "no_call_encoding": "EXPLICIT_CLASS",
+        "revision": "typed-decision-kev-v1"
+      },
+      "execution_scope": "LOCAL_REPRODUCIBLE",
+      "model_identity": {
+        "base": "Qwen/Qwen3.5-0.8B-Base",
+        "base_revision": "dc7cdfe2ee4154fa7e30f5b51ca41bfa40174e68",
+        "checkpoint": "jaredpalmer/kev-0.8b",
+        "checkpoint_revision": "54f4f8777356cd5bbbb6c6919c657f26e6f2f6d8"
+      },
+      "runtime_identity": {
+        "code_revision": "7405b72e73e2d24787f3720d162a21c974ff2ad2",
+        "install_route": "PINNED_COLD_INSTALL",
+        "python": "3.12",
+        "requirements_sha256": "ac62d5b9b3955b63aea7c643b9500020bda3051faaa431fa97c328be2191383d"
+      },
+      "status": "BENCHMARK_READY"
+    },
+    "nanojev": {
+      "adapter": {
+        "kind": "NANOJEV",
+        "no_call_encoding": "UNKNOWN",
+        "revision": "not-runnable-v1"
+      },
+      "execution_scope": "LOCAL_REPRODUCIBLE",
+      "model_identity": {
+        "status": "NOT_EXECUTED"
+      },
+      "runtime_identity": {
+        "blocker": "CUDA_REQUIRED",
+        "code_revision": "76fdfc9ecdca45a9bcef17991a07d3041a87685a"
+      },
+      "status": "BLOCKED_STANDARD_CPU"
+    },
+    "needle3_base": {
+      "adapter": {
+        "kind": "NEEDLE_TOOL_CALL",
+        "no_call_encoding": "NO_TOOL_CALL",
+        "revision": "typed-decision-needle-v1"
+      },
+      "execution_scope": "LOCAL_REPRODUCIBLE",
+      "model_identity": {
+        "artifact": "needle3.safetensors",
+        "sha256": "c234c70dccc7a9115e7c41ac2e41d3655fea3b85c245dd898b46179fb90c6c0c"
+      },
+      "runtime_identity": {
+        "package": "cactus-needle",
+        "package_version": "3.0.4",
+        "python": "3.12",
+        "release_tag_commit": "49f6759ae70ac24c479baf70f966fc9c787bf9ac",
+        "requirements_lock_sha256": "5b1f739d9bd09c1964db8852cae0fced312f631d5ed4e7083f84e7b6452d192c",
+        "source_commit": "f189b23ebf34b98bcc8f9ee819249425c6623a32",
+        "wheel_sha256": "0825b85dc7ebd7dfff98caaacc2baa6e805c3560d0646470b46bd93743056b26"
+      },
+      "status": "BENCHMARK_READY"
+    },
+    "needle_tuned": {
+      "adapter": {
+        "kind": "NEEDLE_TOOL_CALL",
+        "no_call_encoding": "NO_TOOL_CALL",
+        "revision": "DEFERRED"
+      },
+      "execution_scope": "LOCAL_REPRODUCIBLE",
+      "model_identity": {
+        "status": "NO_ARTIFACT_SELECTED"
+      },
+      "runtime_identity": {
+        "status": "DEFERRED_FOR_V1"
+      },
+      "status": "DEFERRED_FOR_V1"
+    },
+    "nimble_open_reference": {
+      "adapter": {
+        "kind": "NIMBLE",
+        "no_call_encoding": "UNRESOLVED",
+        "revision": "UNRESOLVED"
+      },
+      "execution_scope": "LOCAL_REPRODUCIBLE",
+      "model_identity": {
+        "status": "CURRENTNESS_PROBE_REQUIRED"
+      },
+      "runtime_identity": {
+        "status": "CURRENTNESS_PROBE_REQUIRED"
+      },
+      "status": "CURRENTNESS_PROBE_REQUIRED"
+    },
+    "semif_qwen3_0_6b_q8": {
+      "adapter": {
+        "kind": "SEMIF_DIRECT_OPTIONS",
+        "no_call_encoding": "EXPLICIT_CLASS",
+        "revision": "typed-decision-semif-v1"
+      },
+      "execution_scope": "LOCAL_REPRODUCIBLE",
+      "model_identity": {
+        "base": "Qwen/Qwen3-0.6B",
+        "base_revision": "c1899de289a04d12100db370d81485cdf75e47ca",
+        "gguf_file": "Qwen3-0.6B-Q8_0.gguf",
+        "gguf_repo": "Qwen/Qwen3-0.6B-GGUF",
+        "gguf_revision": "23749fefcc72300e3a2ad315e1317431b06b590a",
+        "gguf_sha256": "9465e63a22add5354d9bb4b99e90117043c7124007664907259bd16d043bb031"
+      },
+      "runtime_identity": {
+        "cookbook_helper": ".github/actions/semantic-advisory-mechanics/artifact_package.py",
+        "cookbook_revision": "821e1cf04dfdfa42ada18255677175203bbab7df",
+        "distribution": "PUBLIC_GITHUB_RELEASE",
+        "lock_sha256": "7411514043a691f30653e6a26fcb3416d7af4b19e3f6f8b67d3a2e10f2000667",
+        "producer_actions_artifact_digest": "sha256:d0f949f4fcd8cc96f9acd4171f0eb269c9b723b9057afb29f3cb7bf7097638d6",
+        "producer_actions_artifact_id": 10772811868,
+        "producer_head_sha": "3d477dad0c782cfbc69ce504c1613423a60c2422",
+        "producer_run_id": 35910243662,
+        "python": "3.11",
+        "release_asset_digest": "sha256:f985f2be09ad5301dc809f4f9e6a9b72c60bca9a61e7b8128a245e88de54501d",
+        "release_asset_id": 586562898,
+        "release_asset_name": "semif-cpu-toolchain.tar.gz",
+        "release_asset_size": 323605130,
+        "release_checksum_asset_id": 586562897,
+        "release_checksum_digest": "sha256:2c64c3ba1ae0d0330254a4ec455bc63b2d28b5a35caf2afac368c95db5a0b7c6",
+        "release_checksum_url": "https://github.com/TeaShaman-cyber/theseus-typed-decision-lab/releases/download/semif-cpu-toolchain-1f2dea3-py311-linux-x86_64-v1/semif-cpu-toolchain.tar.gz.sha256",
+        "release_id": 395961859,
+        "release_repository": "TeaShaman-cyber/theseus-typed-decision-lab",
+        "release_tag": "semif-cpu-toolchain-1f2dea3-py311-linux-x86_64-v1",
+        "release_target_commit": "3d477dad0c782cfbc69ce504c1613423a60c2422",
+        "release_url": "https://github.com/TeaShaman-cyber/theseus-typed-decision-lab/releases/download/semif-cpu-toolchain-1f2dea3-py311-linux-x86_64-v1/semif-cpu-toolchain.tar.gz",
+        "source_revision": "1f2dea3e25379f9dfc98cb83c324f00ab5deda37",
+        "tar_sha256": "f985f2be09ad5301dc809f4f9e6a9b72c60bca9a61e7b8128a245e88de54501d",
+        "tree_sha256": "e38fe6b0cf10db467314403f0c1ef03347fba8b4e560494ee3069f0d237df5a2"
+      },
+      "status": "BENCHMARK_READY"
+    }
+  },
+  "schema": "theseus.typed-decision-benchmark-candidates.v1",
+  "sibling_runtime_lab_revision": "1c8f2fa9f912b27d11471c77cc523493a6359288"
+}

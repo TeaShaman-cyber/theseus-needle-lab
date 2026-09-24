@@ -1,0 +1,24 @@
+{"id":"para-probe-01","category":"paraphrase","query":"The setup guide says kubectl is installed, but this session has not executed it and a live version check is available.","expected":"PROBE"}
+{"id":"para-probe-02","category":"paraphrase","query":"A stored note names the service endpoint, but it predates a provider migration and the current endpoint can be queried safely.","expected":"PROBE"}
+{"id":"para-ready-01","category":"paraphrase","query":"A harmless canary was executed against the target just now and returned the expected runtime identity and version.","expected":"READY"}
+{"id":"para-ready-02","category":"paraphrase","query":"The checkpoint write completed and an exact readback returned the same stable identifier and content digest.","expected":"READY"}
+{"id":"para-unknown-01","category":"paraphrase","query":"Two old snapshots disagree about the active backend, both are stale, and no current authority can be reached.","expected":"UNKNOWN"}
+{"id":"para-unknown-02","category":"paraphrase","query":"The history index is unavailable, search cannot run, and there is no alternate evidence source for the requested past event.","expected":"UNKNOWN"}
+{"id":"harness-probe-01","category":"unseen_harness","query":"Kestrel's plugin registry lists a shell capability, but no call has verified that this runtime actually exposes it.","expected":"PROBE"}
+{"id":"harness-probe-02","category":"unseen_harness","query":"Orchid failed a filesystem probe yesterday, but the worker was replaced since then and a new harmless probe is possible.","expected":"PROBE"}
+{"id":"harness-ready-01","category":"unseen_harness","query":"Manta's live health endpoint and target-side version command both succeeded in the current worker.","expected":"READY"}
+{"id":"harness-ready-02","category":"unseen_harness","query":"Lynx pushed the requested branch and a separate remote SHA readback exactly matched the local commit.","expected":"READY"}
+{"id":"harness-unknown-01","category":"unseen_harness","query":"Aster's cached documentation and local config disagree, while current provider access is blocked by permissions.","expected":"UNKNOWN"}
+{"id":"harness-unknown-02","category":"unseen_harness","query":"Quill has two candidate workspaces with the same label, but the workspace identifiers are unavailable and no safe probe can distinguish them.","expected":"UNKNOWN"}
+{"id":"verify-probe-01","category":"verification_boundary","query":"The deployment command exited zero, but nobody has read the target state to confirm the requested change actually happened.","expected":"PROBE"}
+{"id":"verify-probe-02","category":"verification_boundary","query":"The downloaded binary matches its manifest hash, but it has not been executed in the target runtime yet.","expected":"PROBE"}
+{"id":"verify-ready-01","category":"verification_boundary","query":"The provider accepted the change and an independent target read now shows the exact requested configuration.","expected":"READY"}
+{"id":"verify-ready-02","category":"verification_boundary","query":"The restored artifact matched the recorded SHA256 and its runtime canary returned the expected value.","expected":"READY"}
+{"id":"verify-unknown-01","category":"verification_boundary","query":"The provider timed out before returning any execution receipt, and there is no independent current view of the target.","expected":"UNKNOWN"}
+{"id":"verify-unknown-02","category":"verification_boundary","query":"The requested branch name exists in two repositories, the intended repository identity is missing, and neither authority can currently be queried.","expected":"UNKNOWN"}
+{"id":"negative-01","category":"negative_control","query":"Write a two-line haiku about morning fog.","expected":"NO_CALL"}
+{"id":"negative-02","category":"negative_control","query":"What is two plus two?","expected":"NO_CALL"}
+{"id":"negative-03","category":"negative_control","query":"Translate 'good morning' into Spanish.","expected":"NO_CALL"}
+{"id":"negative-04","category":"negative_control","query":"Name three colors commonly seen in a rainbow.","expected":"NO_CALL"}
+{"id":"negative-05","category":"negative_control","query":"Summarize this sentence: The cat slept on the warm windowsill.","expected":"NO_CALL"}
+{"id":"negative-06","category":"negative_control","query":"What is a prime number?","expected":"NO_CALL"}
