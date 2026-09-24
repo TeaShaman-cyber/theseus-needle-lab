@@ -1,0 +1,65 @@
+{
+  "acceptance_authority_source": "issue_56_explicit_acceptance_gate",
+  "acceptance_gate": {
+    "comment_id": 5821580702,
+    "review_comment_id": 5821571677,
+    "witness_comment_id": 5821146507
+  },
+  "accepted_facts": {
+    "complete_local_matrix": true,
+    "kev_exact_correct": 11,
+    "kev_false_ready_count": 0,
+    "kev_model_artifact_bytes": 1835409545,
+    "needle_contract_error_count": 4,
+    "needle_exact_correct": 7,
+    "needle_false_ready_count": 1,
+    "needle_model_artifact_bytes": 242047978,
+    "semif_exact_correct": 13,
+    "semif_false_ready_count": 0,
+    "semif_model_artifact_bytes": 639446688
+  },
+  "aggregate_readback": {
+    "artifact_digest": "sha256:4fe3f5cbc51080b9e7425f1995807b822ffe897702dea020dd5ace773494cc7f",
+    "artifact_id": 10829389283,
+    "path": "receipts/typed-decision-benchmark-v1-readback.json",
+    "retention_expires_at": "2026-10-24T19:38:53Z",
+    "sha256": "c802430e5a8d18e015cbfdd62fe981a5b3768ae58d600be443b1407d3f6ca550"
+  },
+  "delivery_disposition": "PROMOTED",
+  "execution": {
+    "canonical_first_run_id": 36044860321,
+    "experiment_sha": "82cafd07bd1240bbe4aa41e1cdabf33d0e9b5a0a",
+    "launcher_sha": "82cafd07bd1240bbe4aa41e1cdabf33d0e9b5a0a",
+    "recovery_run_attempt": 1,
+    "recovery_run_id": 36047923524
+  },
+  "falsifier": {
+    "needle_higher_false_ready_than_references": true,
+    "needle_more_than_one_case_worse_than_kev": true,
+    "needle_more_than_one_case_worse_than_semif": true,
+    "one_case_margin": 1,
+    "triggered": true
+  },
+  "fixture": {
+    "contract_sha256": "1e95c3794c5006a6ced877e6de73a958d3b30fc2280353e0682f0f50dfc5939d",
+    "legacy_fixture_sha256": "05992ce1354cf7b4090eeabf23363e4bb455673c93cfed768814b8ecb1118034",
+    "population": "PUBLIC_SYNTHETIC_LABELS_VISIBLE_NOT_BLINDED",
+    "primary_fixture_sha256": "1cef5f9702d7dc2f4e418e604be69fc084327df57f4fd017129ecf9fcd87e8de"
+  },
+  "hypothesis": "TINY_SPECIALIST_SUFFICIENT_SIGNAL",
+  "parent_issue": 56,
+  "research_outcome": "REJECTED",
+  "schema": "theseus.typed-decision-benchmark-terminal-receipt.v1",
+  "scientific_acceptance_performed": true,
+  "scope_guards": [
+    "bounded_v1_fixture_only",
+    "needle_3_0_4_base_reference_only",
+    "not_current_upstream_3_0_5",
+    "not_w4_cact_deployment_equivalence",
+    "not_hidden_label_generalization",
+    "nimble_unmeasured_unknown",
+    "jev_unmeasured_unknown",
+    "tuned_needle_deferred"
+  ],
+  "terminal_disposition": "ISSUE_COMPLETE_AFTER_REPOSITORY_READBACK"
+}

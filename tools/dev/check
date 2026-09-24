@@ -28,7 +28,10 @@ for path in \
   scripts/prepare_semif_release_runtime.py \
   scripts/run_typed_decision_arm.sh \
   scripts/readback_typed_decision_benchmark.py \
-  .github/workflows/typed-decision-benchmark-v1.yml; do
+  .github/workflows/typed-decision-benchmark-v1.yml \
+  receipts/typed-decision-benchmark-v1-readback.json \
+  receipts/typed-decision-benchmark-v1-readback.sha256 \
+  receipts/typed-decision-benchmark-v1-terminal.json; do
   if [[ ! -s "$path" ]]; then
     printf 'QA_CONTRACT_DRIFT: missing_or_empty=%s\n' "$path" >&2
     exit 2
