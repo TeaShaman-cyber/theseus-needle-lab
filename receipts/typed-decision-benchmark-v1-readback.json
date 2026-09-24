@@ -1,0 +1,397 @@
+{
+  "acceptance_authority": false,
+  "candidates": [
+    {
+      "artifact_sha256": {
+        "normalized-results.jsonl": "a4394381bf7b7f303a4e6fb27696b45abd2ba58df75d0e91bfa5cc9408fdbe68",
+        "raw-results.jsonl": "c23558cff3bd661044e1650a7724e7d21422781cdbb9be9edbcd56b17547e631",
+        "resource-receipt.json": "99d8fd75f7327adaae05e395bc30c48d3cd001016fea48ca309ecb9803a33687",
+        "runtime-receipt.json": "5e35b03654514891a693b4593342f850c7142fd2b75fc11b1c493b036292e29b",
+        "serialization-receipt.json": "f7ec52417ec6a2a2fa13469bf5b26d5e195f10754709f6f004b75914977c402c"
+      },
+      "candidate_id": "baseline_constant_unknown",
+      "checkpoint_sha256": "cd93759652327e069a0b69fb996601e5c879081f1084492907194fc1dc28da4a",
+      "evidence_state": "MODEL_OR_DOMAIN_WITNESS_INPUT_VERIFIED",
+      "execution_status": "SUCCEEDED",
+      "lifecycle_state": "ARTIFACT_PROVENANCE",
+      "resource_receipt": {
+        "acceptance_authority": false,
+        "candidate_id": "baseline_constant_unknown",
+        "load_ms": 0.0,
+        "model_artifact_bytes": 395,
+        "peak_rss_kib": 23936,
+        "per_case_latency_ms": [
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "schema": "theseus.typed-decision-benchmark-resource.v1",
+        "setup_ms": 0
+      },
+      "score": {
+        "authority_claim": false,
+        "calibration_n": 0,
+        "confusion_matrix": {
+          "NO_CALL": {
+            "ERROR": 0,
+            "NO_CALL": 0,
+            "PROBE": 0,
+            "READY": 0,
+            "UNKNOWN": 6
+          },
+          "PROBE": {
+            "ERROR": 0,
+            "NO_CALL": 0,
+            "PROBE": 0,
+            "READY": 0,
+            "UNKNOWN": 6
+          },
+          "READY": {
+            "ERROR": 0,
+            "NO_CALL": 0,
+            "PROBE": 0,
+            "READY": 0,
+            "UNKNOWN": 6
+          },
+          "UNKNOWN": {
+            "ERROR": 0,
+            "NO_CALL": 0,
+            "PROBE": 0,
+            "READY": 0,
+            "UNKNOWN": 6
+          }
+        },
+        "contract_error_rate": 0.0,
+        "escalation_frequency": 1.0,
+        "exact_accuracy": 0.25,
+        "false_probe_rate": 0.0,
+        "false_ready_rate": 0.0,
+        "mean_latency_ms": 0.0,
+        "multiclass_brier": null,
+        "n": 24,
+        "negative_control_no_call_rate": 0.0,
+        "unknown_precision": 0.25,
+        "unknown_recall": 1.0
+      }
+    },
+    {
+      "artifact_sha256": {
+        "normalized-results.jsonl": "62458e8509433d0ae8a1cf32efb625a89975475a980c9220980f7e5570847ab3",
+        "raw-results.jsonl": "de899fd04964b36bb5c1fe9eee9fb1c0b91e57f21b04a87e2c6119766d4fa3bf",
+        "resource-receipt.json": "41dc1b9cd937af2f54a74bd0c82c7e0f10e6b348992a141dd49ac6d2087e56c6",
+        "runtime-receipt.json": "05309a366a463b7a4edfb131508d41d8379016fcbee701d1d422fc4074efe78c",
+        "serialization-receipt.json": "c361da05304279dcb975c16534bffe542cfdbdfcc7ae225ef6603ad0be31f41e"
+      },
+      "candidate_id": "needle3_base",
+      "checkpoint_sha256": "6e074e73a446a0c3e4644c50ddb303b85323f9e463361a21ec26e9bd0af49e02",
+      "evidence_state": "MODEL_OR_DOMAIN_WITNESS_INPUT_VERIFIED",
+      "execution_status": "SUCCEEDED",
+      "lifecycle_state": "ARTIFACT_PROVENANCE",
+      "resource_receipt": {
+        "acceptance_authority": false,
+        "candidate_id": "needle3_base",
+        "load_ms": 1102.8976440000022,
+        "model_artifact_bytes": 242047978,
+        "peak_rss_kib": 1713432,
+        "per_case_latency_ms": [
+          33116.42236900001,
+          23545.541470999993,
+          83972.75346600001,
+          51949.32568799999,
+          18630.046823999975,
+          20993.01098700005,
+          19041.883290999976,
+          18001.230722000004,
+          25335.64809799998,
+          19036.394873000005,
+          56807.442578999995,
+          18043.444384999988,
+          24175.815709000006,
+          58653.57937599998,
+          63085.21671900008,
+          72033.392735,
+          19852.84010999999,
+          54352.962563999994,
+          19698.510371999986,
+          16702.33517500003,
+          12326.44138899991,
+          15424.985473999983,
+          22889.01572899999,
+          17355.412669999965
+        ],
+        "schema": "theseus.typed-decision-benchmark-resource.v1",
+        "setup_ms": 25125
+      },
+      "score": {
+        "authority_claim": false,
+        "calibration_n": 0,
+        "confusion_matrix": {
+          "NO_CALL": {
+            "ERROR": 0,
+            "NO_CALL": 6,
+            "PROBE": 0,
+            "READY": 0,
+            "UNKNOWN": 0
+          },
+          "PROBE": {
+            "ERROR": 1,
+            "NO_CALL": 4,
+            "PROBE": 0,
+            "READY": 0,
+            "UNKNOWN": 1
+          },
+          "READY": {
+            "ERROR": 1,
+            "NO_CALL": 5,
+            "PROBE": 0,
+            "READY": 0,
+            "UNKNOWN": 0
+          },
+          "UNKNOWN": {
+            "ERROR": 2,
+            "NO_CALL": 2,
+            "PROBE": 0,
+            "READY": 1,
+            "UNKNOWN": 1
+          }
+        },
+        "contract_error_rate": 0.16666666666666666,
+        "escalation_frequency": 0.08333333333333333,
+        "exact_accuracy": 0.2916666666666667,
+        "false_probe_rate": 0.0,
+        "false_ready_rate": 0.05555555555555555,
+        "mean_latency_ms": 32709.318865624995,
+        "multiclass_brier": null,
+        "n": 24,
+        "negative_control_no_call_rate": 1.0,
+        "unknown_precision": 0.5,
+        "unknown_recall": 0.16666666666666666
+      }
+    },
+    {
+      "artifact_sha256": {
+        "normalized-results.jsonl": "923f248754e0fa5102be47be34702e0f92a5cba986164159c748f393f2fee1e5",
+        "raw-results.jsonl": "3cd93336142729ef73b18e1f78d846fcb08f3cf36e293e046ecd9ee2be1bb96f",
+        "resource-receipt.json": "ce621b9d062af7c2dc63a2253dcec9f1e5af4ece17789e77b25cc06b5f0a640c",
+        "runtime-receipt.json": "99a382f61b3ec590c3365b200f0b0cc118683cf66b99f49babbfb321d1b4b22c",
+        "serialization-receipt.json": "66ef45bfa1eda9a88c91bd166409b9e88360d5c56a1c70d7d08d8459119d211e"
+      },
+      "candidate_id": "semif_qwen3_0_6b_q8",
+      "checkpoint_sha256": "d82c3f4bbb5bb3e4830980e7496753f767022bf2e62ea6d6aa399449561ea999",
+      "evidence_state": "MODEL_OR_DOMAIN_WITNESS_INPUT_VERIFIED",
+      "execution_status": "SUCCEEDED",
+      "lifecycle_state": "ARTIFACT_PROVENANCE",
+      "resource_receipt": {
+        "acceptance_authority": false,
+        "candidate_id": "semif_qwen3_0_6b_q8",
+        "load_ms": null,
+        "model_artifact_bytes": 639446688,
+        "peak_rss_kib": null,
+        "peak_rss_status": "UNAVAILABLE_SEPARATE_INFERENCE_PROCESS",
+        "per_case_latency_ms": [
+          1405.2545389999977,
+          1306.5253130000087,
+          1324.010450000003,
+          1296.5745809999873,
+          1329.5744679999898,
+          1300.664072999993,
+          1313.6495010000003,
+          1284.9228919999973,
+          1287.4293400000029,
+          1300.2631339999907,
+          1238.279034999991,
+          1248.8829229999965,
+          1309.700828000004,
+          1322.9525060000071,
+          1288.8963900000049,
+          1248.568886000001,
+          1316.1511219999938,
+          1238.6359270000044,
+          1201.722247999996,
+          1159.0006769999945,
+          1203.9649190000005,
+          1169.2578579999945,
+          1230.064439000003,
+          1209.3585270000062
+        ],
+        "runtime_package_setup_ms": 19843,
+        "schema": "theseus.typed-decision-benchmark-resource.v1",
+        "setup_ms": 30826
+      },
+      "score": {
+        "authority_claim": false,
+        "calibration_n": 24,
+        "confusion_matrix": {
+          "NO_CALL": {
+            "ERROR": 0,
+            "NO_CALL": 5,
+            "PROBE": 1,
+            "READY": 0,
+            "UNKNOWN": 0
+          },
+          "PROBE": {
+            "ERROR": 0,
+            "NO_CALL": 0,
+            "PROBE": 6,
+            "READY": 0,
+            "UNKNOWN": 0
+          },
+          "READY": {
+            "ERROR": 0,
+            "NO_CALL": 0,
+            "PROBE": 6,
+            "READY": 0,
+            "UNKNOWN": 0
+          },
+          "UNKNOWN": {
+            "ERROR": 0,
+            "NO_CALL": 0,
+            "PROBE": 4,
+            "READY": 0,
+            "UNKNOWN": 2
+          }
+        },
+        "contract_error_rate": 0.0,
+        "escalation_frequency": 0.7916666666666666,
+        "exact_accuracy": 0.5416666666666666,
+        "false_probe_rate": 0.6111111111111112,
+        "false_ready_rate": 0.0,
+        "mean_latency_ms": 1272.2626906666653,
+        "multiclass_brier": 0.7729839094373108,
+        "n": 24,
+        "negative_control_no_call_rate": 0.8333333333333334,
+        "unknown_precision": 1.0,
+        "unknown_recall": 0.3333333333333333
+      }
+    },
+    {
+      "artifact_sha256": {
+        "normalized-results.jsonl": "06f6b8c7fd84fc02decc117e652423501f34646e691d32e38cc1d9133c5695be",
+        "raw-results.jsonl": "69db9bdac71af9350ebfea7d1e1f91d3714806292a400efe4e4ed65099f2e3d3",
+        "resource-receipt.json": "1d50ef7dd10ad36ad2c41b9c32b24c4aa7f50158cb067f61ff2dc2b99f7b0367",
+        "runtime-receipt.json": "07d16be68da4a2a97699045b3b7b7021345e90e1c5c233a7e2efdebced6512a8",
+        "serialization-receipt.json": "ccc132bd0b83a67576a3c1d34d888cc2838d1d0428f45a1771e85016b85a47cc"
+      },
+      "candidate_id": "kev_0_8b",
+      "checkpoint_sha256": "86c0b0551ae6fcbccd263a7fba805088e17db511296b5d7331ec9bc7dc78c5d9",
+      "evidence_state": "MODEL_OR_DOMAIN_WITNESS_INPUT_VERIFIED",
+      "execution_status": "SUCCEEDED",
+      "lifecycle_state": "ARTIFACT_PROVENANCE",
+      "resource_receipt": {
+        "acceptance_authority": false,
+        "candidate_id": "kev_0_8b",
+        "load_ms": 11424.057004999995,
+        "model_artifact_bytes": 1835409545,
+        "model_artifact_components": {
+          "adapter_snapshot_bytes": 65512436,
+          "base_snapshot_bytes": 1769897109
+        },
+        "peak_rss_kib": 5223396,
+        "per_case_latency_ms": [
+          1158.0815159999956,
+          1104.754248000006,
+          1120.4408549999982,
+          1109.0366659999802,
+          1140.741604999988,
+          1111.2589439999851,
+          1122.725766000002,
+          1099.5500390000075,
+          1090.1008660000002,
+          1108.5086000000217,
+          1053.389803000016,
+          1079.3504000000098,
+          1121.5082459999905,
+          1123.7007260000098,
+          1091.3384899999983,
+          1072.4268120000033,
+          1091.3544800000068,
+          1068.1472109999959,
+          1012.7779489999966,
+          964.5009589999916,
+          979.2325329999869,
+          1009.0748549999944,
+          1025.918200999996,
+          1028.4225590000062
+        ],
+        "schema": "theseus.typed-decision-benchmark-resource.v1",
+        "setup_ms": 76581
+      },
+      "score": {
+        "authority_claim": false,
+        "calibration_n": 24,
+        "confusion_matrix": {
+          "NO_CALL": {
+            "ERROR": 0,
+            "NO_CALL": 6,
+            "PROBE": 0,
+            "READY": 0,
+            "UNKNOWN": 0
+          },
+          "PROBE": {
+            "ERROR": 0,
+            "NO_CALL": 2,
+            "PROBE": 0,
+            "READY": 0,
+            "UNKNOWN": 4
+          },
+          "READY": {
+            "ERROR": 0,
+            "NO_CALL": 4,
+            "PROBE": 0,
+            "READY": 2,
+            "UNKNOWN": 0
+          },
+          "UNKNOWN": {
+            "ERROR": 0,
+            "NO_CALL": 3,
+            "PROBE": 0,
+            "READY": 0,
+            "UNKNOWN": 3
+          }
+        },
+        "contract_error_rate": 0.0,
+        "escalation_frequency": 0.2916666666666667,
+        "exact_accuracy": 0.4583333333333333,
+        "false_probe_rate": 0.0,
+        "false_ready_rate": 0.0,
+        "mean_latency_ms": 1078.5975970416662,
+        "multiclass_brier": 0.6826650005357457,
+        "n": 24,
+        "negative_control_no_call_rate": 1.0,
+        "unknown_precision": 0.42857142857142855,
+        "unknown_recall": 0.5
+      }
+    }
+  ],
+  "complete_local_matrix": true,
+  "contract_sha256": "1e95c3794c5006a6ced877e6de73a958d3b30fc2280353e0682f0f50dfc5939d",
+  "experiment_sha": "82cafd07bd1240bbe4aa41e1cdabf33d0e9b5a0a",
+  "launcher_sha": "82cafd07bd1240bbe4aa41e1cdabf33d0e9b5a0a",
+  "legacy_fixture_sha256": "05992ce1354cf7b4090eeabf23363e4bb455673c93cfed768814b8ecb1118034",
+  "primary_fixture_sha256": "1cef5f9702d7dc2f4e418e604be69fc084327df57f4fd017129ecf9fcd87e8de",
+  "run_attempt": "1",
+  "run_id": "36047923524",
+  "schema": "theseus.typed-decision-benchmark-readback.v1",
+  "scientific_acceptance_performed": false
+}
