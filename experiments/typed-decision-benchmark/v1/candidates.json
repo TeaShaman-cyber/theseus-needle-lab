@@ -1,0 +1,82 @@
+{
+  "candidates": {
+    "heuristic_v1": {
+      "adapter_semantics": "DIRECT_CLASS_ENUM",
+      "execution_scope": "LOCAL_REPRODUCIBLE",
+      "kind": "DETERMINISTIC_BASELINE",
+      "no_call_encoding": "EXPLICIT_CLASS",
+      "note": "Must be frozen before quality runs; it is a baseline, not an oracle.",
+      "status": "IMPLEMENTATION_REQUIRED"
+    },
+    "jev_system_one": {
+      "adapter_revision": "e1d4cc938204b22fc5a3c3aca7044072fe3f712d",
+      "adapter_semantics": "TYPED_PROVIDER_CHOICE",
+      "execution_scope": "EXTERNAL_PROVIDER",
+      "kind": "EXTERNAL_TYPED_PROVIDER",
+      "no_call_encoding": "EXPLICIT_CLASS",
+      "note": "Run only after a current authorized provider path is verified.",
+      "status": "ACCESS_REQUIRED"
+    },
+    "kev_0_8b": {
+      "adapter_revision": "54f4f8777356cd5bbbb6c6919c657f26e6f2f6d8",
+      "adapter_semantics": "FOUR_CHOICE_SCORE",
+      "base_revision": "dc7cdfe2ee4154fa7e30f5b51ca41bfa40174e68",
+      "code_revision": "7405b72e73e2d24787f3720d162a21c974ff2ad2",
+      "execution_scope": "LOCAL_REPRODUCIBLE",
+      "kind": "OPEN_TYPED_REFERENCE",
+      "no_call_encoding": "EXPLICIT_CLASS",
+      "runtime_classification": "PACKAGE_NOT_JUSTIFIED",
+      "status": "RUNTIME_VERIFIED"
+    },
+    "nanojev": {
+      "code_revision": "76fdfc9ecdca45a9bcef17991a07d3041a87685a",
+      "execution_scope": "LOCAL_REPRODUCIBLE",
+      "kind": "OPEN_TYPED_REFERENCE",
+      "reason": "Canonical inference path requires CUDA; no standard-CPU result may be fabricated.",
+      "status": "BLOCKED_STANDARD_CPU"
+    },
+    "needle3_base_v304": {
+      "adapter_semantics": "TOOL_CALL_OR_NO_CALL",
+      "execution_scope": "LOCAL_REPRODUCIBLE",
+      "kind": "NEEDLE_BASE",
+      "no_call_encoding": "NO_TOOL_CALL",
+      "runtime": {
+        "base_checkpoint_sha256": "c234c70dccc7a9115e7c41ac2e41d3655fea3b85c245dd898b46179fb90c6c0c",
+        "package": "cactus-needle",
+        "package_version": "3.0.4",
+        "release_tag_commit": "49f6759ae70ac24c479baf70f966fc9c787bf9ac",
+        "source_commit": "f189b23ebf34b98bcc8f9ee819249425c6623a32",
+        "source_repository": "cactus-compute/needle",
+        "wheel_sha256": "0825b85dc7ebd7dfff98caaacc2baa6e805c3560d0646470b46bd93743056b26"
+      },
+      "status": "RUNTIME_IDENTITY_VERIFIED"
+    },
+    "needle_tuned_existing": {
+      "adapter_semantics": "TOOL_CALL_OR_NO_CALL",
+      "execution_scope": "LOCAL_REPRODUCIBLE",
+      "kind": "NEEDLE_TUNED",
+      "no_call_encoding": "NO_TOOL_CALL",
+      "note": "Select an existing accepted/relevant artifact explicitly before a run; do not cherry-pick by benchmark score.",
+      "status": "ARTIFACT_SELECTION_REQUIRED"
+    },
+    "nimble_open_reference": {
+      "execution_scope": "LOCAL_REPRODUCIBLE",
+      "kind": "OPEN_TYPED_REFERENCE",
+      "note": "No current exact runnable identity is asserted by this manifest; probe before inclusion.",
+      "status": "CURRENTNESS_PROBE_REQUIRED"
+    },
+    "semif_qwen3_0_6b_q8": {
+      "adapter_semantics": "FOUR_CHOICE_SCORE",
+      "code_revision": "1f2dea3e25379f9dfc98cb83c324f00ab5deda37",
+      "execution_scope": "LOCAL_REPRODUCIBLE",
+      "kind": "OPEN_TYPED_REFERENCE",
+      "model_file": "Qwen3-0.6B-Q8_0.gguf",
+      "model_revision": "23749fefcc72300e3a2ad315e1317431b06b590a",
+      "model_sha256": "9465e63a22add5354d9bb4b99e90117043c7124007664907259bd16d043bb031",
+      "no_call_encoding": "EXPLICIT_CLASS",
+      "runtime_classification": "PACKAGE_REQUIRED",
+      "status": "RUNTIME_VERIFIED"
+    }
+  },
+  "schema": "theseus.typed-decision-benchmark-candidates.v1"
+}

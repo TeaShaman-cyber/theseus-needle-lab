@@ -1,0 +1,64 @@
+{
+  "benchmark_id": "theseus-routing-benchmark-v1",
+  "candidate_registry": {
+    "path": "experiments/typed-decision-benchmark/v1/candidates.json",
+    "sha256": "1a123840a973edcc08fa22d250c4adc651053a59fb7d354569302df416cdcde7"
+  },
+  "contract": {
+    "authority": "CANONICAL_SEMANTICS_ONLY_NOT_ACCEPTANCE_AUTHORITY",
+    "path": "contracts/typed-decision/v1.schema.json",
+    "schema_id": "theseus.typed-decision.v1",
+    "sha256": "1e95c3794c5006a6ced877e6de73a958d3b30fc2280353e0682f0f50dfc5939d"
+  },
+  "issue": 56,
+  "legacy_compat_suite": {
+    "path": "experiments/typed-decision-benchmark/v1/legacy-compat-24.jsonl",
+    "role": "CONTINUITY_ONLY_NOT_PRIMARY_SELECTION",
+    "rows": 24,
+    "sha256": "05992ce1354cf7b4090eeabf23363e4bb455673c93cfed768814b8ecb1118034",
+    "source_commit": "b16dbbb06e3bade0d2e12c3322164006981e6097"
+  },
+  "metrics": [
+    "exact_accuracy",
+    "confusion_matrix",
+    "unknown_precision",
+    "unknown_recall",
+    "false_ready_rate",
+    "false_probe_rate",
+    "negative_control_no_call_rate",
+    "contract_error_rate",
+    "escalation_frequency",
+    "latency_ms",
+    "multiclass_brier_when_probabilities_available"
+  ],
+  "prediction_classes": [
+    "PROBE",
+    "READY",
+    "UNKNOWN",
+    "NO_CALL",
+    "ERROR"
+  ],
+  "primary_suite": {
+    "known_fixture_overlap_policy": "NO_VERBATIM_QUERY_OVERLAP_WITH_LEGACY_OR_CURRENT_CANARY",
+    "label_counts": {
+      "NO_CALL": 6,
+      "PROBE": 6,
+      "READY": 6,
+      "UNKNOWN": 6
+    },
+    "path": "experiments/typed-decision-benchmark/v1/primary-24.jsonl",
+    "role": "PRIMARY_QUALITY_COMPARISON",
+    "rows": 24,
+    "sha256": "1cef5f9702d7dc2f4e418e604be69fc084327df57f4fd017129ecf9fcd87e8de"
+  },
+  "run_policy": {
+    "candidate_identity_must_be_exact": true,
+    "external_results_separate": true,
+    "negative_and_inconclusive_results_preserved": true,
+    "provider_serialization_receipt_required": true,
+    "self_reported_confidence_is_authority": false,
+    "stage0_executes_models": false
+  },
+  "schema": "theseus.typed-decision-benchmark-manifest.v1",
+  "task": "EVIDENCE_ROUTING"
+}
