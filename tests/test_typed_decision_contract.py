@@ -58,6 +58,23 @@ class TypedDecisionContractTests(unittest.TestCase):
         confidence = self.schema["properties"]["advisory_confidence"]
         self.assertEqual(len(confidence["oneOf"]), 3)
 
+    def test_schema_rejects_empty_probe_route_target_contractually(self):
+        route_target = self.schema["properties"]["probe"]["oneOf"][1][
+            "properties"
+        ]["route_target"]
+        self.assertEqual(route_target["minLength"], 1)
+
+        value = copy.deepcopy(
+            next(
+                row["expected"]
+                for row in self.fixtures
+                if row["expected"]["decision"] == "PROBE"
+            )
+        )
+        value["probe"]["route_target"] = ""
+        with self.assertRaisesRegex(ValueError, "route_target"):
+            contract.validate_envelope(value)
+
     def test_decision_cannot_use_drift_task(self):
         value = copy.deepcopy(self.fixtures[0]["expected"])
         value["task"] = "DRIFT_SENTINEL"
