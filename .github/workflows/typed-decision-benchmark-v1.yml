@@ -1,0 +1,161 @@
+name: Typed decision benchmark v1
+
+on:
+  workflow_dispatch:
+    inputs:
+      experiment_sha:
+        description: Exact promoted main SHA containing the frozen v1 harness
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: typed-decision-benchmark-v1-${{ inputs.experiment_sha }}
+  cancel-in-progress: false
+
+jobs:
+  gate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      EXPERIMENT_SHA: ${{ inputs.experiment_sha }}
+      LAUNCHER_SHA: ${{ github.workflow_sha }}
+    steps:
+      - name: Verify exact current main
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$EXPERIMENT_SHA" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$LAUNCHER_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$LAUNCHER_SHA" = "$EXPERIMENT_SHA"
+          remote=$(git ls-remote https://github.com/${GITHUB_REPOSITORY}.git refs/heads/main | awk '{print $1}')
+          test "$remote" = "$EXPERIMENT_SHA"
+          echo EXACT_MAIN_GATE_PASS=$remote
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ inputs.experiment_sha }}
+          fetch-depth: 1
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12'
+      - name: Canonical repository QA
+        run: tools/dev/check
+
+  candidate:
+    needs: gate
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - candidate: baseline_constant_unknown
+            python: '3.12'
+          - candidate: needle3_base
+            python: '3.12'
+          - candidate: semif_qwen3_0_6b_q8
+            python: '3.11'
+          - candidate: kev_0_8b
+            python: '3.12'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      EXPERIMENT_SHA: ${{ inputs.experiment_sha }}
+      LAUNCHER_SHA: ${{ github.workflow_sha }}
+      CANDIDATE_ID: ${{ matrix.candidate }}
+      GH_TOKEN: ${{ github.token }}
+      PYTHONUNBUFFERED: '1'
+      JAX_PLATFORM_NAME: cpu
+      XLA_PYTHON_CLIENT_PREALLOCATE: 'false'
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ inputs.experiment_sha }}
+          fetch-depth: 1
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Verify exact revision
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPERIMENT_SHA"
+          test "$LAUNCHER_SHA" = "$EXPERIMENT_SHA"
+      - name: Execute candidate with recovery telemetry
+        shell: bash
+        run: |
+          set -euo pipefail
+          out="_benchmark/$CANDIDATE_ID"
+          tel="_telemetry/$CANDIDATE_ID"
+          mkdir -p "$out" "$tel"
+          python3 scripts/execution_telemetry.py run \
+            --experiment-sha "$EXPERIMENT_SHA" \
+            --launcher-sha "$LAUNCHER_SHA" \
+            --run-id "$GITHUB_RUN_ID" \
+            --run-attempt "$GITHUB_RUN_ATTEMPT" \
+            --stage typed_decision_benchmark_v1 \
+            --unit "$CANDIDATE_ID" \
+            --heartbeat-seconds 300 \
+            --checkpoint "$tel/checkpoint.json" \
+            --heartbeat "$tel/heartbeat.jsonl" \
+            --artifact-root "$out" \
+            -- bash scripts/run_typed_decision_arm.sh "$CANDIDATE_ID" "$out"
+      - name: Upload candidate evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: typed-decision-v1-${{ matrix.candidate }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            _benchmark/${{ matrix.candidate }}/
+            _telemetry/${{ matrix.candidate }}/
+          if-no-files-found: warn
+          retention-days: 30
+          compression-level: 0
+
+  readback:
+    needs: [gate, candidate]
+    if: ${{ always() && needs.gate.result == 'success' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      EXPERIMENT_SHA: ${{ inputs.experiment_sha }}
+      LAUNCHER_SHA: ${{ github.workflow_sha }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ inputs.experiment_sha }}
+          fetch-depth: 1
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12'
+      - name: Download exact run-attempt candidate evidence
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          pattern: typed-decision-v1-*-${{ github.run_id }}-${{ github.run_attempt }}
+          path: _readback
+          merge-multiple: false
+      - name: Validate readback and aggregate bounded evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p _aggregate
+          python3 scripts/readback_typed_decision_benchmark.py \
+            --root _readback \
+            --experiment-sha "$EXPERIMENT_SHA" \
+            --launcher-sha "$LAUNCHER_SHA" \
+            --run-id "$GITHUB_RUN_ID" \
+            --run-attempt "$GITHUB_RUN_ATTEMPT" \
+            --out _aggregate/benchmark-readback.json
+      - name: Upload aggregate readback
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: typed-decision-v1-readback-${{ github.run_id }}-${{ github.run_attempt }}
+          path: _aggregate/
+          if-no-files-found: warn
+          retention-days: 30
+          compression-level: 0

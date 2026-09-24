@@ -1,0 +1,16 @@
+schema=theseus.typed-decision-baseline.constant-unknown.v1
+task=EVIDENCE_ROUTING
+outcome=DECISION
+decision=UNKNOWN
+probe=null
+signal=null
+error=null
+advisory_confidence.kind=UNAVAILABLE
+advisory_confidence.value=null
+advisory_confidence.calibrated=false
+evidence_refs=[]
+currentness_refs=[]
+escalation_reason=INSUFFICIENT_EVIDENCE
+authority_required=false
+extensions={}
+class_probabilities=null

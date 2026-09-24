@@ -15,7 +15,20 @@ for path in \
   experiments/README.md \
   receipts/README.md \
   .github/ISSUE_TEMPLATE/experiment.yml \
-  config/needle-watch.json   docs/typed-decision-contract-v1.md   contracts/typed-decision/v1.schema.json   contracts/typed-decision/legacy-mapping.v1.json   contracts/typed-decision/fixtures.v1.jsonl; do
+  config/needle-watch.json   docs/typed-decision-contract-v1.md   contracts/typed-decision/v1.schema.json   contracts/typed-decision/legacy-mapping.v1.json   contracts/typed-decision/fixtures.v1.jsonl \
+  experiments/typed-decision-benchmark/v1/manifest.json \
+  experiments/typed-decision-benchmark/v1/candidates.json \
+  experiments/typed-decision-benchmark/v1/primary-24.jsonl \
+  experiments/typed-decision-benchmark/v1/legacy-compat-24.jsonl \
+  experiments/typed-decision-benchmark/v1/baseline-constant-unknown.v1.txt \
+  experiments/typed-decision-benchmark/v1/README.md \
+  scripts/typed_decision_benchmark.py \
+  scripts/run_typed_decision_candidate.py \
+  scripts/finalize_typed_decision_semif.py \
+  scripts/prepare_semif_release_runtime.py \
+  scripts/run_typed_decision_arm.sh \
+  scripts/readback_typed_decision_benchmark.py \
+  .github/workflows/typed-decision-benchmark-v1.yml; do
   if [[ ! -s "$path" ]]; then
     printf 'QA_CONTRACT_DRIFT: missing_or_empty=%s\n' "$path" >&2
     exit 2
