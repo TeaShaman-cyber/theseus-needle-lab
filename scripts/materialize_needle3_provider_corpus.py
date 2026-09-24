@@ -86,6 +86,24 @@ def load_sources(
     return result
 
 
+def validate_session_search_runtime(
+    session_search_root: pathlib.Path,
+    frozen_manifest: pathlib.Path,
+    *,
+    observed_head: str | None = None,
+) -> str:
+    manifest = json.loads(frozen_manifest.read_text(encoding="utf-8"))
+    expected = manifest.get("session_search_runtime_sha")
+    if not isinstance(expected, str) or len(expected) != 40:
+        raise RuntimeError("INVALID_SESSION_SEARCH_RUNTIME_SHA")
+    head = observed_head or subprocess.check_output(
+        ["git", "rev-parse", "HEAD"], cwd=session_search_root, text=True
+    ).strip()
+    if head != expected:
+        raise RuntimeError(f"SESSION_SEARCH_RUNTIME_SHA_MISMATCH:expected={expected}:observed={head}")
+    return head
+
+
 def import_session_search(root: pathlib.Path):
     sys.path.insert(0, str(root))
     from session_search.corpus_store import ingest_many, verify_corpus  # type: ignore
@@ -124,6 +142,9 @@ def main() -> int:
             print("MATERIALIZE BLOCKED reason=RUNNER_ACTIVE")
             return 75
 
+        session_search_head = validate_session_search_runtime(
+            args.session_search_root, args.frozen_manifest
+        )
         ingest_many, verify_corpus = import_session_search(args.session_search_root)
         sources = load_sources(args.source_corpus, args.frozen_manifest, args.source_adapter)
         args.tmp_corpus.mkdir(parents=True, exist_ok=True)
@@ -159,9 +180,7 @@ def main() -> int:
             "source_adapter": args.source_adapter,
             "source_artifact_count": len(sources),
             "session_search_root": str(args.session_search_root),
-            "session_search_head": subprocess.check_output(
-                ["git", "rev-parse", "HEAD"], cwd=args.session_search_root, text=True
-            ).strip(),
+            "session_search_head": session_search_head,
             "published_corpus": str(args.publish_corpus),
             "published_corpus_db_sha256": sha256_file(db),
             "verification": published_verify,

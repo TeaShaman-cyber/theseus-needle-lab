@@ -4,7 +4,7 @@ import pathlib
 import tempfile
 import unittest
 
-from scripts.materialize_needle3_provider_corpus import load_sources
+from scripts.materialize_needle3_provider_corpus import load_sources, validate_session_search_runtime
 
 
 def write_artifact(root: pathlib.Path, payload: bytes) -> tuple[str, pathlib.Path]:
@@ -60,6 +60,30 @@ class FrozenSourceSelectionTests(unittest.TestCase):
             selected = load_sources(root, manifest, "chatgpt-export")
 
             self.assertEqual(selected, [frozen_path])
+
+
+    def test_session_search_runtime_must_match_frozen_manifest(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = pathlib.Path(td)
+            runtime = root / "runtime"
+            runtime.mkdir()
+            manifest = root / "frozen.json"
+            manifest.write_text(
+                json.dumps(
+                    {
+                        "schema_version": "theseus.needle3.frozen_provider_artifacts.v1",
+                        "session_search_runtime_sha": "a" * 40,
+                        "providers": {},
+                    }
+                )
+            )
+            with self.assertRaisesRegex(RuntimeError, "SESSION_SEARCH_RUNTIME_SHA_MISMATCH"):
+                validate_session_search_runtime(runtime, manifest, observed_head="b" * 40)
+
+            self.assertEqual(
+                validate_session_search_runtime(runtime, manifest, observed_head="a" * 40),
+                "a" * 40,
+            )
 
     def test_frozen_manifest_missing_or_mismatched_artifact_fails_closed(self):
         with tempfile.TemporaryDirectory() as td:
