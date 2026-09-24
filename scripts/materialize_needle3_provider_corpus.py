@@ -12,8 +12,10 @@ import subprocess
 import sys
 import tempfile
 from datetime import datetime, timezone
+from typing import Callable
 
 SCHEMA = "theseus.needle3.provider_corpus_materialization.v1"
+FROZEN_MANIFEST_SCHEMA = "theseus.needle3.frozen_provider_artifacts.v1"
 
 
 def sha256_file(path: pathlib.Path) -> str:
@@ -32,14 +34,30 @@ def utc_now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+def load_frozen_manifest(path: pathlib.Path) -> tuple[bytes, dict, str]:
+    raw = path.read_bytes()
+    manifest = json.loads(raw.decode("utf-8"))
+    if manifest.get("schema_version") != FROZEN_MANIFEST_SCHEMA:
+        raise RuntimeError("UNSUPPORTED_FROZEN_MANIFEST_SCHEMA")
+    providers = manifest.get("providers")
+    if not isinstance(providers, dict):
+        raise RuntimeError("INVALID_FROZEN_MANIFEST_PROVIDERS")
+    return raw, manifest, hashlib.sha256(raw).hexdigest()
+
+
+def _manifest_data(value: pathlib.Path | dict) -> dict:
+    if isinstance(value, pathlib.Path):
+        _, manifest, _ = load_frozen_manifest(value)
+        return manifest
+    return value
+
+
 def load_sources(
     source_corpus: pathlib.Path,
-    frozen_manifest: pathlib.Path,
+    frozen_manifest: pathlib.Path | dict,
     adapter: str,
 ) -> list[pathlib.Path]:
-    manifest = json.loads(frozen_manifest.read_text(encoding="utf-8"))
-    if manifest.get("schema_version") != "theseus.needle3.frozen_provider_artifacts.v1":
-        raise RuntimeError("UNSUPPORTED_FROZEN_MANIFEST_SCHEMA")
+    manifest = _manifest_data(frozen_manifest)
     providers = manifest.get("providers")
     if not isinstance(providers, dict):
         raise RuntimeError("INVALID_FROZEN_MANIFEST_PROVIDERS")
@@ -68,7 +86,7 @@ def load_sources(
         size_bytes = item.get("size_bytes")
         if not isinstance(sha, str) or len(sha) != 64:
             raise RuntimeError("INVALID_FROZEN_ARTIFACT_SHA")
-        if not isinstance(size_bytes, int) or size_bytes < 0:
+        if not isinstance(size_bytes, int) or isinstance(size_bytes, bool) or size_bytes < 0:
             raise RuntimeError("INVALID_FROZEN_ARTIFACT_SIZE")
         artifact = artifacts_root / f"{sha}.zip"
         if not artifact.is_file():
@@ -88,11 +106,11 @@ def load_sources(
 
 def validate_session_search_runtime(
     session_search_root: pathlib.Path,
-    frozen_manifest: pathlib.Path,
+    frozen_manifest: pathlib.Path | dict,
     *,
     observed_head: str | None = None,
 ) -> str:
-    manifest = json.loads(frozen_manifest.read_text(encoding="utf-8"))
+    manifest = _manifest_data(frozen_manifest)
     expected = manifest.get("session_search_runtime_sha")
     if not isinstance(expected, str) or len(expected) != 40:
         raise RuntimeError("INVALID_SESSION_SEARCH_RUNTIME_SHA")
@@ -110,16 +128,46 @@ def import_session_search(root: pathlib.Path):
     return ingest_many, verify_corpus
 
 
-def atomic_publish(source: pathlib.Path, destination: pathlib.Path) -> None:
+def validate_materialization_paths(tmp_corpus: pathlib.Path, publish_corpus: pathlib.Path) -> None:
+    tmp = tmp_corpus.resolve(strict=False)
+    publish = publish_corpus.resolve(strict=False)
+    if tmp == publish or tmp in publish.parents or publish in tmp.parents:
+        raise RuntimeError("TMP_PUBLISH_PATH_OVERLAP")
+
+
+def prepare_tmp_corpus(path: pathlib.Path) -> None:
+    if path.exists():
+        raise RuntimeError("TMP_CORPUS_PREEXISTS")
+    path.mkdir(parents=True, exist_ok=False)
+
+
+def atomic_publish(
+    source: pathlib.Path,
+    destination: pathlib.Path,
+    verify_corpus: Callable[[pathlib.Path], dict],
+) -> dict:
     destination.parent.mkdir(parents=True, exist_ok=True)
     staging = pathlib.Path(tempfile.mkdtemp(prefix=f".{destination.name}.publish-", dir=destination.parent))
     staged = staging / destination.name
+    installed = False
     try:
         shutil.copytree(source, staged, symlinks=False)
+        staged_verify = verify_corpus(staged)
+        if staged_verify.get("status") != "VERIFIED":
+            raise RuntimeError("STAGED_CORPUS_VERIFY_FAILED")
         if destination.exists():
             raise RuntimeError("PUBLISH_DESTINATION_EXISTS")
         os.replace(staged, destination)
+        installed = True
+        published_verify = verify_corpus(destination)
+        if published_verify.get("status") != "VERIFIED":
+            shutil.rmtree(destination, ignore_errors=True)
+            installed = False
+            raise RuntimeError("PUBLISHED_CORPUS_VERIFY_FAILED")
+        return published_verify
     finally:
+        if installed and staged.exists():
+            shutil.rmtree(staged, ignore_errors=True)
         shutil.rmtree(staging, ignore_errors=True)
 
 
@@ -133,6 +181,10 @@ def main() -> int:
     p.add_argument("--frozen-manifest", required=True, type=pathlib.Path)
     args = p.parse_args()
 
+    validate_materialization_paths(args.tmp_corpus, args.publish_corpus)
+    manifest_bytes, manifest, manifest_sha256 = load_frozen_manifest(args.frozen_manifest)
+    del manifest_bytes  # digest and parsed value remain bound to the same single read
+
     lock_path = args.publish_corpus.parent / f".{args.publish_corpus.name}.runner.lock"
     lock_path.parent.mkdir(parents=True, exist_ok=True)
     with lock_path.open("a+b") as lock_file:
@@ -143,16 +195,11 @@ def main() -> int:
             return 75
 
         session_search_head = validate_session_search_runtime(
-            args.session_search_root, args.frozen_manifest
+            args.session_search_root, manifest
         )
         ingest_many, verify_corpus = import_session_search(args.session_search_root)
-        sources = load_sources(args.source_corpus, args.frozen_manifest, args.source_adapter)
-        args.tmp_corpus.mkdir(parents=True, exist_ok=True)
-
-        mutation_lock = args.tmp_corpus / "mutation.lock"
-        if mutation_lock.exists():
-            print("MATERIALIZE BLOCKED reason=TMP_CORPUS_MUTATION_ACTIVE")
-            return 75
+        sources = load_sources(args.source_corpus, manifest, args.source_adapter)
+        prepare_tmp_corpus(args.tmp_corpus)
 
         result = ingest_many(sources, args.tmp_corpus)
         if result.get("status") != "COMPLETE":
@@ -168,10 +215,7 @@ def main() -> int:
             print("MATERIALIZE BLOCKED reason=PUBLISH_DESTINATION_EXISTS")
             return 75
 
-        atomic_publish(args.tmp_corpus, args.publish_corpus)
-        published_verify = verify_corpus(args.publish_corpus)
-        if published_verify.get("status") != "VERIFIED":
-            raise RuntimeError("PUBLISHED_CORPUS_VERIFY_FAILED")
+        published_verify = atomic_publish(args.tmp_corpus, args.publish_corpus, verify_corpus)
 
         db = args.publish_corpus / "corpus.sqlite3"
         receipt = {
@@ -184,8 +228,8 @@ def main() -> int:
             "published_corpus": str(args.publish_corpus),
             "published_corpus_db_sha256": sha256_file(db),
             "verification": published_verify,
+            "frozen_manifest_sha256": manifest_sha256,
         }
-        receipt["frozen_manifest_sha256"] = sha256_file(args.frozen_manifest)
         receipt_path = args.publish_corpus.parent / f"{args.publish_corpus.name}.receipt.json"
         tmp_receipt = receipt_path.with_suffix(receipt_path.suffix + ".tmp")
         tmp_receipt.write_bytes(stable_json(receipt) + b"\n")
