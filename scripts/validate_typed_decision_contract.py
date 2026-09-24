@@ -152,6 +152,8 @@ def validate_envelope(value: Any) -> None:
     escalation = value["escalation_reason"]
 
     if outcome == "DECISION":
+        if value["task"] != "EVIDENCE_ROUTING":
+            fail("DECISION is reserved for evidence routing")
         if decision not in DECISIONS or signal is not None or error is not None:
             fail("DECISION envelope invalid")
         if decision == "PROBE":

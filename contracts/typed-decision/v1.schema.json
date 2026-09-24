@@ -2,9 +2,245 @@
   "$id": "https://github.com/TeaShaman-cyber/theseus-needle-lab/contracts/typed-decision/v1.schema.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
+  "oneOf": [
+    {
+      "properties": {
+        "decision": {
+          "const": "PROBE"
+        },
+        "error": {
+          "type": "null"
+        },
+        "escalation_reason": {
+          "enum": [
+            "CURRENTNESS_REQUIRED",
+            "CONFLICTING_EVIDENCE",
+            "INSUFFICIENT_EVIDENCE",
+            "LEGACY_UNSPECIFIED"
+          ]
+        },
+        "outcome": {
+          "const": "DECISION"
+        },
+        "probe": {
+          "type": "object"
+        },
+        "signal": {
+          "type": "null"
+        },
+        "task": {
+          "const": "EVIDENCE_ROUTING"
+        }
+      },
+      "title": "routing probe"
+    },
+    {
+      "properties": {
+        "decision": {
+          "const": "READY"
+        },
+        "error": {
+          "type": "null"
+        },
+        "escalation_reason": {
+          "const": "NONE"
+        },
+        "outcome": {
+          "const": "DECISION"
+        },
+        "probe": {
+          "type": "null"
+        },
+        "signal": {
+          "type": "null"
+        },
+        "task": {
+          "const": "EVIDENCE_ROUTING"
+        }
+      },
+      "title": "routing ready"
+    },
+    {
+      "properties": {
+        "decision": {
+          "const": "UNKNOWN"
+        },
+        "error": {
+          "type": "null"
+        },
+        "escalation_reason": {
+          "enum": [
+            "CONFLICTING_EVIDENCE",
+            "INSUFFICIENT_EVIDENCE",
+            "NO_SAFE_PROBE",
+            "LEGACY_UNSPECIFIED"
+          ]
+        },
+        "outcome": {
+          "const": "DECISION"
+        },
+        "probe": {
+          "type": "null"
+        },
+        "signal": {
+          "type": "null"
+        },
+        "task": {
+          "const": "EVIDENCE_ROUTING"
+        }
+      },
+      "title": "routing unknown"
+    },
+    {
+      "properties": {
+        "decision": {
+          "type": "null"
+        },
+        "error": {
+          "type": "null"
+        },
+        "escalation_reason": {
+          "const": "OUT_OF_SCOPE"
+        },
+        "outcome": {
+          "const": "NO_CALL"
+        },
+        "probe": {
+          "type": "null"
+        },
+        "signal": {
+          "type": "null"
+        },
+        "task": {
+          "const": "EVIDENCE_ROUTING"
+        }
+      },
+      "title": "routing no call"
+    },
+    {
+      "properties": {
+        "decision": {
+          "type": "null"
+        },
+        "error": {
+          "type": "null"
+        },
+        "escalation_reason": {
+          "const": "DRIFT_SIGNAL"
+        },
+        "outcome": {
+          "const": "SIGNAL"
+        },
+        "probe": {
+          "type": "null"
+        },
+        "signal": {
+          "type": "object"
+        },
+        "task": {
+          "const": "DRIFT_SENTINEL"
+        }
+      },
+      "title": "drift signal"
+    },
+    {
+      "properties": {
+        "decision": {
+          "type": "null"
+        },
+        "error": {
+          "type": "null"
+        },
+        "escalation_reason": {
+          "const": "NONE"
+        },
+        "outcome": {
+          "const": "NO_SIGNAL"
+        },
+        "probe": {
+          "type": "null"
+        },
+        "signal": {
+          "type": "null"
+        },
+        "task": {
+          "const": "DRIFT_SENTINEL"
+        }
+      },
+      "title": "drift no signal"
+    },
+    {
+      "properties": {
+        "decision": {
+          "type": "null"
+        },
+        "error": {
+          "type": "object"
+        },
+        "escalation_reason": {
+          "const": "ERROR"
+        },
+        "outcome": {
+          "const": "ERROR"
+        },
+        "probe": {
+          "type": "null"
+        },
+        "signal": {
+          "type": "null"
+        }
+      },
+      "title": "error envelope"
+    }
+  ],
   "properties": {
     "advisory_confidence": {
       "additionalProperties": false,
+      "oneOf": [
+        {
+          "properties": {
+            "calibrated": {
+              "const": false
+            },
+            "kind": {
+              "const": "UNAVAILABLE"
+            },
+            "value": {
+              "type": "null"
+            }
+          }
+        },
+        {
+          "properties": {
+            "calibrated": {
+              "const": false
+            },
+            "kind": {
+              "const": "MODEL_REPORTED"
+            },
+            "value": {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            }
+          }
+        },
+        {
+          "properties": {
+            "calibrated": {
+              "const": true
+            },
+            "kind": {
+              "const": "CALIBRATED_POSTHOC"
+            },
+            "value": {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            }
+          }
+        }
+      ],
       "properties": {
         "calibrated": {
           "type": "boolean"

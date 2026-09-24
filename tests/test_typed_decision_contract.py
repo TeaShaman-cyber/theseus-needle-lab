@@ -38,6 +38,32 @@ class TypedDecisionContractTests(unittest.TestCase):
             {"PROBE", "READY", "UNKNOWN", None},
         )
 
+    def test_json_schema_encodes_semantic_branches(self):
+        self.assertEqual(len(self.schema["oneOf"]), 7)
+        self.assertEqual(
+            {
+                branch["title"]
+                for branch in self.schema["oneOf"]
+            },
+            {
+                "routing probe",
+                "routing ready",
+                "routing unknown",
+                "routing no call",
+                "drift signal",
+                "drift no signal",
+                "error envelope",
+            },
+        )
+        confidence = self.schema["properties"]["advisory_confidence"]
+        self.assertEqual(len(confidence["oneOf"]), 3)
+
+    def test_decision_cannot_use_drift_task(self):
+        value = copy.deepcopy(self.fixtures[0]["expected"])
+        value["task"] = "DRIFT_SENTINEL"
+        with self.assertRaisesRegex(ValueError, "reserved for evidence routing"):
+            contract.validate_envelope(value)
+
     def test_all_fixtures_validate(self):
         for row in self.fixtures:
             with self.subTest(case_id=row["case_id"]):
