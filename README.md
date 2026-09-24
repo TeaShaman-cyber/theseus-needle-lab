@@ -13,6 +13,10 @@ Its purpose is to make Needle learning experiments observable, reproducible, and
 - Public visibility is for research transparency. In the absence of an explicit license, public visibility does not grant open-source reuse rights.
 - Real Needle training CI is intentionally not implemented during bootstrap. The first research issue must establish the actual executable Needle interface and runtime requirements before a training workflow is proposed.
 
+## Agent contract
+
+Agentic workers must follow the versioned repository-local contract in [AGENTS.md](AGENTS.md). It is a checked operational projection of the canonical research methodology and does not replace the authority boundaries defined in the architecture and lifecycle documents.
+
 ## Research flow
 
 `Issue/spec -> work -> QA -> execution -> artifact provenance -> model/domain witness -> review -> acceptance gate -> promotion/readback or direct disposition`

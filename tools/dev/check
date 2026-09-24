@@ -8,6 +8,7 @@ export PYTHONPATH="$ROOT${PYTHONPATH:+:$PYTHONPATH}"
 printf '%s\n' '== required repository contract =='
 for path in \
   README.md \
+  AGENTS.md \
   docs/architecture.md \
   docs/experiment-lifecycle.md \
   docs/cookbook/README.md \
