@@ -1,0 +1,392 @@
+import json
+import pathlib, sqlite3, tempfile, unittest
+from unittest import mock
+from scripts.inventory_needle3_multiprovider_corpus import SourceSpec, build_inventory, source_inventory
+
+def make_db(path, adapter, with_tool, branch=False):
+    conn=sqlite3.connect(path)
+    conn.executescript("""
+    create table corpus_meta(key text primary key,value text not null);
+    create table sessions(session_id text primary key,title text not null,coverage_state text not null,coverage_reason text not null,first_message_time real,last_message_time real,first_accepted_at text,last_accepted_at text,title_source_time real,title_source_artifact_sha256 text);
+    create table artifacts(artifact_id integer primary key,sha256 text not null unique,size_bytes integer not null,source_schema text not null,source_adapter text not null,original_filename text,observed_title text not null,accepted_at text not null,coverage_state text not null,session_id text not null,ledger_sha256 text not null,observed_min_time real,observed_max_time real,observed_message_count integer not null);
+    create table payload_pages(page_id integer primary key,artifact_id integer not null,session_id text not null,capture_sequence integer not null,member_name text not null,start_cursor text,end_cursor text,has_previous_page integer not null,has_next_page integer not null,message_count integer not null,min_create_time real,max_create_time real);
+    create table messages(row_id integer primary key,session_id text not null,ordinal integer not null,message_id text,local_identity text not null,canonical_message_sha256 text not null,role text not null,content_type text not null,search_class text not null,create_time real,text text not null,provider_order integer);
+    create table message_sources(message_row_id integer not null,page_id integer not null,page_position integer not null,source_message_id text,source_object_sha256 text not null,primary key(message_row_id,page_id,page_position));
+    """)
+    conn.execute("insert into corpus_meta values('schema_version','session-search-corpus-v1')")
+    sid="s1~branch-a" if branch else "s1"
+    conn.execute("insert into sessions(session_id,title,coverage_state,coverage_reason) values(?,?,?,?)",(sid,"fixture","COMPLETE_EXPOSED_CONVERSATION","fixture"))
+    n=4 if with_tool else 3
+    conn.execute("insert into artifacts(artifact_id,sha256,size_bytes,source_schema,source_adapter,original_filename,observed_title,accepted_at,coverage_state,session_id,ledger_sha256,observed_message_count) values(1,?,?,?,?,?,?,?,?,?,?,?)",("a"*64,1,"fixture",adapter,"fixture.zip","fixture","2026-09-23T00:00:00Z","COMPLETE_EXPOSED_CONVERSATION",sid,"b"*64,n))
+    conn.execute("insert into payload_pages(page_id,artifact_id,session_id,capture_sequence,member_name,has_previous_page,has_next_page,message_count) values(1,1,?,0,'page',0,0,?)",(sid,n))
+    rows=[
+      (1,sid,0,"m1","l1","1"*64,"user","text","dialogue","ask"),
+      (2,sid,1,"m2","l2","2"*64,"assistant","thoughts","hidden","secret"),
+      (3,sid,2,"m3","l3","3"*64,"assistant","text","dialogue","answer")]
+    if with_tool:
+        rows.append((4,sid,3,"m4","l4","4"*64,"tool","execution_output","evidence","result"))
+    conn.executemany("insert into messages(row_id,session_id,ordinal,message_id,local_identity,canonical_message_sha256,role,content_type,search_class,text) values(?,?,?,?,?,?,?,?,?,?)",rows)
+    for pos,row in enumerate(rows):
+        conn.execute("insert into message_sources values(?,?,?,?,?)",(row[0],1,pos,row[3],f"src-{row[0]}"))
+    conn.commit(); conn.close()
+
+class Tests(unittest.TestCase):
+    def test_observable_episode_and_hidden_boundary(self):
+        with tempfile.TemporaryDirectory() as td:
+            p=pathlib.Path(td)/"a.sqlite3"
+            make_db(p,"chatgpt-export",True,True)
+            r,_,_=source_inventory(SourceSpec("chatgpt",p,"chatgpt-export"))
+            self.assertEqual(r["messages"]["selected"],4)
+            self.assertEqual(r["messages"]["hidden_excluded_from_projection"],1)
+            self.assertEqual(r["candidate_episodes"]["eligible_user_turn_episodes"],1)
+            self.assertEqual(r["candidate_episodes"]["episodes_with_observed_tool_evidence"],1)
+            self.assertEqual(r["sessions"]["branch_session_ids"],1)
+            self.assertEqual(r["candidate_episodes"]["tool_observability"],"EXPOSED")
+
+    def test_no_tool_evidence_does_not_become_no_call(self):
+        with tempfile.TemporaryDirectory() as td:
+            td=pathlib.Path(td)
+            a=td/"a.sqlite3"; b=td/"b.sqlite3"
+            make_db(a,"chatgpt-export",False)
+            make_db(b,"xai-export",False)
+            held=td/"held.jsonl"; held.write_text('{"case_id":"x"}\n')
+            inv=build_inventory([SourceSpec("chatgpt",a,"chatgpt-export"),SourceSpec("xai",b,"xai-export")],[held])
+            self.assertEqual(inv["decision_label_inventory"]["state"],"NOT_ADJUDICATED")
+            self.assertIsNone(inv["decision_label_inventory"]["NO_CALL"])
+            self.assertFalse(inv["projection_policy"]["no_observed_tool_evidence_means_no_call"])
+            self.assertFalse(inv["next_gate"]["training_authorized"])
+            self.assertEqual(inv["candidate_pool"]["raw_eligible_user_turn_episode_instances_across_sources"],2)
+            self.assertEqual(inv["candidate_pool"]["deduplicated_eligible_user_turn_episodes_across_sources"],2)
+            self.assertEqual(inv["candidate_pool"]["duplicate_episode_instances_within_provider_across_sources"],0)
+
+    def test_adapter_filter_fails_closed(self):
+        with tempfile.TemporaryDirectory() as td:
+            p=pathlib.Path(td)/"a.sqlite3"
+            make_db(p,"deepseek-export",False)
+            with self.assertRaisesRegex(ValueError,"selected zero messages"):
+                source_inventory(SourceSpec("chatgpt",p,"chatgpt-export"))
+
+    def test_unsupported_corpus_schema_fails_closed(self):
+        with tempfile.TemporaryDirectory() as td:
+            p=pathlib.Path(td)/"a.sqlite3"
+            make_db(p,"chatgpt-export",False)
+            conn=sqlite3.connect(p)
+            try:
+                conn.execute("update corpus_meta set value='session-search-corpus-v2' where key='schema_version'")
+                conn.commit()
+            finally:
+                conn.close()
+            with self.assertRaisesRegex(ValueError,"unsupported corpus schema_version"):
+                source_inventory(SourceSpec("chatgpt",p,"chatgpt-export"))
+
+    def test_duplicate_database_adapter_slice_fails_closed(self):
+        with tempfile.TemporaryDirectory() as td:
+            td=pathlib.Path(td)
+            db=td/"shared.sqlite3"
+            alias=td/"alias.sqlite3"
+            make_db(db,"chatgpt-export",False)
+            alias.symlink_to(db)
+            sources=[
+                SourceSpec("chatgpt",db,"chatgpt-export"),
+                SourceSpec("other-name",alias,"chatgpt-export"),
+            ]
+            with self.assertRaisesRegex(ValueError,"duplicate source database slice"):
+                build_inventory(sources,[])
+
+    def test_missing_source_adapter_fails_closed(self):
+        with tempfile.TemporaryDirectory() as td:
+            td=pathlib.Path(td)
+            a=td/"a.sqlite3"
+            b=td/"b.sqlite3"
+            make_db(a,"chatgpt-export",False)
+            make_db(b,"xai-export",False)
+            sources=[
+                SourceSpec("chatgpt",a,None),
+                SourceSpec("xai",b,"xai-export"),
+            ]
+            with self.assertRaisesRegex(ValueError,"missing explicit source adapter for chatgpt"):
+                build_inventory(sources,[])
+
+    def test_missing_heldout_binding_fails_closed(self):
+        with tempfile.TemporaryDirectory() as td:
+            td=pathlib.Path(td)
+            a=td/"a.sqlite3"; b=td/"b.sqlite3"
+            make_db(a,"chatgpt-export",False); make_db(b,"xai-export",False)
+            sources=[
+                SourceSpec("chatgpt",a,"chatgpt-export"),
+                SourceSpec("xai",b,"xai-export"),
+            ]
+            with self.assertRaisesRegex(ValueError,"at least one heldout binding is required"):
+                build_inventory(sources,[])
+
+if __name__=="__main__":
+    unittest.main()
+
+
+class BindingAndContractGuardTests(unittest.TestCase):
+    def test_absolute_heldout_path_is_not_serialized(self):
+        with tempfile.TemporaryDirectory() as td:
+            td=pathlib.Path(td)
+            a=td/"a.sqlite3"; b=td/"b.sqlite3"
+            make_db(a,"chatgpt-export",False); make_db(b,"xai-export",False)
+            held=td/"private-heldout.jsonl"; held.write_text('{"case_id":"x"}\n')
+            inv=build_inventory([
+                SourceSpec("chatgpt",a,"chatgpt-export"),
+                SourceSpec("xai",b,"xai-export"),
+            ],[held.resolve()])
+            binding=inv["leakage_boundary"]["bound_heldout_files"][0]
+            self.assertEqual(binding["path"],"private-heldout.jsonl")
+            self.assertFalse(pathlib.Path(binding["path"]).is_absolute())
+
+    def test_selection_contract_semantics_fail_closed(self):
+        from scripts.inventory_needle3_multiprovider_corpus import validate_selection_contract
+        root=pathlib.Path(__file__).resolve().parents[1]
+        contract=json.loads((root/"experiments/needle3-multiprovider-corpus/v1/candidate-selection-contract.json").read_text())
+        contract["deterministic_sampling"]["method"]="future_method"
+        with self.assertRaisesRegex(ValueError,"unsupported shortlist selection method"):
+            validate_selection_contract(contract)
+
+    def test_binding_mismatch_does_not_replace_existing_inventory(self):
+        from scripts.inventory_needle3_multiprovider_corpus import main
+        with tempfile.TemporaryDirectory() as td:
+            td=pathlib.Path(td)
+            a=td/"a.sqlite3"; b=td/"b.sqlite3"
+            make_db(a,"chatgpt-export",False); make_db(b,"xai-export",False)
+            output=td/"inventory.json"; output.write_text("sentinel\n")
+            shortlist=td/"shortlist.jsonl"
+            heldout=td/"heldout.jsonl"; heldout.write_text('{"case_id":"heldout"}\n')
+            contract={
+                "schema_version":"theseus.needle3.multiprovider_candidate_selection.v1",
+                "deterministic_sampling":{
+                    "method":"sha256_rank",
+                    "rank_input":"provider + session_id + episode_signature + contract_salt",
+                    "contract_salt":"fixture-salt",
+                },
+                "deduplication":{
+                    "cross_provider_exact_episode_signature":"KEEP_PROVIDER_DISTINCT",
+                    "exact_episode_signature":"KEEP_ONE_PER_PROVIDER",
+                    "representative_tiebreak":"LEXICOGRAPHIC_MIN_SESSION_ID_THEN_START_ORDINAL_THEN_END_ORDINAL",
+                    "semantic_near_duplicate_screening":"REQUIRED_AFTER_SHORTLIST_BEFORE_SPLIT",
+                },
+                "inventory_binding":{"sha256":"0"*64},
+                "provider_quotas":{"chatgpt":1,"xai":1},
+            }
+            contract_path=td/"contract.json"; contract_path.write_text(json.dumps(contract))
+            argv=[
+                "inventory",
+                "--source",f"chatgpt={a}","--source",f"xai={b}",
+                "--source-adapter","chatgpt=chatgpt-export","--source-adapter","xai=xai-export",
+                "--heldout-file",str(heldout),
+                "--output",str(output),"--shortlist-contract",str(contract_path),"--shortlist-output",str(shortlist),
+            ]
+            with mock.patch("sys.argv",argv):
+                with self.assertRaisesRegex(ValueError,"inventory binding mismatch"):
+                    main()
+            self.assertEqual(output.read_text(),"sentinel\n")
+            self.assertFalse(shortlist.exists())
+
+class CandidateSelectionContractTests(unittest.TestCase):
+    def test_candidate_selection_contract_is_balanced_metadata_only_and_non_authoritative(self):
+        root = pathlib.Path(__file__).resolve().parents[1]
+        contract = json.loads(
+            (root / "experiments/needle3-multiprovider-corpus/v1/candidate-selection-contract.json").read_text()
+        )
+        inventory = root / contract["inventory_binding"]["path"]
+        import hashlib
+        observed = hashlib.sha256(inventory.read_bytes()).hexdigest()
+        self.assertEqual(observed, contract["inventory_binding"]["sha256"])
+        self.assertEqual(contract["provider_quotas"], {
+            "chatgpt": 300,
+            "deepseek": 300,
+            "xai": 300,
+        })
+        self.assertEqual(
+            contract["deduplication"]["representative_tiebreak"],
+            "LEXICOGRAPHIC_MIN_SESSION_ID_THEN_START_ORDINAL_THEN_END_ORDINAL",
+        )
+        self.assertEqual(contract["labels"]["state"], "NOT_ADJUDICATED")
+        self.assertFalse(contract["labels"]["historical_provider_action_is_ground_truth"])
+        self.assertEqual(contract["privacy"]["shortlist_output"], "METADATA_ONLY_NO_RAW_TEXT")
+        self.assertFalse(contract["next_gate"]["training_authorized"])
+        self.assertEqual(
+            contract["source_lifecycle"]["session_search_role"],
+            "ONE_SHOT_EXPORT_SOURCE",
+        )
+        self.assertFalse(
+            contract["source_lifecycle"]["live_session_search_runtime_required_after_materialization"]
+        )
+        self.assertEqual(
+            contract["source_lifecycle"]["post_materialization_authority"],
+            "FROZEN_SHORTLIST_AND_BOUND_MANIFEST",
+        )
+        manifest_path = root / contract["source_manifest_binding"]["path"]
+        manifest_bytes = manifest_path.read_bytes()
+        self.assertEqual(
+            hashlib.sha256(manifest_bytes).hexdigest(),
+            contract["source_manifest_binding"]["sha256"],
+        )
+        manifest = json.loads(manifest_bytes)
+        self.assertEqual(manifest["schema_version"], "theseus.needle3.frozen_provider_artifacts.v1")
+        self.assertEqual(manifest["session_search_runtime_sha"], "36610de432f41fb46fe50354f909abc925fd7d0c")
+        self.assertEqual(
+            {name: data["artifact_count"] for name, data in manifest["providers"].items()},
+            {"chatgpt":303,"deepseek":43,"xai":60},
+        )
+        self.assertNotIn("/workspace/", manifest_bytes.decode("utf-8"))
+
+
+class DuplicateRepresentativeTests(unittest.TestCase):
+    def test_duplicate_signature_uses_lexicographic_representative(self):
+        from scripts.inventory_needle3_multiprovider_corpus import episode_records
+        def row(session_id,ordinal,role,digest):
+            return {
+                "session_id":session_id,
+                "ordinal":ordinal,
+                "role":role,
+                "content_type":"text",
+                "search_class":"dialogue",
+                "canonical_message_sha256":digest,
+            }
+        rows=[
+            row("z-session",0,"user","1"*64),
+            row("z-session",1,"assistant","2"*64),
+            row("a-session",0,"user","1"*64),
+            row("a-session",1,"assistant","2"*64),
+        ]
+        records=episode_records(rows,"chatgpt","fixture-salt")
+        self.assertEqual(len(records),1)
+        self.assertEqual(records[0]["session_id"],"a-session")
+        self.assertEqual(records[0]["episode_start_ordinal"],0)
+
+
+class ShortlistMaterializationTests(unittest.TestCase):
+    def test_materialized_shortlist_is_deterministic_metadata_only_and_balanced(self):
+        from scripts.inventory_needle3_multiprovider_corpus import SourceSpec, materialize_shortlist
+        with tempfile.TemporaryDirectory() as td:
+            td=pathlib.Path(td)
+            sources=[]
+            for provider,adapter,tool in (
+                ("chatgpt","chatgpt-export",False),
+                ("deepseek","deepseek-export",True),
+                ("xai","xai-export",False),
+            ):
+                path=td/f"{provider}.sqlite3"
+                make_db(path,adapter,tool)
+                sources.append(SourceSpec(provider,path,adapter))
+            heldout=td/"heldout.jsonl"
+            heldout.write_text('{"case_id":"heldout"}\n')
+            inventory=build_inventory(sources,[heldout])
+            bound={source["provider"]:source["database"]["sha256"] for source in inventory["sources"]}
+            rows,counts=materialize_shortlist(
+                sources,
+                {"chatgpt":1,"deepseek":1,"xai":1},
+                "fixture-salt",
+                bound,
+            )
+            self.assertEqual(counts,{"chatgpt":1,"deepseek":1,"xai":1})
+            self.assertEqual(len(rows),3)
+            self.assertTrue(all(row["decision_label"] is None for row in rows))
+            self.assertTrue(all(row["label_state"]=="NOT_ADJUDICATED" for row in rows))
+            forbidden={"text","query","answer","content"}
+            self.assertTrue(all(not (forbidden & set(row)) for row in rows))
+            rows2,counts2=materialize_shortlist(
+                sources,
+                {"chatgpt":1,"deepseek":1,"xai":1},
+                "fixture-salt",
+                bound,
+            )
+            self.assertEqual(rows,rows2)
+            self.assertEqual(counts,counts2)
+
+    def test_materialization_rejects_source_drift_after_inventory(self):
+        from scripts.inventory_needle3_multiprovider_corpus import SourceSpec, materialize_shortlist
+        with tempfile.TemporaryDirectory() as td:
+            td=pathlib.Path(td)
+            sources=[]
+            for provider,adapter in (("chatgpt","chatgpt-export"),("deepseek","deepseek-export"),("xai","xai-export")):
+                path=td/f"{provider}.sqlite3"
+                make_db(path,adapter,False)
+                sources.append(SourceSpec(provider,path,adapter))
+            heldout=td/"heldout.jsonl"
+            heldout.write_text('{"case_id":"heldout"}\n')
+            inventory=build_inventory(sources,[heldout])
+            bound={source["provider"]:source["database"]["sha256"] for source in inventory["sources"]}
+            conn=sqlite3.connect(sources[0].path)
+            try:
+                conn.execute("insert into corpus_meta values('after_inventory','drift')")
+                conn.commit()
+            finally:
+                conn.close()
+            with self.assertRaisesRegex(ValueError,"source snapshot binding mismatch for chatgpt"):
+                materialize_shortlist(
+                    sources,
+                    {"chatgpt":1,"deepseek":1,"xai":1},
+                    "fixture-salt",
+                    bound,
+                )
+
+
+class StableSqliteBindingTests(unittest.TestCase):
+    def test_nonempty_wal_is_captured_by_stable_backup(self):
+        from scripts.inventory_needle3_multiprovider_corpus import SourceSpec, source_inventory
+        with tempfile.TemporaryDirectory() as td:
+            db=pathlib.Path(td)/"a.sqlite3"
+            make_db(db,"chatgpt-export",False)
+            writer=sqlite3.connect(db)
+            try:
+                writer.execute("pragma journal_mode=WAL")
+                writer.execute("insert into corpus_meta values('fixture_commit','visible_in_wal')")
+                writer.commit()
+                wal=pathlib.Path(str(db)+"-wal")
+                self.assertTrue(wal.is_file())
+                self.assertGreater(wal.stat().st_size,0)
+                report,_,_=source_inventory(SourceSpec("chatgpt",db,"chatgpt-export"))
+            finally:
+                writer.close()
+            self.assertEqual(len(report["database"]["sha256"]),64)
+            self.assertNotIn("binding_mode",report["database"])
+
+    def test_snapshot_is_immutable_after_source_commit(self):
+        from scripts.inventory_needle3_multiprovider_corpus import sha256_file, stable_sqlite_snapshot
+        with tempfile.TemporaryDirectory() as td:
+            db=pathlib.Path(td)/"a.sqlite3"
+            make_db(db,"chatgpt-export",False)
+            with stable_sqlite_snapshot(db) as snapshot:
+                before=sha256_file(snapshot)
+                writer=sqlite3.connect(db)
+                try:
+                    writer.execute("insert into corpus_meta values('after_snapshot','new_source_state')")
+                    writer.commit()
+                finally:
+                    writer.close()
+                self.assertEqual(sha256_file(snapshot),before)
+                snap=sqlite3.connect(snapshot)
+                try:
+                    row=snap.execute("select value from corpus_meta where key='after_snapshot'").fetchone()
+                finally:
+                    snap.close()
+                self.assertIsNone(row)
+
+
+class ProjectionSignatureTests(unittest.TestCase):
+    def test_trace_only_context_does_not_change_episode_signature(self):
+        from scripts.inventory_needle3_multiprovider_corpus import episode_records
+        def row(ordinal, role, content_type, search_class, digest):
+            return {
+                "session_id":"s1",
+                "ordinal":ordinal,
+                "role":role,
+                "content_type":content_type,
+                "search_class":search_class,
+                "canonical_message_sha256":digest,
+            }
+        base=[
+            row(0,"user","text","dialogue","1"*64),
+            row(1,"assistant","text","dialogue","2"*64),
+        ]
+        with_trace=base+[row(2,"unknown","user_editable_context","trace","3"*64)]
+        a=episode_records(base,"chatgpt","salt")
+        b=episode_records(with_trace,"chatgpt","salt")
+        self.assertEqual(a[0]["episode_signature"],b[0]["episode_signature"])
+        self.assertFalse(a[0]["observed_trace"])
+        self.assertTrue(b[0]["observed_trace"])
