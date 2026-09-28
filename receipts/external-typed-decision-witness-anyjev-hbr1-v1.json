@@ -1,0 +1,60 @@
+{
+  "acceptance_authority": false,
+  "claim_scope": "BOUNDED_TYPED_DECISION_WITNESS_ONLY",
+  "comparison_context": "REPRESENTATION_VS_PREREGISTERED_SEMANTIC_CONTROL_SENSITIVITY",
+  "comparisons": [
+    {
+      "candidate_surface": "S2_FORMAT_PRESERVE",
+      "declared_semantic_relation": "SAME",
+      "metric": "TOTAL_VARIATION",
+      "observed_value": 0.17722242872889635,
+      "probability_surface": "L0",
+      "reference_surface": "S0_ORIGINAL",
+      "source_comparison_value": 0.17722242872889635
+    },
+    {
+      "candidate_surface": "S3_SEMANTIC_CHANGE_CONTROL",
+      "declared_semantic_relation": "CHANGED_CONTROL",
+      "metric": "TOTAL_VARIATION",
+      "observed_value": 0.017633349203101875,
+      "probability_surface": "L0",
+      "reference_surface": "S0_ORIGINAL",
+      "source_comparison_value": 0.017633349203101875
+    }
+  ],
+  "implementation_sha": "b14eba5f7fa699eabf537e55533159e9abcbd856",
+  "implementation_worktree_clean": true,
+  "mapped_state": "MODEL_OR_DOMAIN_WITNESS",
+  "metric": "TOTAL_VARIATION",
+  "model_or_domain_witness": true,
+  "permission_authority": false,
+  "probability_surface": "L0",
+  "promotion_authority": false,
+  "schema": "needle-external-typed-decision-witness-v1",
+  "scientific_acceptance_performed": false,
+  "semantic_oracle": false,
+  "source": {
+    "experiment_revision": "f7e7843e883ada479c29beba25a94bcf7b0a1683",
+    "files": [
+      {
+        "kind": "manifest",
+        "path": "fixtures/anyjev/hbr1/manifest.json",
+        "sha256": "1eded12722cbd196f68b4cc551ac13052d7ec9ea0d9a72221a2e2d2e7b3d00e1"
+      },
+      {
+        "kind": "candidate_receipt",
+        "path": "receipts/anyjev-hbr1/run-36458707223-candidate.json",
+        "sha256": "81f8b726c6b6a32153e7bb3c98848aaf89c02d2958b0386f33621523d1df625e"
+      },
+      {
+        "kind": "comparison_receipt",
+        "path": "receipts/anyjev-hbr1/run-36458707223-comparison.json",
+        "sha256": "6a3b9e1ee721940f15d2649a44c8f21b49bf7c00e2f56d919514539e0e37bbf9"
+      }
+    ],
+    "repository": "TeaShaman-cyber/theseus-typed-decision-lab",
+    "run_id": "36458707223",
+    "storage_revision": "c8c0702597cbb395fe54e78354cca49e26b6bf01"
+  },
+  "verification_authority": false
+}
