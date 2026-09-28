@@ -1,0 +1,43 @@
+{
+  "schema": "needle-external-typed-decision-witness-config-v1",
+  "claim_scope": "BOUNDED_TYPED_DECISION_WITNESS_ONLY",
+  "source": {
+    "repository": "TeaShaman-cyber/theseus-typed-decision-lab",
+    "storage_revision": "c8c0702597cbb395fe54e78354cca49e26b6bf01",
+    "experiment_revision": "f7e7843e883ada479c29beba25a94bcf7b0a1683",
+    "run_id": "36458707223",
+    "manifest": {
+      "path": "fixtures/anyjev/hbr1/manifest.json",
+      "sha256": "1eded12722cbd196f68b4cc551ac13052d7ec9ea0d9a72221a2e2d2e7b3d00e1"
+    },
+    "candidate_receipt": {
+      "path": "receipts/anyjev-hbr1/run-36458707223-candidate.json",
+      "sha256": "81f8b726c6b6a32153e7bb3c98848aaf89c02d2958b0386f33621523d1df625e"
+    },
+    "comparison_receipt": {
+      "path": "receipts/anyjev-hbr1/run-36458707223-comparison.json",
+      "sha256": "6a3b9e1ee721940f15d2649a44c8f21b49bf7c00e2f56d919514539e0e37bbf9"
+    }
+  },
+  "metric": "TOTAL_VARIATION",
+  "probability_surface": "L0",
+  "comparisons": [
+    {
+      "reference_surface": "S0_ORIGINAL",
+      "candidate_surface": "S2_FORMAT_PRESERVE",
+      "declared_semantic_relation": "SAME"
+    },
+    {
+      "reference_surface": "S0_ORIGINAL",
+      "candidate_surface": "S3_SEMANTIC_CHANGE_CONTROL",
+      "declared_semantic_relation": "CHANGED_CONTROL"
+    }
+  ],
+  "mapped_state": "MODEL_OR_DOMAIN_WITNESS",
+  "semantic_oracle": false,
+  "scientific_acceptance_performed": false,
+  "acceptance_authority": false,
+  "permission_authority": false,
+  "verification_authority": false,
+  "promotion_authority": false
+}

@@ -28,6 +28,8 @@ for path in \
   scripts/prepare_semif_release_runtime.py \
   scripts/run_typed_decision_arm.sh \
   scripts/readback_typed_decision_benchmark.py \
+  scripts/build_external_typed_decision_witness.py \
+  experiments/external-typed-decision-witness/anyjev-hbr1-v1.json \
   .github/workflows/typed-decision-benchmark-v1.yml \
   receipts/typed-decision-benchmark-v1-readback.json \
   receipts/typed-decision-benchmark-v1-readback.sha256 \
