@@ -3,6 +3,7 @@ import importlib.util
 import json
 import pathlib
 import tempfile
+from unittest import mock
 import unittest
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -175,12 +176,16 @@ class ExternalTypedDecisionWitnessTests(unittest.TestCase):
     def test_build_recomputes_two_separate_bounded_comparisons(self):
         with tempfile.TemporaryDirectory() as td:
             config, source_revision = self.make_source(td)
-            receipt = MOD.build_witness(
-                config,
-                pathlib.Path(td),
-                source_revision=source_revision,
-                implementation_sha="c" * 40,
-            )
+            with mock.patch.object(
+                MOD,
+                "implementation_identity",
+                return_value={"sha": "c" * 40, "worktree_clean": True},
+            ):
+                receipt = MOD.build_witness(
+                    config,
+                    pathlib.Path(td),
+                    source_revision=source_revision,
+                )
         self.assertEqual(receipt["mapped_state"], "MODEL_OR_DOMAIN_WITNESS")
         self.assertTrue(receipt["model_or_domain_witness"])
         self.assertFalse(receipt["semantic_oracle"])
@@ -198,23 +203,31 @@ class ExternalTypedDecisionWitnessTests(unittest.TestCase):
             path = pathlib.Path(td) / config["source"]["candidate_receipt"]["path"]
             path.write_text(path.read_text(encoding="utf-8") + " ", encoding="utf-8")
             with self.assertRaisesRegex(ValueError, "source hash mismatch"):
-                MOD.build_witness(
-                    config,
-                    pathlib.Path(td),
-                    source_revision=source_revision,
-                    implementation_sha="c" * 40,
-                )
+                with mock.patch.object(
+                    MOD,
+                    "implementation_identity",
+                    return_value={"sha": "c" * 40, "worktree_clean": True},
+                ):
+                    MOD.build_witness(
+                        config,
+                        pathlib.Path(td),
+                        source_revision=source_revision,
+                        )
 
     def test_manifest_relation_mismatch_fails_closed(self):
         with tempfile.TemporaryDirectory() as td:
             config, source_revision = self.make_source(td, s2_semantics="CHANGED")
             with self.assertRaisesRegex(ValueError, "SAME relation disagrees"):
-                MOD.build_witness(
-                    config,
-                    pathlib.Path(td),
-                    source_revision=source_revision,
-                    implementation_sha="c" * 40,
-                )
+                with mock.patch.object(
+                    MOD,
+                    "implementation_identity",
+                    return_value={"sha": "c" * 40, "worktree_clean": True},
+                ):
+                    MOD.build_witness(
+                        config,
+                        pathlib.Path(td),
+                        source_revision=source_revision,
+                        )
 
     def test_self_consistent_comparison_value_tamper_is_recomputed_and_rejected(self):
         with tempfile.TemporaryDirectory() as td:
@@ -225,43 +238,112 @@ class ExternalTypedDecisionWitnessTests(unittest.TestCase):
             write_json(path, value)
             config["source"]["comparison_receipt"]["sha256"] = MOD.sha256_file(path)
             with self.assertRaisesRegex(ValueError, "recomputed TV differs"):
-                MOD.build_witness(
-                    config,
-                    pathlib.Path(td),
-                    source_revision=source_revision,
-                    implementation_sha="c" * 40,
-                )
+                with mock.patch.object(
+                    MOD,
+                    "implementation_identity",
+                    return_value={"sha": "c" * 40, "worktree_clean": True},
+                ):
+                    MOD.build_witness(
+                        config,
+                        pathlib.Path(td),
+                        source_revision=source_revision,
+                        )
 
     def test_validate_rejects_witness_tamper(self):
         with tempfile.TemporaryDirectory() as td:
             config, source_revision = self.make_source(td)
-            receipt = MOD.build_witness(
-                config,
-                pathlib.Path(td),
-                source_revision=source_revision,
-                implementation_sha="c" * 40,
-            )
-            tampered = copy.deepcopy(receipt)
-            tampered["comparisons"][0]["observed_value"] = 0.9
-            with self.assertRaisesRegex(ValueError, "does not match exact recomputation"):
-                MOD.validate_witness(
-                    tampered,
+            with mock.patch.object(
+                MOD,
+                "implementation_identity",
+                return_value={"sha": "c" * 40, "worktree_clean": True},
+            ):
+                receipt = MOD.build_witness(
                     config,
                     pathlib.Path(td),
                     source_revision=source_revision,
-                    implementation_sha="c" * 40,
                 )
+                tampered = copy.deepcopy(receipt)
+                tampered["comparisons"][0]["observed_value"] = 0.9
+                with self.assertRaisesRegex(
+                    ValueError,
+                    "does not match exact recomputation",
+                ):
+                    MOD.validate_witness(
+                        tampered,
+                        config,
+                        pathlib.Path(td),
+                        source_revision=source_revision,
+                    )
+
+    def test_probability_strings_and_booleans_fail_before_float_coercion(self):
+        for malformed in ("0.5", True):
+            with self.subTest(malformed=malformed):
+                with tempfile.TemporaryDirectory() as td:
+                    config, source_revision = self.make_source(td)
+                    path = pathlib.Path(td) / config["source"]["candidate_receipt"]["path"]
+                    candidate = json.loads(path.read_text(encoding="utf-8"))
+                    for row in candidate["results"]:
+                        if row["surface_id"] == "S0_ORIGINAL" and row["requested_level"] == "L0":
+                            row["probabilities"]["A"] = malformed
+                            row["probabilities"]["B"] = 0.5
+                    write_json(path, candidate)
+                    config["source"]["candidate_receipt"]["sha256"] = MOD.sha256_file(path)
+
+                    comparison_path = pathlib.Path(td) / config["source"]["comparison_receipt"]["path"]
+                    comparison = json.loads(comparison_path.read_text(encoding="utf-8"))
+                    comparison["candidate_receipt_sha256"] = config["source"]["candidate_receipt"]["sha256"]
+                    write_json(comparison_path, comparison)
+                    config["source"]["comparison_receipt"]["sha256"] = MOD.sha256_file(comparison_path)
+
+                    with self.assertRaisesRegex(ValueError, "probability must be numeric"):
+                        with mock.patch.object(
+                            MOD,
+                            "implementation_identity",
+                            return_value={"sha": "c" * 40, "worktree_clean": True},
+                        ):
+                            MOD.build_witness(
+                                config,
+                                pathlib.Path(td),
+                                source_revision=source_revision,
+                            )
+
+    def test_implementation_identity_binds_head_and_clean_worktree(self):
+        with tempfile.TemporaryDirectory() as td:
+            repo = pathlib.Path(td)
+            subprocess = __import__("subprocess")
+            subprocess.run(["git", "init", "-q", str(repo)], check=True)
+            subprocess.run(["git", "-C", str(repo), "config", "user.email", "test@example.invalid"], check=True)
+            subprocess.run(["git", "-C", str(repo), "config", "user.name", "Needle Test"], check=True)
+            (repo / "tracked.txt").write_text("clean\n", encoding="utf-8")
+            subprocess.run(["git", "-C", str(repo), "add", "tracked.txt"], check=True)
+            subprocess.run(["git", "-C", str(repo), "commit", "-qm", "fixture"], check=True)
+            expected = subprocess.check_output(
+                ["git", "-C", str(repo), "rev-parse", "HEAD"],
+                text=True,
+            ).strip()
+
+            with mock.patch.object(MOD, "REPO_ROOT", repo):
+                identity = MOD.implementation_identity()
+                self.assertEqual(identity, {"sha": expected, "worktree_clean": True})
+
+                (repo / "tracked.txt").write_text("dirty\n", encoding="utf-8")
+                with self.assertRaisesRegex(ValueError, "worktree is not clean"):
+                    MOD.implementation_identity()
 
     def test_wrong_storage_revision_fails_closed(self):
         with tempfile.TemporaryDirectory() as td:
             config, _ = self.make_source(td)
             with self.assertRaisesRegex(ValueError, "storage revision mismatch"):
-                MOD.build_witness(
-                    config,
-                    pathlib.Path(td),
-                    source_revision="d" * 40,
-                    implementation_sha="c" * 40,
-                )
+                with mock.patch.object(
+                    MOD,
+                    "implementation_identity",
+                    return_value={"sha": "c" * 40, "worktree_clean": True},
+                ):
+                    MOD.build_witness(
+                        config,
+                        pathlib.Path(td),
+                        source_revision="d" * 40,
+                        )
 
 
 if __name__ == "__main__":

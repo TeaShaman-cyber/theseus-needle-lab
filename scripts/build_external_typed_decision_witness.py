@@ -14,6 +14,7 @@ CONFIG_SCHEMA = "needle-external-typed-decision-witness-config-v1"
 RECEIPT_SCHEMA = "needle-external-typed-decision-witness-v1"
 SHA40_RE = re.compile(r"^[0-9a-f]{40}$")
 SHA64_RE = re.compile(r"^[0-9a-f]{64}$")
+REPO_ROOT = pathlib.Path(__file__).resolve().parents[1]
 
 
 def load_json(path: pathlib.Path) -> dict[str, Any]:
@@ -63,6 +64,27 @@ def git_head(path: pathlib.Path) -> str:
     if not SHA40_RE.fullmatch(value):
         raise ValueError("invalid source git HEAD")
     return value
+
+
+def implementation_identity() -> dict[str, Any]:
+    sha = git_head(REPO_ROOT)
+    status = subprocess.check_output(
+        [
+            "git",
+            "-C",
+            str(REPO_ROOT),
+            "status",
+            "--porcelain",
+            "--untracked-files=all",
+        ],
+        text=True,
+    )
+    if status:
+        raise ValueError("Needle implementation worktree is not clean")
+    return {
+        "sha": sha,
+        "worktree_clean": True,
+    }
 
 
 def _authority_false(value: dict[str, Any], *, prefix: str) -> None:
@@ -222,8 +244,8 @@ def _candidate_l0(
             raise ValueError("invalid option id list")
         if not isinstance(probs, dict) or set(probs) != set(option_ids):
             raise ValueError("probability option-set mismatch")
+        total_variation(probs, probs)
         validated = {key: float(value) for key, value in probs.items()}
-        total_variation(validated, validated)
         result[surface_id] = validated
 
     if set(result) != required:
@@ -236,13 +258,11 @@ def build_witness(
     source_root: pathlib.Path,
     *,
     source_revision: str,
-    implementation_sha: str,
 ) -> dict[str, Any]:
     _validate_config(config)
     if source_revision != config["source"]["storage_revision"]:
         raise ValueError("external source storage revision mismatch")
-    if not SHA40_RE.fullmatch(implementation_sha):
-        raise ValueError("invalid Needle implementation SHA")
+    implementation = implementation_identity()
 
     manifest, candidate, comparison, provenance = _source_files(config, source_root)
     semantics = _manifest_semantics(manifest)
@@ -316,7 +336,8 @@ def build_witness(
     return {
         "schema": RECEIPT_SCHEMA,
         "claim_scope": config["claim_scope"],
-        "implementation_sha": implementation_sha,
+        "implementation_sha": implementation["sha"],
+        "implementation_worktree_clean": implementation["worktree_clean"],
         "mapped_state": "MODEL_OR_DOMAIN_WITNESS",
         "source": {
             "repository": config["source"]["repository"],
@@ -345,13 +366,11 @@ def validate_witness(
     source_root: pathlib.Path,
     *,
     source_revision: str,
-    implementation_sha: str,
 ) -> None:
     expected = build_witness(
         config,
         source_root,
         source_revision=source_revision,
-        implementation_sha=implementation_sha,
     )
     if receipt != expected:
         raise ValueError("witness receipt does not match exact recomputation")
@@ -374,7 +393,6 @@ def parser() -> argparse.ArgumentParser:
         cmd = sub.add_parser(name)
         cmd.add_argument("--config", type=pathlib.Path, required=True)
         cmd.add_argument("--source-root", type=pathlib.Path, required=True)
-        cmd.add_argument("--implementation-sha", required=True)
         if name == "build":
             cmd.add_argument("--output", type=pathlib.Path, required=True)
         else:
@@ -391,7 +409,6 @@ def main() -> int:
             config,
             args.source_root,
             source_revision=source_revision,
-            implementation_sha=args.implementation_sha,
         )
         write_json(args.output, receipt)
         print("EXTERNAL_TYPED_DECISION_WITNESS=BUILT STATE=MODEL_OR_DOMAIN_WITNESS")
@@ -403,7 +420,6 @@ def main() -> int:
         config,
         args.source_root,
         source_revision=source_revision,
-        implementation_sha=args.implementation_sha,
     )
     print("EXTERNAL_TYPED_DECISION_WITNESS_VALID=PASS STATE=MODEL_OR_DOMAIN_WITNESS")
     return 0
