@@ -1,0 +1,66 @@
+{
+  "deduplication": {
+    "cross_provider_exact_episode_signature": "KEEP_PROVIDER_DISTINCT",
+    "exact_episode_signature": "KEEP_ONE_PER_PROVIDER",
+    "representative_tiebreak": "LEXICOGRAPHIC_MIN_SESSION_ID_THEN_START_ORDINAL_THEN_END_ORDINAL",
+    "semantic_near_duplicate_screening": "REQUIRED_AFTER_SHORTLIST_BEFORE_SPLIT"
+  },
+  "deterministic_sampling": {
+    "content_quality_score_used": false,
+    "contract_salt": "needle3-multiprovider-candidate-selection-v1",
+    "method": "sha256_rank",
+    "rank_input": "provider + session_id + episode_signature + contract_salt"
+  },
+  "inventory_binding": {
+    "path": "experiments/needle3-multiprovider-corpus/v1/inventory.json",
+    "sha256": "bcdd43f04ed5c0d2a93bba168947a446ff56304db0027cc086385a24dac284c9"
+  },
+  "labels": {
+    "allowed_future_labels": [
+      "PROBE",
+      "READY",
+      "UNKNOWN",
+      "NO_CALL"
+    ],
+    "historical_provider_action_is_ground_truth": false,
+    "state": "NOT_ADJUDICATED"
+  },
+  "next_gate": {
+    "required": [
+      "materialize_metadata_only_shortlist",
+      "privacy_publicability_review",
+      "semantic_family_adjudication",
+      "decision_label_adjudication",
+      "heldout_near_duplicate_screening"
+    ],
+    "training_authorized": false
+  },
+  "privacy": {
+    "public_projection_authorized": false,
+    "raw_text_export_authorized": false,
+    "shortlist_output": "METADATA_ONLY_NO_RAW_TEXT"
+  },
+  "provider_quotas": {
+    "chatgpt": 300,
+    "deepseek": 300,
+    "xai": 300
+  },
+  "purpose": "issue_26_pre_adjudication_shortlist",
+  "schema_version": "theseus.needle3.multiprovider_candidate_selection.v1",
+  "selection_unit": "observable_user_turn_episode",
+  "source_lifecycle": {
+    "live_session_search_runtime_required_after_materialization": false,
+    "post_materialization_authority": "FROZEN_SHORTLIST_AND_BOUND_MANIFEST",
+    "session_search_role": "ONE_SHOT_EXPORT_SOURCE",
+    "source_drift_after_materialization_changes_existing_experiment": false
+  },
+  "source_manifest_binding": {
+    "path": "experiments/needle3-multiprovider-corpus/v1/frozen-source-manifest.json",
+    "sha256": "68ac606ef679c791806d19b022530e9ded40e7bb8a693283acb6e7325e221c2b"
+  },
+  "tool_evidence": {
+    "absence_of_tool_evidence_means_no_call": false,
+    "observed_tool_evidence_is_metadata_not_authority": true,
+    "recovery_of_chatgpt_or_xai_tool_evidence": "SEPARATE_PROVENANCE_TASK_IF_NEEDED"
+  }
+}
