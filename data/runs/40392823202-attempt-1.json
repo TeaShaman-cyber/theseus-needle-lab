@@ -1,0 +1,303 @@
+{
+  "candidates": [
+    {
+      "candidate_id": "116cec89123533078797e945b8a3f20d062f142defcb413aa05ce39ff1f1e382",
+      "canonical_url": "https://github.com/praveer13/statespace",
+      "content_fingerprint": "commit:c8dc62a07279a401d9c17be59583a32f74cd656c",
+      "discovery_route": "github_search:tiny-model",
+      "entity_seen_in_previous_snapshot": true,
+      "matched_watch_lines": [
+        "tiny-model"
+      ],
+      "observed_at": "2026-10-26T20:07:42Z",
+      "published_or_pushed_at": "2026-10-26T20:02:41Z",
+      "seen_in_previous_snapshot": false,
+      "source_class": "github_repo",
+      "source_entity_id": "github-repo:1432146333",
+      "source_id": "github-search:tiny-model",
+      "source_identity": "praveer13/statespace@master",
+      "title": "praveer13/statespace",
+      "upstream_revision": "c8dc62a07279a401d9c17be59583a32f74cd656c"
+    },
+    {
+      "candidate_id": "531ece6ea9fd8ed079d9947106e1dcb63478ef9880d989b917a28bb87b44d3c5",
+      "canonical_url": "https://github.com/IDUclub/gMART",
+      "content_fingerprint": "commit:ce48ddab4c9a0c2cf6e3aafb0bc34aa7fdc66c6b",
+      "discovery_route": "github_search:tiny-model",
+      "entity_seen_in_previous_snapshot": false,
+      "matched_watch_lines": [
+        "tiny-model"
+      ],
+      "observed_at": "2026-10-26T20:07:42Z",
+      "published_or_pushed_at": "2026-10-26T19:18:11Z",
+      "seen_in_previous_snapshot": false,
+      "source_class": "github_repo",
+      "source_entity_id": "github-repo:1189505404",
+      "source_id": "github-search:tiny-model",
+      "source_identity": "IDUclub/gMART@main",
+      "title": "IDUclub/gMART",
+      "upstream_revision": "ce48ddab4c9a0c2cf6e3aafb0bc34aa7fdc66c6b"
+    },
+    {
+      "candidate_id": "c75a93dba2ced93ee3369a1a4ce175756060fac53813ffddc7c54f4165462730",
+      "canonical_url": "https://github.com/mainSiddharthhoon/Tiny-GPT",
+      "content_fingerprint": "commit:a51aef27a22caeaa46e683c878509f184a3a9e2e",
+      "discovery_route": "github_search:tiny-model",
+      "entity_seen_in_previous_snapshot": false,
+      "matched_watch_lines": [
+        "tiny-model"
+      ],
+      "observed_at": "2026-10-26T20:07:42Z",
+      "published_or_pushed_at": "2026-10-26T18:16:23Z",
+      "seen_in_previous_snapshot": false,
+      "source_class": "github_repo",
+      "source_entity_id": "github-repo:1343033713",
+      "source_id": "github-search:tiny-model",
+      "source_identity": "mainSiddharthhoon/Tiny-GPT@main",
+      "title": "mainSiddharthhoon/Tiny-GPT",
+      "upstream_revision": "a51aef27a22caeaa46e683c878509f184a3a9e2e"
+    },
+    {
+      "candidate_id": "2506c191db8e9d4430696604530d0f9c0d484de67022c35df17cd5dca301dab2",
+      "canonical_url": "https://github.com/CaptJackSparrow21/tiny-gpt-from-scratch",
+      "content_fingerprint": "commit:7f640b45cff803b4a75a996cf7ee68cea5112c50",
+      "discovery_route": "github_search:tiny-model",
+      "entity_seen_in_previous_snapshot": false,
+      "matched_watch_lines": [
+        "tiny-model"
+      ],
+      "observed_at": "2026-10-26T20:07:42Z",
+      "published_or_pushed_at": "2026-10-26T18:03:30Z",
+      "seen_in_previous_snapshot": false,
+      "source_class": "github_repo",
+      "source_entity_id": "github-repo:1434741501",
+      "source_id": "github-search:tiny-model",
+      "source_identity": "CaptJackSparrow21/tiny-gpt-from-scratch@main",
+      "title": "CaptJackSparrow21/tiny-gpt-from-scratch",
+      "upstream_revision": "7f640b45cff803b4a75a996cf7ee68cea5112c50"
+    },
+    {
+      "candidate_id": "c05672221c1029f0e21379ef14e45e37258d1135f29074ff0fc0343213984398",
+      "canonical_url": "https://github.com/Uttamb7/tiny-transformer-lm",
+      "content_fingerprint": "commit:f2f28daa682892eeaaa055aceca0bf4f7ebbb9e5",
+      "discovery_route": "github_search:tiny-model",
+      "entity_seen_in_previous_snapshot": true,
+      "matched_watch_lines": [
+        "tiny-model"
+      ],
+      "observed_at": "2026-10-26T20:07:42Z",
+      "published_or_pushed_at": "2026-10-26T17:12:35Z",
+      "seen_in_previous_snapshot": false,
+      "source_class": "github_repo",
+      "source_entity_id": "github-repo:1317887141",
+      "source_id": "github-search:tiny-model",
+      "source_identity": "Uttamb7/tiny-transformer-lm@master",
+      "title": "Uttamb7/tiny-transformer-lm",
+      "upstream_revision": "f2f28daa682892eeaaa055aceca0bf4f7ebbb9e5"
+    },
+    {
+      "candidate_id": "78cb5c758b3ac0bb7af6dd5382df6ced7f7d170e0388f7e8e44b88a0389b7dd7",
+      "canonical_url": "https://github.com/tiancaiamao/tinyactor",
+      "content_fingerprint": "commit:c7bbcbb6db083896ebcdab6d2ea379af42c3f966",
+      "discovery_route": "github_search:tiny-model",
+      "entity_seen_in_previous_snapshot": false,
+      "matched_watch_lines": [
+        "tiny-model"
+      ],
+      "observed_at": "2026-10-26T20:07:42Z",
+      "published_or_pushed_at": "2026-10-26T17:06:42Z",
+      "seen_in_previous_snapshot": false,
+      "source_class": "github_repo",
+      "source_entity_id": "github-repo:1275811025",
+      "source_id": "github-search:tiny-model",
+      "source_identity": "tiancaiamao/tinyactor@main",
+      "title": "tiancaiamao/tinyactor",
+      "upstream_revision": "c7bbcbb6db083896ebcdab6d2ea379af42c3f966"
+    },
+    {
+      "candidate_id": "662b98b38d4ee719a05a6d3712672ac74eb884c7859346921cb21e4ca19245fc",
+      "canonical_url": "https://github.com/srihariharanu/TinyLM-for-ESP8266",
+      "content_fingerprint": "commit:775e8cef1ca4fce6c8720be5c97637b4afb9e6f6",
+      "discovery_route": "github_search:tiny-model",
+      "entity_seen_in_previous_snapshot": false,
+      "matched_watch_lines": [
+        "tiny-model"
+      ],
+      "observed_at": "2026-10-26T20:07:42Z",
+      "published_or_pushed_at": "2026-10-26T16:22:12Z",
+      "seen_in_previous_snapshot": false,
+      "source_class": "github_repo",
+      "source_entity_id": "github-repo:1434592715",
+      "source_id": "github-search:tiny-model",
+      "source_identity": "srihariharanu/TinyLM-for-ESP8266@main",
+      "title": "srihariharanu/TinyLM-for-ESP8266",
+      "upstream_revision": "775e8cef1ca4fce6c8720be5c97637b4afb9e6f6"
+    },
+    {
+      "candidate_id": "6cf29dc70135924bf1fe07a77bf3180080595609c830c7c87b4463ce2bfa72c2",
+      "canonical_url": "https://github.com/frank1181434411-hub/tiny-language-model",
+      "content_fingerprint": "commit:c202497b2582fa5449f36464e7dd6cb19f0b4cd0",
+      "discovery_route": "github_search:tiny-model",
+      "entity_seen_in_previous_snapshot": true,
+      "matched_watch_lines": [
+        "tiny-model"
+      ],
+      "observed_at": "2026-10-26T20:07:42Z",
+      "published_or_pushed_at": "2026-10-26T08:58:35Z",
+      "seen_in_previous_snapshot": false,
+      "source_class": "github_repo",
+      "source_entity_id": "github-repo:1426998684",
+      "source_id": "github-search:tiny-model",
+      "source_identity": "frank1181434411-hub/tiny-language-model@main",
+      "title": "frank1181434411-hub/tiny-language-model",
+      "upstream_revision": "c202497b2582fa5449f36464e7dd6cb19f0b4cd0"
+    },
+    {
+      "candidate_id": "199e6d2d2b369a8fb2b5797eefa257ffbfa455aeebaa1a45f3475b575524b68e",
+      "canonical_url": "https://github.com/MaiSoeng/tiny-gpt-from-scratch",
+      "content_fingerprint": "commit:7b9cfa1c97f0b7f1f14c5b30bdf4493896b9b56a",
+      "discovery_route": "github_search:tiny-model",
+      "entity_seen_in_previous_snapshot": true,
+      "matched_watch_lines": [
+        "tiny-model"
+      ],
+      "observed_at": "2026-10-26T20:07:42Z",
+      "published_or_pushed_at": "2026-10-26T08:44:28Z",
+      "seen_in_previous_snapshot": false,
+      "source_class": "github_repo",
+      "source_entity_id": "github-repo:1426853075",
+      "source_id": "github-search:tiny-model",
+      "source_identity": "MaiSoeng/tiny-gpt-from-scratch@main",
+      "title": "MaiSoeng/tiny-gpt-from-scratch",
+      "upstream_revision": "7b9cfa1c97f0b7f1f14c5b30bdf4493896b9b56a"
+    },
+    {
+      "candidate_id": "7dcdfc809a35f87dd5d852430982c1cd830cf0373cd51d259f90ed8c32f3617b",
+      "canonical_url": "https://github.com/hunckelarissa/SLM",
+      "content_fingerprint": "commit:91d997ef5919bca15d9dbb098164c01b7a3489e8",
+      "discovery_route": "github_search:tiny-model",
+      "entity_seen_in_previous_snapshot": false,
+      "matched_watch_lines": [
+        "tiny-model"
+      ],
+      "observed_at": "2026-10-26T20:07:42Z",
+      "published_or_pushed_at": "2026-10-26T08:37:50Z",
+      "seen_in_previous_snapshot": false,
+      "source_class": "github_repo",
+      "source_entity_id": "github-repo:1434110722",
+      "source_id": "github-search:tiny-model",
+      "source_identity": "hunckelarissa/SLM@main",
+      "title": "hunckelarissa/SLM",
+      "upstream_revision": "91d997ef5919bca15d9dbb098164c01b7a3489e8"
+    },
+    {
+      "candidate_id": "cd88b60be619d07b2fc08ac4342bde5ec3a6698d455485edb3003abeb376f8ac",
+      "canonical_url": "https://github.com/yairpatch/flyweight",
+      "content_fingerprint": "commit:d4322b34f46cf5e4102a084f6418f8b7a8aa9a24",
+      "discovery_route": "github_search:moe-cache",
+      "entity_seen_in_previous_snapshot": false,
+      "matched_watch_lines": [
+        "parameter-storage",
+        "sparse-execution"
+      ],
+      "observed_at": "2026-10-26T20:07:42Z",
+      "published_or_pushed_at": "2026-10-26T18:13:05Z",
+      "seen_in_previous_snapshot": false,
+      "source_class": "github_repo",
+      "source_entity_id": "github-repo:1304040894",
+      "source_id": "github-search:moe-cache",
+      "source_identity": "yairpatch/flyweight@main",
+      "title": "yairpatch/flyweight",
+      "upstream_revision": "d4322b34f46cf5e4102a084f6418f8b7a8aa9a24"
+    },
+    {
+      "candidate_id": "c0ea9f6f0b4c6df557e9b7deab2109673f35290264380907866b65dcefe4efd8",
+      "canonical_url": "https://github.com/optim-enterprises-bv/titan-engine",
+      "content_fingerprint": "commit:7b38f56b09a8936357bea3ec9737653c4356889d",
+      "discovery_route": "github_search:moe-cache",
+      "entity_seen_in_previous_snapshot": true,
+      "matched_watch_lines": [
+        "parameter-storage",
+        "sparse-execution"
+      ],
+      "observed_at": "2026-10-26T20:07:42Z",
+      "published_or_pushed_at": "2026-10-26T11:29:11Z",
+      "seen_in_previous_snapshot": false,
+      "source_class": "github_repo",
+      "source_entity_id": "github-repo:1394604417",
+      "source_id": "github-search:moe-cache",
+      "source_identity": "optim-enterprises-bv/titan-engine@main",
+      "title": "optim-enterprises-bv/titan-engine",
+      "upstream_revision": "7b38f56b09a8936357bea3ec9737653c4356889d"
+    }
+  ],
+  "collector_revision": "a961240970a1ec12ec02d235ed2bcdc73ab2bae0",
+  "generated_at": "2026-10-26T20:07:42Z",
+  "prior_schema_version": "needle-watch-receipt-v0.2",
+  "run_id": "40392823202-attempt-1",
+  "schema_version": "needle-watch-receipt-v0.2",
+  "source_health": [
+    {
+      "checked_at": "2026-10-26T20:07:42Z",
+      "cursor_or_watermark": "2026-10-25T20:07:42Z",
+      "error_class": "ResultTruncated",
+      "incomplete_results": false,
+      "records_seen": 10,
+      "returned_count": 10,
+      "source_id": "github-search:tiny-model",
+      "status": "partial",
+      "total_count": 15,
+      "truncated": true
+    },
+    {
+      "checked_at": "2026-10-26T20:07:42Z",
+      "cursor_or_watermark": "2026-10-25T20:07:42Z",
+      "error_class": null,
+      "incomplete_results": false,
+      "records_seen": 0,
+      "returned_count": 0,
+      "source_id": "github-search:helper-model",
+      "status": "ok",
+      "total_count": 0,
+      "truncated": false
+    },
+    {
+      "checked_at": "2026-10-26T20:07:42Z",
+      "cursor_or_watermark": "2026-10-25T20:07:42Z",
+      "error_class": null,
+      "incomplete_results": false,
+      "records_seen": 0,
+      "returned_count": 0,
+      "source_id": "github-search:low-memory-training",
+      "status": "ok",
+      "total_count": 0,
+      "truncated": false
+    },
+    {
+      "checked_at": "2026-10-26T20:07:42Z",
+      "cursor_or_watermark": "2026-10-25T20:07:42Z",
+      "error_class": null,
+      "incomplete_results": false,
+      "records_seen": 0,
+      "returned_count": 0,
+      "source_id": "github-search:parameter-offload",
+      "status": "ok",
+      "total_count": 0,
+      "truncated": false
+    },
+    {
+      "checked_at": "2026-10-26T20:07:42Z",
+      "cursor_or_watermark": "2026-10-25T20:07:42Z",
+      "error_class": null,
+      "incomplete_results": false,
+      "records_seen": 2,
+      "returned_count": 2,
+      "source_id": "github-search:moe-cache",
+      "status": "ok",
+      "total_count": 2,
+      "truncated": false
+    }
+  ],
+  "window_end": "2026-10-26T20:07:42Z",
+  "window_start": "2026-10-25T20:07:42Z"
+}
