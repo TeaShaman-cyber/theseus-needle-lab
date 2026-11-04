@@ -1,297 +1,297 @@
 {
   "candidates": [
     {
-      "candidate_id": "495f1d5be15917286c9386fb15dbcfa8c3ad8df88b8702751809bf4c23c35307",
+      "candidate_id": "807f26084d6c876571e4f0edf4b66d15dcebe4c87c0d4e605c461f9363d2b359",
+      "canonical_url": "https://github.com/jlinoff/tiny-llm-in-rust",
+      "content_fingerprint": "commit:ae9cb596bb553e2d052943f9bebbbeb587b73a70",
+      "discovery_route": "github_search:tiny-model",
+      "entity_seen_in_previous_snapshot": false,
+      "matched_watch_lines": [
+        "tiny-model"
+      ],
+      "observed_at": "2026-11-04T20:54:41Z",
+      "published_or_pushed_at": "2026-11-04T20:50:03Z",
+      "seen_in_previous_snapshot": false,
+      "source_class": "github_repo",
+      "source_entity_id": "github-repo:1438686373",
+      "source_id": "github-search:tiny-model",
+      "source_identity": "jlinoff/tiny-llm-in-rust@main",
+      "title": "jlinoff/tiny-llm-in-rust",
+      "upstream_revision": "ae9cb596bb553e2d052943f9bebbbeb587b73a70"
+    },
+    {
+      "candidate_id": "5295d36d9e99284350c94aba2baf09b4beb8a3642b06a1d64e68f53c062ff354",
+      "canonical_url": "https://github.com/tigersoldier/llm-101",
+      "content_fingerprint": "commit:8f8550a05896dfbe24933cbf11a9a1131651ffa6",
+      "discovery_route": "github_search:tiny-model",
+      "entity_seen_in_previous_snapshot": false,
+      "matched_watch_lines": [
+        "tiny-model"
+      ],
+      "observed_at": "2026-11-04T20:54:41Z",
+      "published_or_pushed_at": "2026-11-04T20:49:23Z",
+      "seen_in_previous_snapshot": false,
+      "source_class": "github_repo",
+      "source_entity_id": "github-repo:1436156855",
+      "source_id": "github-search:tiny-model",
+      "source_identity": "tigersoldier/llm-101@master",
+      "title": "tigersoldier/llm-101",
+      "upstream_revision": "8f8550a05896dfbe24933cbf11a9a1131651ffa6"
+    },
+    {
+      "candidate_id": "b67d6f144a36a072d13028548ea74d65fd0496710bb769d185e1047e9618e7d4",
+      "canonical_url": "https://github.com/dustincorder/seto",
+      "content_fingerprint": "commit:6bd1b1993a07f212b41cd7a17ed3bee35fe59d60",
+      "discovery_route": "github_search:tiny-model",
+      "entity_seen_in_previous_snapshot": false,
+      "matched_watch_lines": [
+        "tiny-model"
+      ],
+      "observed_at": "2026-11-04T20:54:41Z",
+      "published_or_pushed_at": "2026-11-04T20:54:13Z",
+      "seen_in_previous_snapshot": false,
+      "source_class": "github_repo",
+      "source_entity_id": "github-repo:1341159206",
+      "source_id": "github-search:tiny-model",
+      "source_identity": "dustincorder/seto@master",
+      "title": "dustincorder/seto",
+      "upstream_revision": "6bd1b1993a07f212b41cd7a17ed3bee35fe59d60"
+    },
+    {
+      "candidate_id": "779672b8f508f8432d73c8aba5385762400e61a9aa960274df4b4a769f148f23",
+      "canonical_url": "https://github.com/uday1o1/char-lm-architectures",
+      "content_fingerprint": "commit:b386e050161845f73580289d8332b0fbfa069bac",
+      "discovery_route": "github_search:tiny-model",
+      "entity_seen_in_previous_snapshot": false,
+      "matched_watch_lines": [
+        "tiny-model"
+      ],
+      "observed_at": "2026-11-04T20:54:41Z",
+      "published_or_pushed_at": "2026-11-04T20:18:17Z",
+      "seen_in_previous_snapshot": false,
+      "source_class": "github_repo",
+      "source_entity_id": "github-repo:1446132029",
+      "source_id": "github-search:tiny-model",
+      "source_identity": "uday1o1/char-lm-architectures@main",
+      "title": "uday1o1/char-lm-architectures",
+      "upstream_revision": "b386e050161845f73580289d8332b0fbfa069bac"
+    },
+    {
+      "candidate_id": "e33912ce26c9ba0657d507192835c622b7e88c80af748aee8aa4a57b977718ce",
       "canonical_url": "https://github.com/Uttamb7/tiny-transformer-lm",
-      "content_fingerprint": "commit:857d5a066386f743c9f0f3c13e4d16b942bbc49a",
+      "content_fingerprint": "commit:4ef5f8a068a5a2473ebc463d92ebc19a485e0bdf",
       "discovery_route": "github_search:tiny-model",
       "entity_seen_in_previous_snapshot": true,
       "matched_watch_lines": [
         "tiny-model"
       ],
-      "observed_at": "2026-11-03T20:36:30Z",
-      "published_or_pushed_at": "2026-11-03T18:51:02Z",
+      "observed_at": "2026-11-04T20:54:41Z",
+      "published_or_pushed_at": "2026-11-04T16:56:32Z",
       "seen_in_previous_snapshot": false,
       "source_class": "github_repo",
       "source_entity_id": "github-repo:1317887141",
       "source_id": "github-search:tiny-model",
       "source_identity": "Uttamb7/tiny-transformer-lm@master",
       "title": "Uttamb7/tiny-transformer-lm",
-      "upstream_revision": "857d5a066386f743c9f0f3c13e4d16b942bbc49a"
+      "upstream_revision": "4ef5f8a068a5a2473ebc463d92ebc19a485e0bdf"
     },
     {
-      "candidate_id": "89843a31e023fa465084a459fb5d59b360be01af679f2385a944908ade0ae750",
+      "candidate_id": "1f057ad3128aaeacc211457958c068a042207a71df87bbf576d128699e7ec3d2",
+      "canonical_url": "https://github.com/tiancaiamao/tinyactor",
+      "content_fingerprint": "commit:8b828a9b63dbcc04589a65f6864985b4d4f3d588",
+      "discovery_route": "github_search:tiny-model",
+      "entity_seen_in_previous_snapshot": false,
+      "matched_watch_lines": [
+        "tiny-model"
+      ],
+      "observed_at": "2026-11-04T20:54:41Z",
+      "published_or_pushed_at": "2026-11-04T16:11:23Z",
+      "seen_in_previous_snapshot": false,
+      "source_class": "github_repo",
+      "source_entity_id": "github-repo:1275811025",
+      "source_id": "github-search:tiny-model",
+      "source_identity": "tiancaiamao/tinyactor@main",
+      "title": "tiancaiamao/tinyactor",
+      "upstream_revision": "8b828a9b63dbcc04589a65f6864985b4d4f3d588"
+    },
+    {
+      "candidate_id": "0cc035d36c8030b99d6049ace70238a0059455ebc6f8e6ed37b7dcbed6939892",
+      "canonical_url": "https://github.com/MaiSoeng/tiny-gpt-from-scratch",
+      "content_fingerprint": "commit:ef63a76f8988075acdbb65c35d32ffb620465458",
+      "discovery_route": "github_search:tiny-model",
+      "entity_seen_in_previous_snapshot": false,
+      "matched_watch_lines": [
+        "tiny-model"
+      ],
+      "observed_at": "2026-11-04T20:54:41Z",
+      "published_or_pushed_at": "2026-11-04T15:40:13Z",
+      "seen_in_previous_snapshot": false,
+      "source_class": "github_repo",
+      "source_entity_id": "github-repo:1426853075",
+      "source_id": "github-search:tiny-model",
+      "source_identity": "MaiSoeng/tiny-gpt-from-scratch@main",
+      "title": "MaiSoeng/tiny-gpt-from-scratch",
+      "upstream_revision": "ef63a76f8988075acdbb65c35d32ffb620465458"
+    },
+    {
+      "candidate_id": "0fc0da10da415316ed3591fc7d1faf786bc64839e142c1daeb4983810dd3eec8",
+      "canonical_url": "https://github.com/muhammetlord55/tiny-gpt-from-scratch",
+      "content_fingerprint": "commit:41ea626c3acca01ce32892a6061b3be146673b48",
+      "discovery_route": "github_search:tiny-model",
+      "entity_seen_in_previous_snapshot": false,
+      "matched_watch_lines": [
+        "tiny-model"
+      ],
+      "observed_at": "2026-11-04T20:54:41Z",
+      "published_or_pushed_at": "2026-11-04T14:29:00Z",
+      "seen_in_previous_snapshot": false,
+      "source_class": "github_repo",
+      "source_entity_id": "github-repo:1407792015",
+      "source_id": "github-search:tiny-model",
+      "source_identity": "muhammetlord55/tiny-gpt-from-scratch@main",
+      "title": "muhammetlord55/tiny-gpt-from-scratch",
+      "upstream_revision": "41ea626c3acca01ce32892a6061b3be146673b48"
+    },
+    {
+      "candidate_id": "8555737a8e6b4391f9696eb1d26b26c195f09ae30aa643b638f94a792266a03f",
       "canonical_url": "https://github.com/NUS-CEG5206/TinyLLM-llama2",
-      "content_fingerprint": "commit:efda94bd85b65c79c55c591adf2e81a87b82d456",
+      "content_fingerprint": "commit:9210a6360d22dca457d960d7a429cb2283c3f051",
       "discovery_route": "github_search:tiny-model",
       "entity_seen_in_previous_snapshot": true,
       "matched_watch_lines": [
         "tiny-model"
       ],
-      "observed_at": "2026-11-03T20:36:30Z",
-      "published_or_pushed_at": "2026-11-03T16:46:47Z",
+      "observed_at": "2026-11-04T20:54:41Z",
+      "published_or_pushed_at": "2026-11-04T14:27:07Z",
       "seen_in_previous_snapshot": false,
       "source_class": "github_repo",
       "source_entity_id": "github-repo:1414196606",
       "source_id": "github-search:tiny-model",
       "source_identity": "NUS-CEG5206/TinyLLM-llama2@main",
       "title": "NUS-CEG5206/TinyLLM-llama2",
-      "upstream_revision": "efda94bd85b65c79c55c591adf2e81a87b82d456"
+      "upstream_revision": "9210a6360d22dca457d960d7a429cb2283c3f051"
     },
     {
-      "candidate_id": "0f318ad336f2f80da06c3023717a377e60eaacdc808dfa711352ecee10e4b6b4",
-      "canonical_url": "https://github.com/IBrushMyTeeth/Tiny-LM-Lab",
-      "content_fingerprint": "commit:96be4669b3ca3b092447ab668b9e0ba479ec3cc6",
+      "candidate_id": "02e1e894802045545386f84249633fbf5f03b5e8b44f2be7df1e6cbc373839c9",
+      "canonical_url": "https://github.com/milosimchen/tiny-lm",
+      "content_fingerprint": "commit:b757427d326b0807f561c2654959ce605a7ea70f",
       "discovery_route": "github_search:tiny-model",
       "entity_seen_in_previous_snapshot": false,
       "matched_watch_lines": [
         "tiny-model"
       ],
-      "observed_at": "2026-11-03T20:36:30Z",
-      "published_or_pushed_at": "2026-11-03T16:39:51Z",
+      "observed_at": "2026-11-04T20:54:41Z",
+      "published_or_pushed_at": "2026-11-03T23:39:50Z",
       "seen_in_previous_snapshot": false,
       "source_class": "github_repo",
-      "source_entity_id": "github-repo:1415931298",
+      "source_entity_id": "github-repo:1437543610",
       "source_id": "github-search:tiny-model",
-      "source_identity": "IBrushMyTeeth/Tiny-LM-Lab@main",
-      "title": "IBrushMyTeeth/Tiny-LM-Lab",
-      "upstream_revision": "96be4669b3ca3b092447ab668b9e0ba479ec3cc6"
+      "source_identity": "milosimchen/tiny-lm@main",
+      "title": "milosimchen/tiny-lm",
+      "upstream_revision": "b757427d326b0807f561c2654959ce605a7ea70f"
     },
     {
-      "candidate_id": "38e944d312892603f0892da42796b74efcffbc4e7d7501f27c92b92ae73b16c0",
-      "canonical_url": "https://github.com/agungor2/tiny-tutors",
-      "content_fingerprint": "commit:7a9606aa6636a426ef345ec5ed4d5f7359c2b53c",
-      "discovery_route": "github_search:tiny-model",
-      "entity_seen_in_previous_snapshot": false,
-      "matched_watch_lines": [
-        "tiny-model"
-      ],
-      "observed_at": "2026-11-03T20:36:30Z",
-      "published_or_pushed_at": "2026-11-03T15:55:24Z",
-      "seen_in_previous_snapshot": false,
-      "source_class": "github_repo",
-      "source_entity_id": "github-repo:1443629656",
-      "source_id": "github-search:tiny-model",
-      "source_identity": "agungor2/tiny-tutors@main",
-      "title": "agungor2/tiny-tutors",
-      "upstream_revision": "7a9606aa6636a426ef345ec5ed4d5f7359c2b53c"
-    },
-    {
-      "candidate_id": "44c50ae0d70de800e93ade43bd9923ca9da477f30c7d0eb6addef11daed7eddc",
-      "canonical_url": "https://github.com/gouthamk16/lc-act",
-      "content_fingerprint": "commit:a677a0436dc1306e300fa9f148386a0d1a5d2563",
-      "discovery_route": "github_search:tiny-model",
-      "entity_seen_in_previous_snapshot": false,
-      "matched_watch_lines": [
-        "tiny-model"
-      ],
-      "observed_at": "2026-11-03T20:36:30Z",
-      "published_or_pushed_at": "2026-11-03T12:57:37Z",
-      "seen_in_previous_snapshot": false,
-      "source_class": "github_repo",
-      "source_entity_id": "github-repo:1369554263",
-      "source_id": "github-search:tiny-model",
-      "source_identity": "gouthamk16/lc-act@main",
-      "title": "gouthamk16/lc-act",
-      "upstream_revision": "a677a0436dc1306e300fa9f148386a0d1a5d2563"
-    },
-    {
-      "candidate_id": "f340d6e0f9e6052d114bdb0138ee4e44c9724ed8b33ed92298a0dfeda883e267",
-      "canonical_url": "https://github.com/DanielHromadka/tiny-llm",
-      "content_fingerprint": "commit:5d902301d7c41f62fbd0d8cbd7c51b4dcf3a50db",
-      "discovery_route": "github_search:tiny-model",
-      "entity_seen_in_previous_snapshot": false,
-      "matched_watch_lines": [
-        "tiny-model"
-      ],
-      "observed_at": "2026-11-03T20:36:30Z",
-      "published_or_pushed_at": "2026-11-03T11:04:45Z",
-      "seen_in_previous_snapshot": false,
-      "source_class": "github_repo",
-      "source_entity_id": "github-repo:1444170811",
-      "source_id": "github-search:tiny-model",
-      "source_identity": "DanielHromadka/tiny-llm@main",
-      "title": "DanielHromadka/tiny-llm",
-      "upstream_revision": "5d902301d7c41f62fbd0d8cbd7c51b4dcf3a50db"
-    },
-    {
-      "candidate_id": "9900d927362d99a4f59ecef6a97013a133f5c9ddb851205cfdcfee81464a9412",
-      "canonical_url": "https://github.com/mariacherifa/Tiny_GPT",
-      "content_fingerprint": "commit:4fe78a2186f2338deda78dd674318a4d1b758a68",
-      "discovery_route": "github_search:tiny-model",
-      "entity_seen_in_previous_snapshot": false,
-      "matched_watch_lines": [
-        "tiny-model"
-      ],
-      "observed_at": "2026-11-03T20:36:30Z",
-      "published_or_pushed_at": "2026-11-03T10:10:21Z",
-      "seen_in_previous_snapshot": false,
-      "source_class": "github_repo",
-      "source_entity_id": "github-repo:1433152281",
-      "source_id": "github-search:tiny-model",
-      "source_identity": "mariacherifa/Tiny_GPT@main",
-      "title": "mariacherifa/Tiny_GPT",
-      "upstream_revision": "4fe78a2186f2338deda78dd674318a4d1b758a68"
-    },
-    {
-      "candidate_id": "d8ea0c4616b35b3ab0d58214c44392d0ad25c449a5c7ab8e5d9c01c466cb7660",
-      "canonical_url": "https://github.com/frank1181434411-hub/tiny-language-model",
-      "content_fingerprint": "commit:96381d867b26e636b8725b42611b8d0972a90603",
-      "discovery_route": "github_search:tiny-model",
-      "entity_seen_in_previous_snapshot": false,
-      "matched_watch_lines": [
-        "tiny-model"
-      ],
-      "observed_at": "2026-11-03T20:36:30Z",
-      "published_or_pushed_at": "2026-11-03T10:07:31Z",
-      "seen_in_previous_snapshot": false,
-      "source_class": "github_repo",
-      "source_entity_id": "github-repo:1426998684",
-      "source_id": "github-search:tiny-model",
-      "source_identity": "frank1181434411-hub/tiny-language-model@main",
-      "title": "frank1181434411-hub/tiny-language-model",
-      "upstream_revision": "96381d867b26e636b8725b42611b8d0972a90603"
-    },
-    {
-      "candidate_id": "e8e028ad2b962a7d0c92ee64b40380c21ad827af10c720a6e02ee576f656683b",
-      "canonical_url": "https://github.com/NIPUN0BUGS/sinhala-english-llm-from-scratch",
-      "content_fingerprint": "commit:5c907f5b020d0259c9ed7d77f73e9326928439ef",
-      "discovery_route": "github_search:tiny-model",
-      "entity_seen_in_previous_snapshot": false,
-      "matched_watch_lines": [
-        "tiny-model"
-      ],
-      "observed_at": "2026-11-03T20:36:30Z",
-      "published_or_pushed_at": "2026-11-03T18:30:03Z",
-      "seen_in_previous_snapshot": false,
-      "source_class": "github_repo",
-      "source_entity_id": "github-repo:1418733943",
-      "source_id": "github-search:tiny-model",
-      "source_identity": "NIPUN0BUGS/sinhala-english-llm-from-scratch@main",
-      "title": "NIPUN0BUGS/sinhala-english-llm-from-scratch",
-      "upstream_revision": "5c907f5b020d0259c9ed7d77f73e9326928439ef"
-    },
-    {
-      "candidate_id": "d7f45542110f8ffa00e962f48054cfa35dbe973028e0bdce6fe6188abe9b3d23",
-      "canonical_url": "https://github.com/vamsi-aribandi/metal-megakernel",
-      "content_fingerprint": "commit:74b72a9d9567f4503650cd48f8a0bfff9ba62785",
-      "discovery_route": "github_search:tiny-model",
-      "entity_seen_in_previous_snapshot": false,
-      "matched_watch_lines": [
-        "tiny-model"
-      ],
-      "observed_at": "2026-11-03T20:36:30Z",
-      "published_or_pushed_at": "2026-11-03T08:11:31Z",
-      "seen_in_previous_snapshot": false,
-      "source_class": "github_repo",
-      "source_entity_id": "github-repo:1443994004",
-      "source_id": "github-search:tiny-model",
-      "source_identity": "vamsi-aribandi/metal-megakernel@main",
-      "title": "vamsi-aribandi/metal-megakernel",
-      "upstream_revision": "74b72a9d9567f4503650cd48f8a0bfff9ba62785"
-    },
-    {
-      "candidate_id": "4f03d9253666c1cb685e41924c2874a8b129c1e4f4893f566c511c96559be68d",
-      "canonical_url": "https://github.com/forera-ai/cachalot",
-      "content_fingerprint": "commit:73ab577a189b80fa73c3ed3ae596a72f93b747cf",
+      "candidate_id": "64736b11094acfeb5e3fb55787ded89fa78f9309036d5bf603aab878207f6d83",
+      "canonical_url": "https://github.com/yairpatch/flyweight",
+      "content_fingerprint": "commit:902dae61c1e8ed2eb1b234fd11129c81d26f62a9",
       "discovery_route": "github_search:moe-cache",
       "entity_seen_in_previous_snapshot": true,
       "matched_watch_lines": [
         "parameter-storage",
         "sparse-execution"
       ],
-      "observed_at": "2026-11-03T20:36:30Z",
-      "published_or_pushed_at": "2026-11-03T18:52:30Z",
-      "seen_in_previous_snapshot": false,
-      "source_class": "github_repo",
-      "source_entity_id": "github-repo:1370561698",
-      "source_id": "github-search:moe-cache",
-      "source_identity": "forera-ai/cachalot@main",
-      "title": "forera-ai/cachalot",
-      "upstream_revision": "73ab577a189b80fa73c3ed3ae596a72f93b747cf"
-    },
-    {
-      "candidate_id": "91b0ab4ab08bb4813fe7972bbda7b981ad49c8eb7ee8241e66ba1a1746a98d92",
-      "canonical_url": "https://github.com/yairpatch/flyweight",
-      "content_fingerprint": "commit:caa4ab37e34ceff637308d2c8b9ab855f723447d",
-      "discovery_route": "github_search:moe-cache",
-      "entity_seen_in_previous_snapshot": false,
-      "matched_watch_lines": [
-        "parameter-storage",
-        "sparse-execution"
-      ],
-      "observed_at": "2026-11-03T20:36:30Z",
-      "published_or_pushed_at": "2026-11-03T11:43:19Z",
+      "observed_at": "2026-11-04T20:54:41Z",
+      "published_or_pushed_at": "2026-11-04T12:35:42Z",
       "seen_in_previous_snapshot": false,
       "source_class": "github_repo",
       "source_entity_id": "github-repo:1304040894",
       "source_id": "github-search:moe-cache",
       "source_identity": "yairpatch/flyweight@main",
       "title": "yairpatch/flyweight",
-      "upstream_revision": "caa4ab37e34ceff637308d2c8b9ab855f723447d"
+      "upstream_revision": "902dae61c1e8ed2eb1b234fd11129c81d26f62a9"
     },
     {
-      "candidate_id": "5dab84ebf4736884f7f167e61046008ba4ea634f46ea52cf6cdfbd7b254fa650",
-      "canonical_url": "https://github.com/Andgihat/strata-flint",
-      "content_fingerprint": "commit:308981f63933630ecc963b9e4e29cf7f009f5ca3",
+      "candidate_id": "d3a351d2301cfa3e29c783c3d98e9c1a43314f2173a157223f5330e660e226a7",
+      "canonical_url": "https://github.com/hoonki2002/CECAR",
+      "content_fingerprint": "commit:28cd07cc56edd1e88492e0f4648c627a7d3d65c6",
       "discovery_route": "github_search:moe-cache",
       "entity_seen_in_previous_snapshot": false,
       "matched_watch_lines": [
         "parameter-storage",
         "sparse-execution"
       ],
-      "observed_at": "2026-11-03T20:36:30Z",
-      "published_or_pushed_at": "2026-11-03T10:44:13Z",
+      "observed_at": "2026-11-04T20:54:41Z",
+      "published_or_pushed_at": "2026-11-04T11:39:09Z",
       "seen_in_previous_snapshot": false,
       "source_class": "github_repo",
-      "source_entity_id": "github-repo:1443104542",
+      "source_entity_id": "github-repo:1445134878",
       "source_id": "github-search:moe-cache",
-      "source_identity": "Andgihat/strata-flint@main",
-      "title": "Andgihat/strata-flint",
-      "upstream_revision": "308981f63933630ecc963b9e4e29cf7f009f5ca3"
+      "source_identity": "hoonki2002/CECAR@main",
+      "title": "hoonki2002/CECAR",
+      "upstream_revision": "28cd07cc56edd1e88492e0f4648c627a7d3d65c6"
     },
     {
-      "candidate_id": "864ba953793a65474c260fcf71a7d68c5eaa9de57dc0d915ab17b988ebfc8034",
-      "canonical_url": "https://github.com/Hallelujahb/MOE",
-      "content_fingerprint": "commit:b496d3748900a47bf1c0da5c490a85d306fac152",
+      "candidate_id": "940519aaf59584ab4d94f88145a4ebb58ca535c8ca7eb884fbf05a9912355439",
+      "canonical_url": "https://github.com/forera-ai/cachalot",
+      "content_fingerprint": "commit:34331ecaa5320ef00c8f45955bf8eefe01d74884",
+      "discovery_route": "github_search:moe-cache",
+      "entity_seen_in_previous_snapshot": true,
+      "matched_watch_lines": [
+        "parameter-storage",
+        "sparse-execution"
+      ],
+      "observed_at": "2026-11-04T20:54:41Z",
+      "published_or_pushed_at": "2026-11-04T11:06:40Z",
+      "seen_in_previous_snapshot": false,
+      "source_class": "github_repo",
+      "source_entity_id": "github-repo:1370561698",
+      "source_id": "github-search:moe-cache",
+      "source_identity": "forera-ai/cachalot@main",
+      "title": "forera-ai/cachalot",
+      "upstream_revision": "34331ecaa5320ef00c8f45955bf8eefe01d74884"
+    },
+    {
+      "candidate_id": "6cf3c6f0e170eec20aa5bdc36a8a4f61cfd5c6a968a303c9422ef22ddebd26d2",
+      "canonical_url": "https://github.com/marfrit/arcint",
+      "content_fingerprint": "commit:ed5e8e763ca4a6e5637f9baa72b6fb49de1716b4",
       "discovery_route": "github_search:moe-cache",
       "entity_seen_in_previous_snapshot": false,
       "matched_watch_lines": [
         "parameter-storage",
         "sparse-execution"
       ],
-      "observed_at": "2026-11-03T20:36:30Z",
-      "published_or_pushed_at": "2026-11-03T07:36:01Z",
+      "observed_at": "2026-11-04T20:54:41Z",
+      "published_or_pushed_at": "2026-11-03T21:35:09Z",
       "seen_in_previous_snapshot": false,
       "source_class": "github_repo",
-      "source_entity_id": "github-repo:1443958707",
+      "source_entity_id": "github-repo:1350413310",
       "source_id": "github-search:moe-cache",
-      "source_identity": "Hallelujahb/MOE@main",
-      "title": "Hallelujahb/MOE",
-      "upstream_revision": "b496d3748900a47bf1c0da5c490a85d306fac152"
+      "source_identity": "marfrit/arcint@main",
+      "title": "marfrit/arcint",
+      "upstream_revision": "ed5e8e763ca4a6e5637f9baa72b6fb49de1716b4"
     }
   ],
-  "collector_revision": "80517394b40b8fa7d41c7cf08910c775244186ec",
-  "generated_at": "2026-11-03T20:36:30Z",
+  "collector_revision": "4af75a9ef4c5f5e5da8aa7e083ace422ceee9fe4",
+  "generated_at": "2026-11-04T20:54:41Z",
   "prior_schema_version": "needle-watch-receipt-v0.2",
-  "run_id": "41714067059-attempt-1",
+  "run_id": "41911024091-attempt-1",
   "schema_version": "needle-watch-receipt-v0.2",
   "source_health": [
     {
-      "checked_at": "2026-11-03T20:36:30Z",
-      "cursor_or_watermark": "2026-11-02T20:36:30Z",
+      "checked_at": "2026-11-04T20:54:41Z",
+      "cursor_or_watermark": "2026-11-03T20:54:41Z",
       "error_class": "ResultTruncated",
       "incomplete_results": false,
       "records_seen": 10,
       "returned_count": 10,
       "source_id": "github-search:tiny-model",
       "status": "partial",
-      "total_count": 16,
+      "total_count": 11,
       "truncated": true
     },
     {
-      "checked_at": "2026-11-03T20:36:30Z",
-      "cursor_or_watermark": "2026-11-02T20:36:30Z",
+      "checked_at": "2026-11-04T20:54:41Z",
+      "cursor_or_watermark": "2026-11-03T20:54:41Z",
       "error_class": null,
       "incomplete_results": false,
       "records_seen": 0,
@@ -302,8 +302,8 @@
       "truncated": false
     },
     {
-      "checked_at": "2026-11-03T20:36:30Z",
-      "cursor_or_watermark": "2026-11-02T20:36:30Z",
+      "checked_at": "2026-11-04T20:54:41Z",
+      "cursor_or_watermark": "2026-11-03T20:54:41Z",
       "error_class": null,
       "incomplete_results": false,
       "records_seen": 0,
@@ -314,8 +314,8 @@
       "truncated": false
     },
     {
-      "checked_at": "2026-11-03T20:36:30Z",
-      "cursor_or_watermark": "2026-11-02T20:36:30Z",
+      "checked_at": "2026-11-04T20:54:41Z",
+      "cursor_or_watermark": "2026-11-03T20:54:41Z",
       "error_class": null,
       "incomplete_results": false,
       "records_seen": 0,
@@ -326,8 +326,8 @@
       "truncated": false
     },
     {
-      "checked_at": "2026-11-03T20:36:30Z",
-      "cursor_or_watermark": "2026-11-02T20:36:30Z",
+      "checked_at": "2026-11-04T20:54:41Z",
+      "cursor_or_watermark": "2026-11-03T20:54:41Z",
       "error_class": null,
       "incomplete_results": false,
       "records_seen": 4,
@@ -338,6 +338,6 @@
       "truncated": false
     }
   ],
-  "window_end": "2026-11-03T20:36:30Z",
-  "window_start": "2026-11-02T20:36:30Z"
+  "window_end": "2026-11-04T20:54:41Z",
+  "window_start": "2026-11-03T20:54:41Z"
 }
