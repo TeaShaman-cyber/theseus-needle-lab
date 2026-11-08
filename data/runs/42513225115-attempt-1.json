@@ -1,0 +1,264 @@
+{
+  "candidates": [
+    {
+      "candidate_id": "23f419f409551becccc51b8b6a0a035e15a88c87799006304a97e3d7f6352712",
+      "canonical_url": "https://github.com/AidenHadisi/tiny-llm",
+      "content_fingerprint": "commit:2dca365bae5fea9e49bc5a629a8194b7f25750b8",
+      "discovery_route": "github_search:tiny-model",
+      "entity_seen_in_previous_snapshot": false,
+      "matched_watch_lines": [
+        "tiny-model"
+      ],
+      "observed_at": "2026-11-08T19:05:22Z",
+      "published_or_pushed_at": "2026-11-08T18:35:48Z",
+      "seen_in_previous_snapshot": false,
+      "source_class": "github_repo",
+      "source_entity_id": "github-repo:1449980248",
+      "source_id": "github-search:tiny-model",
+      "source_identity": "AidenHadisi/tiny-llm@main",
+      "title": "AidenHadisi/tiny-llm",
+      "upstream_revision": "2dca365bae5fea9e49bc5a629a8194b7f25750b8"
+    },
+    {
+      "candidate_id": "a30273fc36ac6d32361461cb680d7c9c285b706d81524341ff1040610953b7bc",
+      "canonical_url": "https://github.com/jlinoff/tiny-llm-in-rust",
+      "content_fingerprint": "commit:667c066b02c3e6c34c25591ee7d840487ba312fc",
+      "discovery_route": "github_search:tiny-model",
+      "entity_seen_in_previous_snapshot": false,
+      "matched_watch_lines": [
+        "tiny-model"
+      ],
+      "observed_at": "2026-11-08T19:05:22Z",
+      "published_or_pushed_at": "2026-11-08T17:51:41Z",
+      "seen_in_previous_snapshot": false,
+      "source_class": "github_repo",
+      "source_entity_id": "github-repo:1438686373",
+      "source_id": "github-search:tiny-model",
+      "source_identity": "jlinoff/tiny-llm-in-rust@main",
+      "title": "jlinoff/tiny-llm-in-rust",
+      "upstream_revision": "667c066b02c3e6c34c25591ee7d840487ba312fc"
+    },
+    {
+      "candidate_id": "e94c906d4550dc385048a7de4bbfe173625ccd9e58bfc2dcc1ad6b5689e85923",
+      "canonical_url": "https://github.com/will-larkin/tiny-gpt-from-scratch",
+      "content_fingerprint": "commit:fe5507ada91aa5c49038cd8283e22d5331ed6f20",
+      "discovery_route": "github_search:tiny-model",
+      "entity_seen_in_previous_snapshot": true,
+      "matched_watch_lines": [
+        "tiny-model"
+      ],
+      "observed_at": "2026-11-08T19:05:22Z",
+      "published_or_pushed_at": "2026-11-08T17:03:45Z",
+      "seen_in_previous_snapshot": false,
+      "source_class": "github_repo",
+      "source_entity_id": "github-repo:1447213260",
+      "source_id": "github-search:tiny-model",
+      "source_identity": "will-larkin/tiny-gpt-from-scratch@main",
+      "title": "will-larkin/tiny-gpt-from-scratch",
+      "upstream_revision": "fe5507ada91aa5c49038cd8283e22d5331ed6f20"
+    },
+    {
+      "candidate_id": "6894a40cc2aee71e2337c8e43bc5bb72cd48de19b8585c2fdd63bbd0e7cea1a0",
+      "canonical_url": "https://github.com/Departement-Of-Dyon/microai",
+      "content_fingerprint": "commit:27c0d0d3a3db17406b6c20479ad0dda30e17a6af",
+      "discovery_route": "github_search:tiny-model",
+      "entity_seen_in_previous_snapshot": false,
+      "matched_watch_lines": [
+        "tiny-model"
+      ],
+      "observed_at": "2026-11-08T19:05:22Z",
+      "published_or_pushed_at": "2026-11-08T16:20:14Z",
+      "seen_in_previous_snapshot": false,
+      "source_class": "github_repo",
+      "source_entity_id": "github-repo:1450445632",
+      "source_id": "github-search:tiny-model",
+      "source_identity": "Departement-Of-Dyon/microai@main",
+      "title": "Departement-Of-Dyon/microai",
+      "upstream_revision": "27c0d0d3a3db17406b6c20479ad0dda30e17a6af"
+    },
+    {
+      "candidate_id": "214e9fff1e8576affa915111679ab7b1b7d867af002bfd6e3fd3ebbae8fa98b8",
+      "canonical_url": "https://github.com/NUS-CEG5206/TinyLLM-llama2",
+      "content_fingerprint": "commit:000ff13837035bd5302278c6bd38b02bf89c0c17",
+      "discovery_route": "github_search:tiny-model",
+      "entity_seen_in_previous_snapshot": true,
+      "matched_watch_lines": [
+        "tiny-model"
+      ],
+      "observed_at": "2026-11-08T19:05:22Z",
+      "published_or_pushed_at": "2026-11-08T15:02:32Z",
+      "seen_in_previous_snapshot": false,
+      "source_class": "github_repo",
+      "source_entity_id": "github-repo:1414196606",
+      "source_id": "github-search:tiny-model",
+      "source_identity": "NUS-CEG5206/TinyLLM-llama2@main",
+      "title": "NUS-CEG5206/TinyLLM-llama2",
+      "upstream_revision": "000ff13837035bd5302278c6bd38b02bf89c0c17"
+    },
+    {
+      "candidate_id": "881c466d2188fbf60a344ab0d2ebbc13de6a09bde63108e6a8a6cce5c056f7d8",
+      "canonical_url": "https://github.com/KishoreKannan123/tiny-gpt-from-scratch",
+      "content_fingerprint": "commit:55b0a57620d17704e9ca2c914754fe589459b245",
+      "discovery_route": "github_search:tiny-model",
+      "entity_seen_in_previous_snapshot": false,
+      "matched_watch_lines": [
+        "tiny-model"
+      ],
+      "observed_at": "2026-11-08T19:05:22Z",
+      "published_or_pushed_at": "2026-11-08T11:31:57Z",
+      "seen_in_previous_snapshot": false,
+      "source_class": "github_repo",
+      "source_entity_id": "github-repo:1429382953",
+      "source_id": "github-search:tiny-model",
+      "source_identity": "KishoreKannan123/tiny-gpt-from-scratch@main",
+      "title": "KishoreKannan123/tiny-gpt-from-scratch",
+      "upstream_revision": "55b0a57620d17704e9ca2c914754fe589459b245"
+    },
+    {
+      "candidate_id": "b41bcde7d8bc655e55149df5d6232fd9dada1d391abcc2d33780f7959088f1b7",
+      "canonical_url": "https://github.com/devarenidhi25/toy-rlhf",
+      "content_fingerprint": "commit:c61a131ee3d57849464dbcb5af435e5b39f259e5",
+      "discovery_route": "github_search:tiny-model",
+      "entity_seen_in_previous_snapshot": false,
+      "matched_watch_lines": [
+        "tiny-model"
+      ],
+      "observed_at": "2026-11-08T19:05:22Z",
+      "published_or_pushed_at": "2026-11-08T09:29:01Z",
+      "seen_in_previous_snapshot": false,
+      "source_class": "github_repo",
+      "source_entity_id": "github-repo:1450118842",
+      "source_id": "github-search:tiny-model",
+      "source_identity": "devarenidhi25/toy-rlhf@main",
+      "title": "devarenidhi25/toy-rlhf",
+      "upstream_revision": "c61a131ee3d57849464dbcb5af435e5b39f259e5"
+    },
+    {
+      "candidate_id": "546b1161cd9b03949646158d2a2020c50dd95b09e1a2c88cd96ee89f1609b7e2",
+      "canonical_url": "https://github.com/saidkacem/TinyLM",
+      "content_fingerprint": "commit:9a0205872d78a51cc12dd8cf6aa8b1b5fe4d69cb",
+      "discovery_route": "github_search:tiny-model",
+      "entity_seen_in_previous_snapshot": false,
+      "matched_watch_lines": [
+        "tiny-model"
+      ],
+      "observed_at": "2026-11-08T19:05:22Z",
+      "published_or_pushed_at": "2026-11-08T09:07:27Z",
+      "seen_in_previous_snapshot": false,
+      "source_class": "github_repo",
+      "source_entity_id": "github-repo:1450120087",
+      "source_id": "github-search:tiny-model",
+      "source_identity": "saidkacem/TinyLM@master",
+      "title": "saidkacem/TinyLM",
+      "upstream_revision": "9a0205872d78a51cc12dd8cf6aa8b1b5fe4d69cb"
+    },
+    {
+      "candidate_id": "61442b0cf291bba494eb42823844654a5fdc049d585e538f4b239436faafe65d",
+      "canonical_url": "https://github.com/KashyapPatel2232/tiny-gpt-from-scratch",
+      "content_fingerprint": "commit:5c4cac40de647dc2fb9395c1b5cdfe41c6560866",
+      "discovery_route": "github_search:tiny-model",
+      "entity_seen_in_previous_snapshot": true,
+      "matched_watch_lines": [
+        "tiny-model"
+      ],
+      "observed_at": "2026-11-08T19:05:22Z",
+      "published_or_pushed_at": "2026-11-08T07:48:51Z",
+      "seen_in_previous_snapshot": false,
+      "source_class": "github_repo",
+      "source_entity_id": "github-repo:1449491193",
+      "source_id": "github-search:tiny-model",
+      "source_identity": "KashyapPatel2232/tiny-gpt-from-scratch@main",
+      "title": "KashyapPatel2232/tiny-gpt-from-scratch",
+      "upstream_revision": "5c4cac40de647dc2fb9395c1b5cdfe41c6560866"
+    },
+    {
+      "candidate_id": "82beb4f12d6ed99d6ec5f58c7e34f89cdd1dc90df274ed1560d19e5765a84bc5",
+      "canonical_url": "https://github.com/yairpatch/flyweight",
+      "content_fingerprint": "commit:d1842a20170501c4d6dca2512cc153ad318d1dad",
+      "discovery_route": "github_search:moe-cache",
+      "entity_seen_in_previous_snapshot": false,
+      "matched_watch_lines": [
+        "parameter-storage",
+        "sparse-execution"
+      ],
+      "observed_at": "2026-11-08T19:05:22Z",
+      "published_or_pushed_at": "2026-11-08T10:48:41Z",
+      "seen_in_previous_snapshot": false,
+      "source_class": "github_repo",
+      "source_entity_id": "github-repo:1304040894",
+      "source_id": "github-search:moe-cache",
+      "source_identity": "yairpatch/flyweight@main",
+      "title": "yairpatch/flyweight",
+      "upstream_revision": "d1842a20170501c4d6dca2512cc153ad318d1dad"
+    }
+  ],
+  "collector_revision": "f60a069a08dc2c12fdb055d3b096b288db745075",
+  "generated_at": "2026-11-08T19:05:22Z",
+  "prior_schema_version": "needle-watch-receipt-v0.2",
+  "run_id": "42513225115-attempt-1",
+  "schema_version": "needle-watch-receipt-v0.2",
+  "source_health": [
+    {
+      "checked_at": "2026-11-08T19:05:22Z",
+      "cursor_or_watermark": "2026-11-07T19:05:22Z",
+      "error_class": "RevisionResolutionFailed",
+      "incomplete_results": false,
+      "records_seen": 10,
+      "returned_count": 10,
+      "source_id": "github-search:tiny-model",
+      "status": "partial",
+      "total_count": 14,
+      "truncated": true
+    },
+    {
+      "checked_at": "2026-11-08T19:05:22Z",
+      "cursor_or_watermark": "2026-11-07T19:05:22Z",
+      "error_class": null,
+      "incomplete_results": false,
+      "records_seen": 0,
+      "returned_count": 0,
+      "source_id": "github-search:helper-model",
+      "status": "ok",
+      "total_count": 0,
+      "truncated": false
+    },
+    {
+      "checked_at": "2026-11-08T19:05:22Z",
+      "cursor_or_watermark": "2026-11-07T19:05:22Z",
+      "error_class": null,
+      "incomplete_results": false,
+      "records_seen": 0,
+      "returned_count": 0,
+      "source_id": "github-search:low-memory-training",
+      "status": "ok",
+      "total_count": 0,
+      "truncated": false
+    },
+    {
+      "checked_at": "2026-11-08T19:05:22Z",
+      "cursor_or_watermark": "2026-11-07T19:05:22Z",
+      "error_class": null,
+      "incomplete_results": false,
+      "records_seen": 0,
+      "returned_count": 0,
+      "source_id": "github-search:parameter-offload",
+      "status": "ok",
+      "total_count": 0,
+      "truncated": false
+    },
+    {
+      "checked_at": "2026-11-08T19:05:22Z",
+      "cursor_or_watermark": "2026-11-07T19:05:22Z",
+      "error_class": null,
+      "incomplete_results": false,
+      "records_seen": 1,
+      "returned_count": 1,
+      "source_id": "github-search:moe-cache",
+      "status": "ok",
+      "total_count": 1,
+      "truncated": false
+    }
+  ],
+  "window_end": "2026-11-08T19:05:22Z",
+  "window_start": "2026-11-07T19:05:22Z"
+}
