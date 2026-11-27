@@ -1,0 +1,284 @@
+{
+  "candidates": [
+    {
+      "candidate_id": "2be35ba416db7a056ac3788b3e7a3b7d85da669ab8f1411af04b6ac38f4c20d5",
+      "canonical_url": "https://github.com/tigersoldier/llm-101",
+      "content_fingerprint": "commit:8d60ca939f329109e7832a3b66d6f476bbba8769",
+      "discovery_route": "github_search:tiny-model",
+      "entity_seen_in_previous_snapshot": true,
+      "matched_watch_lines": [
+        "tiny-model"
+      ],
+      "observed_at": "2026-11-27T22:54:30Z",
+      "published_or_pushed_at": "2026-11-27T22:47:16Z",
+      "seen_in_previous_snapshot": false,
+      "source_class": "github_repo",
+      "source_entity_id": "github-repo:1436156855",
+      "source_id": "github-search:tiny-model",
+      "source_identity": "tigersoldier/llm-101@master",
+      "title": "tigersoldier/llm-101",
+      "upstream_revision": "8d60ca939f329109e7832a3b66d6f476bbba8769"
+    },
+    {
+      "candidate_id": "3071657f354ac956ebbc90906f32c978814cf2d2c4410a15d7b021ef4cc1a4e9",
+      "canonical_url": "https://github.com/Hydra-Of-Malice/same-model-different-language",
+      "content_fingerprint": "commit:b0049f838940e90a1d682b7cd6598102a21bdc7c",
+      "discovery_route": "github_search:tiny-model",
+      "entity_seen_in_previous_snapshot": false,
+      "matched_watch_lines": [
+        "tiny-model"
+      ],
+      "observed_at": "2026-11-27T22:54:30Z",
+      "published_or_pushed_at": "2026-11-27T20:46:28Z",
+      "seen_in_previous_snapshot": false,
+      "source_class": "github_repo",
+      "source_entity_id": "github-repo:1444318993",
+      "source_id": "github-search:tiny-model",
+      "source_identity": "Hydra-Of-Malice/same-model-different-language@main",
+      "title": "Hydra-Of-Malice/same-model-different-language",
+      "upstream_revision": "b0049f838940e90a1d682b7cd6598102a21bdc7c"
+    },
+    {
+      "candidate_id": "3597a45e627faccd3b2fb9f08c64dc1094e9fa8ce653032a59187d9f749f356e",
+      "canonical_url": "https://github.com/SocioSanity/seed",
+      "content_fingerprint": "commit:3a99723b6ade7c43c758976d57e83da415066b65",
+      "discovery_route": "github_search:tiny-model",
+      "entity_seen_in_previous_snapshot": false,
+      "matched_watch_lines": [
+        "tiny-model"
+      ],
+      "observed_at": "2026-11-27T22:54:30Z",
+      "published_or_pushed_at": "2026-11-27T18:22:38Z",
+      "seen_in_previous_snapshot": false,
+      "source_class": "github_repo",
+      "source_entity_id": "github-repo:1470413977",
+      "source_id": "github-search:tiny-model",
+      "source_identity": "SocioSanity/seed@main",
+      "title": "SocioSanity/seed",
+      "upstream_revision": "3a99723b6ade7c43c758976d57e83da415066b65"
+    },
+    {
+      "candidate_id": "a340a284fc0cbf34505180a3be85cc58187cf7b7f6c2fc131c965f649eb29554",
+      "canonical_url": "https://github.com/mohammadazam7/tiny-llm",
+      "content_fingerprint": "commit:7a5c21c4dde9c737dcf4522ca8a9ec549f1a8e36",
+      "discovery_route": "github_search:tiny-model",
+      "entity_seen_in_previous_snapshot": false,
+      "matched_watch_lines": [
+        "tiny-model"
+      ],
+      "observed_at": "2026-11-27T22:54:30Z",
+      "published_or_pushed_at": "2026-11-27T18:19:28Z",
+      "seen_in_previous_snapshot": false,
+      "source_class": "github_repo",
+      "source_entity_id": "github-repo:1427904753",
+      "source_id": "github-search:tiny-model",
+      "source_identity": "mohammadazam7/tiny-llm@main",
+      "title": "mohammadazam7/tiny-llm",
+      "upstream_revision": "7a5c21c4dde9c737dcf4522ca8a9ec549f1a8e36"
+    },
+    {
+      "candidate_id": "83afd11348e591ae3822e4f72c6364191835679dcd89a222700a63865eb1b523",
+      "canonical_url": "https://github.com/Uttamb7/tiny-transformer-lm",
+      "content_fingerprint": "commit:0e6eb27e989c9baef8499a834be47170b966546f",
+      "discovery_route": "github_search:tiny-model",
+      "entity_seen_in_previous_snapshot": false,
+      "matched_watch_lines": [
+        "tiny-model"
+      ],
+      "observed_at": "2026-11-27T22:54:30Z",
+      "published_or_pushed_at": "2026-11-27T18:02:37Z",
+      "seen_in_previous_snapshot": false,
+      "source_class": "github_repo",
+      "source_entity_id": "github-repo:1317887141",
+      "source_id": "github-search:tiny-model",
+      "source_identity": "Uttamb7/tiny-transformer-lm@master",
+      "title": "Uttamb7/tiny-transformer-lm",
+      "upstream_revision": "0e6eb27e989c9baef8499a834be47170b966546f"
+    },
+    {
+      "candidate_id": "4e7e48dac8a05deff8ef0e60266d794478bff14305afd591f71f5e4922cfa775",
+      "canonical_url": "https://github.com/AllomorphLabs/unsupervised-grounding",
+      "content_fingerprint": "commit:5e4289e34f87ad2932d8aed89d2b101b268233aa",
+      "discovery_route": "github_search:tiny-model",
+      "entity_seen_in_previous_snapshot": false,
+      "matched_watch_lines": [
+        "tiny-model"
+      ],
+      "observed_at": "2026-11-27T22:54:30Z",
+      "published_or_pushed_at": "2026-11-27T17:39:13Z",
+      "seen_in_previous_snapshot": false,
+      "source_class": "github_repo",
+      "source_entity_id": "github-repo:1466758385",
+      "source_id": "github-search:tiny-model",
+      "source_identity": "AllomorphLabs/unsupervised-grounding@main",
+      "title": "AllomorphLabs/unsupervised-grounding",
+      "upstream_revision": "5e4289e34f87ad2932d8aed89d2b101b268233aa"
+    },
+    {
+      "candidate_id": "9e0d1a26844dffc023d41499043874e2e7fc9ce7a5fce35fe9d44921d1547a66",
+      "canonical_url": "https://github.com/Orenda-Project/molde",
+      "content_fingerprint": "commit:6affd75a40a416e95d1350d58cbe17336bd9f20a",
+      "discovery_route": "github_search:tiny-model",
+      "entity_seen_in_previous_snapshot": false,
+      "matched_watch_lines": [
+        "tiny-model"
+      ],
+      "observed_at": "2026-11-27T22:54:30Z",
+      "published_or_pushed_at": "2026-11-27T20:11:32Z",
+      "seen_in_previous_snapshot": false,
+      "source_class": "github_repo",
+      "source_entity_id": "github-repo:1455357435",
+      "source_id": "github-search:tiny-model",
+      "source_identity": "Orenda-Project/molde@main",
+      "title": "Orenda-Project/molde",
+      "upstream_revision": "6affd75a40a416e95d1350d58cbe17336bd9f20a"
+    },
+    {
+      "candidate_id": "c033a1b038d771043eeafd7f8d1506e8738d45a75aaf5585657c4a48c4d0df52",
+      "canonical_url": "https://github.com/jeetjitsu/TinyLM",
+      "content_fingerprint": "commit:32a302d1ce84fedbb54392b9ba48f1d7b4116842",
+      "discovery_route": "github_search:tiny-model",
+      "entity_seen_in_previous_snapshot": false,
+      "matched_watch_lines": [
+        "tiny-model"
+      ],
+      "observed_at": "2026-11-27T22:54:30Z",
+      "published_or_pushed_at": "2026-11-27T12:57:29Z",
+      "seen_in_previous_snapshot": false,
+      "source_class": "github_repo",
+      "source_entity_id": "github-repo:1474434442",
+      "source_id": "github-search:tiny-model",
+      "source_identity": "jeetjitsu/TinyLM@master",
+      "title": "jeetjitsu/TinyLM",
+      "upstream_revision": "32a302d1ce84fedbb54392b9ba48f1d7b4116842"
+    },
+    {
+      "candidate_id": "3fb4691f4f77b13d4a0da8853f377caa0af77bf33e52b9f1e5106b6fa36b1da4",
+      "canonical_url": "https://github.com/logitcai/tinybrain",
+      "content_fingerprint": "commit:5540e60820dad741f16bcc68cb7e2fbf3b16981e",
+      "discovery_route": "github_search:tiny-model",
+      "entity_seen_in_previous_snapshot": false,
+      "matched_watch_lines": [
+        "tiny-model"
+      ],
+      "observed_at": "2026-11-27T22:54:30Z",
+      "published_or_pushed_at": "2026-11-27T12:15:48Z",
+      "seen_in_previous_snapshot": false,
+      "source_class": "github_repo",
+      "source_entity_id": "github-repo:1456264552",
+      "source_id": "github-search:tiny-model",
+      "source_identity": "logitcai/tinybrain@main",
+      "title": "logitcai/tinybrain",
+      "upstream_revision": "5540e60820dad741f16bcc68cb7e2fbf3b16981e"
+    },
+    {
+      "candidate_id": "b226ae8284a1465055ee154af375f242960474302babdc1864ba69a7a5a9ca76",
+      "canonical_url": "https://github.com/randomdevtom/quarry",
+      "content_fingerprint": "commit:dde516743d4132b5a14b0ae38be021abc91fbe03",
+      "discovery_route": "github_search:moe-cache",
+      "entity_seen_in_previous_snapshot": false,
+      "matched_watch_lines": [
+        "parameter-storage",
+        "sparse-execution"
+      ],
+      "observed_at": "2026-11-27T22:54:30Z",
+      "published_or_pushed_at": "2026-11-27T13:33:46Z",
+      "seen_in_previous_snapshot": false,
+      "source_class": "github_repo",
+      "source_entity_id": "github-repo:1466883787",
+      "source_id": "github-search:moe-cache",
+      "source_identity": "randomdevtom/quarry@main",
+      "title": "randomdevtom/quarry",
+      "upstream_revision": "dde516743d4132b5a14b0ae38be021abc91fbe03"
+    },
+    {
+      "candidate_id": "04e0688555cd095fa885fb879823e90c00c6cb404d3bc4b4489057728acc6da4",
+      "canonical_url": "https://github.com/optim-enterprises-bv/titan-engine",
+      "content_fingerprint": "commit:128bdb5b0f700b78536213c8548488d5715af649",
+      "discovery_route": "github_search:moe-cache",
+      "entity_seen_in_previous_snapshot": false,
+      "matched_watch_lines": [
+        "parameter-storage",
+        "sparse-execution"
+      ],
+      "observed_at": "2026-11-27T22:54:30Z",
+      "published_or_pushed_at": "2026-11-27T08:16:33Z",
+      "seen_in_previous_snapshot": false,
+      "source_class": "github_repo",
+      "source_entity_id": "github-repo:1394604417",
+      "source_id": "github-search:moe-cache",
+      "source_identity": "optim-enterprises-bv/titan-engine@main",
+      "title": "optim-enterprises-bv/titan-engine",
+      "upstream_revision": "128bdb5b0f700b78536213c8548488d5715af649"
+    }
+  ],
+  "collector_revision": "8a8d345638bf22510db3976ac287b5919a6df736",
+  "generated_at": "2026-11-27T22:54:30Z",
+  "prior_schema_version": "needle-watch-receipt-v0.2",
+  "run_id": "46079389716-attempt-1",
+  "schema_version": "needle-watch-receipt-v0.2",
+  "source_health": [
+    {
+      "checked_at": "2026-11-27T22:54:30Z",
+      "cursor_or_watermark": "2026-11-26T22:54:30Z",
+      "error_class": "RevisionResolutionFailed",
+      "incomplete_results": false,
+      "records_seen": 10,
+      "returned_count": 10,
+      "source_id": "github-search:tiny-model",
+      "status": "partial",
+      "total_count": 21,
+      "truncated": true
+    },
+    {
+      "checked_at": "2026-11-27T22:54:30Z",
+      "cursor_or_watermark": "2026-11-26T22:54:30Z",
+      "error_class": null,
+      "incomplete_results": false,
+      "records_seen": 0,
+      "returned_count": 0,
+      "source_id": "github-search:helper-model",
+      "status": "ok",
+      "total_count": 0,
+      "truncated": false
+    },
+    {
+      "checked_at": "2026-11-27T22:54:30Z",
+      "cursor_or_watermark": "2026-11-26T22:54:30Z",
+      "error_class": null,
+      "incomplete_results": false,
+      "records_seen": 0,
+      "returned_count": 0,
+      "source_id": "github-search:low-memory-training",
+      "status": "ok",
+      "total_count": 0,
+      "truncated": false
+    },
+    {
+      "checked_at": "2026-11-27T22:54:30Z",
+      "cursor_or_watermark": "2026-11-26T22:54:30Z",
+      "error_class": null,
+      "incomplete_results": false,
+      "records_seen": 0,
+      "returned_count": 0,
+      "source_id": "github-search:parameter-offload",
+      "status": "ok",
+      "total_count": 0,
+      "truncated": false
+    },
+    {
+      "checked_at": "2026-11-27T22:54:30Z",
+      "cursor_or_watermark": "2026-11-26T22:54:30Z",
+      "error_class": null,
+      "incomplete_results": false,
+      "records_seen": 2,
+      "returned_count": 2,
+      "source_id": "github-search:moe-cache",
+      "status": "ok",
+      "total_count": 2,
+      "truncated": false
+    }
+  ],
+  "window_end": "2026-11-27T22:54:30Z",
+  "window_start": "2026-11-26T22:54:30Z"
+}
